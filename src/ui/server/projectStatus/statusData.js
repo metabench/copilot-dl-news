@@ -236,9 +236,28 @@ function buildStatus() {
   let pendingSignals = [];
   try { pendingSignals = require('./signals').pending(); } catch (_) {}
 
+  // live tool inventory for the TOOL FACTORY coordination point — counted from
+  // disk each rebuild so the listing cannot drift from reality (603 as of 2026-07-28)
+  let toolInventory = { total: 0, dirs: 0 };
+  try {
+    const toolsRoot = path.join(ROOT, 'tools');
+    const walk = (dir, depth) => {
+      let n = 0;
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (e.name === 'node_modules') continue;
+        if (e.isDirectory() && depth < 4) n += walk(path.join(dir, e.name), depth + 1);
+        else if (e.isFile() && e.name.endsWith('.js')) n += 1;
+      }
+      return n;
+    };
+    const dirs = fs.readdirSync(toolsRoot, { withFileTypes: true }).filter((e) => e.isDirectory() && e.name !== 'node_modules');
+    toolInventory = { total: walk(toolsRoot, 0), dirs: dirs.length };
+  } catch (_) {}
+
   const data = {
     player,
     pendingSignals,
+    toolInventory,
     stats: {
       cycles: totals.cycles,
       preShipPct: totals.defectsPre + totals.defectsPost

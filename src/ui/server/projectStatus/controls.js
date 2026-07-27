@@ -48,7 +48,7 @@ const recentText = (r) => `${r.correction ? '↺' : '·'} c${r.cycle} — ${r.la
 // where the full tiers + SVG art render per request. Emoji stand in for the branch
 // icons here (the isomorphic bundle treats control text as text, so inline SVG art
 // belongs on the server-rendered pages); the branch COLOR carries on the card border.
-const BRANCH_EMOJI = { iceBulb: '💡', treeMonitor: '🖥️', spiderWeb: '🕷️' };
+const BRANCH_EMOJI = { iceBulb: '💡', treeMonitor: '🖥️', spiderWeb: '🕷️', factorySpanner: '🏭' };
 function branchCardModel(b) {
   return {
     key: b.key,
@@ -423,7 +423,7 @@ Status_Widget.css = `
 .ps-road__sub { font-size: 10px; color: #8a8778; margin-top: 4px; }
 .ps-road__arrow { align-self: center; color: #b8862e; font-size: 16px; flex: 0 0 auto; }
 .ps-tree__roots { font-size: 10px; color: #6b675a; border-top: 1px dashed #2e3440; padding-top: 6px; margin-top: 8px; }
-.ps-branches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.ps-branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
 @media (max-width: 760px) { .ps-branches { grid-template-columns: 1fr; } }
 .ps-branch { display: block; background: #101216; border: 2px solid #2e3440; border-radius: 6px; padding: 10px 12px; text-decoration: none; color: inherit; }
 .ps-branch:hover { background: #14171c; box-shadow: 0 0 8px rgba(184,134,46,0.15); }

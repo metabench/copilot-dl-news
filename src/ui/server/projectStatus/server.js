@@ -80,11 +80,11 @@ async function main() {
     // /tech/crawler. RENDERED PER REQUEST inside the handler — unlike the main
     // page's publish-once SSR, these can never serve a boot-time snapshot.
     const { renderTechPage } = require('./techPages');
-    for (const branchKey of ['agi', 'tree', 'crawler']) {
+    for (const branchKey of ['agi', 'tree', 'crawler', 'factory']) {
       router.set_route(`/tech/${branchKey}`, null, (req, res) => {
         try {
           const st = buildStatus();
-          const html = renderTechPage(branchKey, st.techTree, { pendingSignals: st.pendingSignals });
+          const html = renderTechPage(branchKey, st.techTree, { pendingSignals: st.pendingSignals, toolInventory: st.toolInventory });
           if (!html) { res.writeHead(404); res.end('unknown branch'); return; }
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
           res.end(html);

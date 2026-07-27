@@ -4,7 +4,8 @@
   "branches": {
     "agi": { "label": "AGI", "color": "#4d9ec8", "icon": "iceBulb", "tagline": "the loop that improves the loop — self-verifying, self-prompting, self-checking" },
     "tree": { "label": "TECH TREE", "color": "#55a377", "icon": "treeMonitor", "tagline": "the instrument panel of progress — record, picture, page, prompt" },
-    "crawler": { "label": "CRAWLER", "color": "#b8862e", "icon": "spiderWeb", "tagline": "the product — polite, database-driven news harvesting at archive scale" }
+    "crawler": { "label": "CRAWLER", "color": "#b8862e", "icon": "spiderWeb", "tagline": "the product — polite, database-driven news harvesting at archive scale" },
+    "factory": { "label": "TOOL FACTORY", "color": "#a678c8", "icon": "factorySpanner", "tagline": "the coordination point for the system's tools — 600+ scripts, and the operations that combine, extend and improve them" }
   },
   "roots": [
     { "id": "CR-ENGINE", "branch": "crawler", "title": "Crawler Engine", "note": "news-crawler-itself: fetch loop, worker-thread compression, remote runtime" },
@@ -18,6 +19,13 @@
     { "id": "TR-PAGE", "branch": "tree", "title": "Status Page", "note": "this jsgui3 app: live chips, path ahead, the tree you are reading" },
     { "id": "TR-PROMPT", "branch": "tree", "title": "Prompt Generator", "note": "next cycle's prompt derived from the record; curation labelled, never faked" },
     { "id": "TR-DEVTOOLS", "branch": "tree", "title": "Dev Tooling", "note": "js-scan / js-edit: AST search, guarded edits, continuation tokens" },
+    { "id": "TF-LOOP", "branch": "factory", "title": "Loop Tooling", "note": "tools/agi (9 scripts): cycle-metrics, progress-svg, repo-activity, next-prompt, ack-signal — the loop's own instruments" },
+    { "id": "TF-PROBES", "branch": "factory", "title": "Probe & Check Rig", "note": "tools/dev (~131 scripts): run-probes + 18 registered probes, ncdb-debt-scan, churn-scan, ui-check-inventory, workflow-scorecard" },
+    { "id": "TF-CRAWLOPS", "branch": "factory", "title": "Crawl Operations", "note": "tools/crawl (96 scripts): campaign-runner, host-health, crawl-rate, frontier hydration/composition tooling" },
+    { "id": "TF-DBSAFETY", "branch": "factory", "title": "DB Safety Kit", "note": "tools/db (12 scripts): timed-probe (the WAL-pin incident guard), dedup-http-responses, vacuum, schema inspectors" },
+    { "id": "TF-BRIDGE", "branch": "factory", "title": "Dev Bridge", "note": "tools/dev-bridge (136 scripts): inbox daemon, restart-electron, resilience checks — the hands that reach the electron app" },
+    { "id": "TF-PERF", "branch": "factory", "title": "Perf Bench", "note": "tools/perf (5 scripts): fixture-server, concurrency-bench, postfetch-cost, profile-crawl — offline measurement with a control arm" },
+    { "id": "TF-MAINT", "branch": "factory", "title": "Migration & Repair Shop", "note": "migrations (20) + maintenance (19) + corrections (8) + cleanup (4): schema evolution and data repair, one-shot by design" },
     { "id": "AG-COMPLIANCE", "branch": "agi", "title": "Compliance Meta-tests", "note": "probes that check the AGENT followed directives, not just the code" },
     { "id": "AG-HARNESS", "branch": "agi", "title": "Live Browser Harness", "note": "real pages in a real browser; assertions no in-process check can make" },
     { "id": "AG-METHOD", "branch": "agi", "title": "Earned Method", "note": "rules that exist only because a recorded mistake produced them" }
@@ -26,6 +34,15 @@
     { "ref": "RB-001", "branch": "agi", "prereqs": ["TR-DEVTOOLS", "CR-DB"] },
     { "ref": "RB-007", "branch": "agi", "prereqs": ["AG-COMPLIANCE", "TR-PROMPT"] },
     { "ref": "RB-015", "branch": "tree", "prereqs": ["TR-PICTURE"] },
+    { "id": "TECH-TYPEDEDGES", "branch": "factory", "title": "Typed Edge Grammar", "research": "every edge takes one of the owner's verbs — combine (exactly two inputs fuse), extend (one input + a named capability), improve (one input + a MEASURED axis)", "prereqs": ["AG-METHOD", "TR-PAGE"], "state": "available",
+      "prelim": [
+        "OWNER 2026-07-28: all five factory integrations adopted; this grammar is the one the other four build on.",
+        "Discipline per verb: combine keeps the SMAC two-input cap; extend must NAME the new capability; improve must name a measured axis — an improve claim without a number is not an improve. The schema probe enforces all three, so a lazy edge cannot ship."
+      ] },
+    { "id": "TECH-WORKORDERS", "branch": "factory", "title": "Work Order Queue", "research": "researchable techs double as factory work orders — inputs, operation, expected output — listed by operation type", "prereqs": ["TECH-TYPEDEDGES", "TR-PAGE"], "state": "available" },
+    { "id": "TECH-PRODUCTS", "branch": "factory", "title": "Products Shelf", "research": "derive the factory's product listing mechanically from ledger stanzas' scaffold_added[] — tool, birth cycle, operation; zero new bookkeeping", "prereqs": ["TR-LEDGER", "TF-LOOP"], "state": "available" },
+    { "id": "TECH-SUGGEST", "branch": "factory", "title": "Suggestion Synthesis", "research": "machine-proposed work orders: shared data source → combine candidate; defect-named tool → improve candidate (the defect is the axis); manually-run-every-cycle tool → extend-to-automation candidate", "prereqs": ["TF-PROBES", "TECH-TYPEDEDGES"], "state": "available" },
+    { "id": "TECH-TOOLHEALTH", "branch": "factory", "title": "Health Badges", "research": "tool families wear live status from existing substrate — probe results, churn-scan activity, workflow-scorecard cost-to-catch", "prereqs": ["TF-PROBES", "TR-PAGE"], "state": "available" },
     { "id": "TECH-APPREVIEW", "branch": "tree", "title": "Tech Tree App Review", "research": "review the tech-tree system itself and generate improvement items across GUI, data model, interactivity, automation, progress tie-ins and self-testing", "prereqs": ["TR-PAGE", "AG-METHOD"], "state": "available", "signal": "app-review",
       "prelim": [
         "OWNER-APPROVED SCOPE (2026-07-28, all six): the review generates improvement ITEMS — new tech nodes, spec edits, and small direct fixes — across the six categories below, RANKED by value-per-effort. It ships the top slice, not the whole list; unshipped items become named techs or fog seeds so nothing evaporates.",

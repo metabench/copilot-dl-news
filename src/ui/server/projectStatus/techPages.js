@@ -31,7 +31,8 @@ const NAV = [
   { key: 'status', href: '/', label: 'STATUS' },
   { key: 'agi', href: '/tech/agi', label: 'AGI' },
   { key: 'tree', href: '/tech/tree', label: 'TECH TREE' },
-  { key: 'crawler', href: '/tech/crawler', label: 'CRAWLER' }
+  { key: 'crawler', href: '/tech/crawler', label: 'CRAWLER' },
+  { key: 'factory', href: '/tech/factory', label: 'TOOL FACTORY' }
 ];
 
 function navBar(currentKey, branches) {
@@ -98,6 +99,108 @@ document.addEventListener('click', function (e) {
 });
 </script>`;
 
+// ---- the DRAWN tree (owner 2026-07-28: "make sure the tech tree can actually
+// display as a tree") — a server-rendered SVG DAG: layered left→right by prereq
+// depth, real node-to-node edges colored by their SOURCE branch, fog dashed at the
+// far right with no edges (blind research: what feeds it is unknown by design). ----
+
+/** Collect this branch's drawable nodes + edges (foreign prereqs become layer-0 nodes). */
+function collectGraph(b) {
+  const nodes = new Map();
+  const edges = [];
+  for (const r of b.roots) nodes.set(r.id, { id: r.id, title: r.title, kind: 'root', branch: b.key });
+  const techs = [
+    ...b.grown.map((t) => ({ ...t, kind: 'grown' })),
+    ...b.available.map((t) => ({ ...t, kind: 'avail' })),
+    ...b.gated.map((t) => ({ ...t, kind: 'gated' }))
+  ];
+  for (const t of techs) {
+    nodes.set(t.id, { id: t.id, title: t.title, kind: t.kind, branch: b.key });
+    for (const p of (t.prereqs || [])) {
+      if (!nodes.has(p.id)) nodes.set(p.id, { id: p.id, title: p.id, kind: 'foreign', branch: p.branch });
+      edges.push({ from: p.id, to: t.id, branch: p.branch });
+    }
+  }
+  for (const f of b.future) nodes.set(f.id, { id: f.id, title: 'Future Technology', kind: 'fog', branch: b.key });
+  return { nodes: [...nodes.values()], edges };
+}
+
+/** Layer = prereq depth: foundations 0; a tech sits one right of its deepest input. */
+function assignDepths(nodes, edges) {
+  const depth = new Map();
+  for (const n of nodes) if (n.kind === 'root' || n.kind === 'foreign') depth.set(n.id, 0);
+  const inbound = (id) => edges.filter((e) => e.to === id).map((e) => e.from);
+  let changed = true, guard = 0;
+  while (changed && guard++ < 50) {
+    changed = false;
+    for (const n of nodes) {
+      if (n.kind === 'fog' || depth.has(n.id)) continue;
+      const ins = inbound(n.id);
+      if (ins.every((i) => depth.has(i))) {
+        depth.set(n.id, ins.length ? 1 + Math.max(...ins.map((i) => depth.get(i))) : 1);
+        changed = true;
+      }
+    }
+  }
+  const maxTech = Math.max(0, ...[...depth.values()]);
+  for (const n of nodes) if (n.kind === 'fog') depth.set(n.id, maxTech + 1);
+  for (const n of nodes) if (!depth.has(n.id)) depth.set(n.id, 1); // cycle guard: never lose a node
+  return depth;
+}
+
+function renderTreeSvg(b, branches) {
+  const { nodes, edges } = collectGraph(b);
+  if (!nodes.length) return '';
+  const depth = assignDepths(nodes, edges);
+  const NW = 148, NH = 30, XGAP = 52, YGAP = 12, PAD = 14;
+  const layers = new Map();
+  for (const n of nodes) {
+    const d = depth.get(n.id);
+    if (!layers.has(d)) layers.set(d, []);
+    layers.get(d).push(n);
+  }
+  const pos = new Map();
+  let maxRows = 0;
+  for (const [d, ns] of layers) {
+    ns.forEach((n, i) => pos.set(n.id, { x: PAD + d * (NW + XGAP), y: PAD + i * (NH + YGAP) }));
+    maxRows = Math.max(maxRows, ns.length);
+  }
+  const W = PAD * 2 + (Math.max(...layers.keys()) + 1) * (NW + XGAP) - XGAP;
+  const H = PAD * 2 + maxRows * (NH + YGAP) - YGAP;
+  const colorOf = (key) => (branches.find((x) => x.key === key) || {}).color || '#8a8778';
+
+  const edgeSvg = edges.map((e) => {
+    const a = pos.get(e.from), z = pos.get(e.to);
+    if (!a || !z) return '';
+    const x1 = a.x + NW, y1 = a.y + NH / 2, x2 = z.x, y2 = z.y + NH / 2;
+    const mx = (x1 + x2) / 2;
+    return `<path d="M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}" fill="none" stroke="${colorOf(e.branch)}" stroke-width="1.3" opacity="0.65"/>`;
+  }).join('');
+
+  const nodeSvg = nodes.map((n) => {
+    const p = pos.get(n.id);
+    const accent = colorOf(n.branch);
+    const style = {
+      root: `fill="#14171c" stroke="#8a8778" stroke-width="1"`,
+      foreign: `fill="#14171c" stroke="${accent}" stroke-width="1" stroke-dasharray="3,2"`,
+      grown: `fill="#182019" stroke="${accent}" stroke-width="1.4"`,
+      avail: `fill="#14171c" stroke="${accent}" stroke-width="1.8"`,
+      gated: `fill="#14171c" stroke="#b34d4d" stroke-width="1.2"`,
+      fog: `fill="none" stroke="#5a5648" stroke-width="1" stroke-dasharray="4,3"`
+    }[n.kind];
+    const glow = n.kind === 'avail' ? `<rect x="${p.x - 1.5}" y="${p.y - 1.5}" width="${NW + 3}" height="${NH + 3}" rx="6" fill="none" stroke="${accent}" stroke-width="0.6" opacity="0.4"/>` : '';
+    const t = n.title.length > 21 ? `${n.title.slice(0, 20)}…` : n.title;
+    const label = n.kind === 'fog' ? '❓ Future Technology' : t;
+    return `${glow}<rect x="${p.x}" y="${p.y}" width="${NW}" height="${NH}" rx="5" ${style}/>
+<text x="${p.x + 7}" y="${p.y + 12}" font-family="Segoe UI, sans-serif" font-size="8" fill="${n.kind === 'fog' ? '#6b675a' : '#8a8778'}">${esc(n.kind === 'fog' ? '' : n.id)}</text>
+<text x="${p.x + 7}" y="${p.y + 23}" font-family="Segoe UI, sans-serif" font-size="9" font-weight="600" fill="${n.kind === 'fog' ? '#6b675a' : '#e8e4d8'}">${esc(label)}</text>`;
+  }).join('');
+
+  return `<section class="tp-treeview"><h2 class="tp-tier__head">TREE VIEW</h2>
+<div class="tp-tier__hint">foundations → research, edges colored by their source branch · dashed = another branch's tech · fog stands apart: what feeds it is not yet known</div>
+<div class="tp-treeview__scroll"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(b.label)} tech tree graph">${edgeSvg}${nodeSvg}</svg></div></section>`;
+}
+
 function tierColumn(title, bodyHtml, hint) {
   return `<section class="tp-tier"><h2 class="tp-tier__head">${esc(title)}</h2>${hint ? `<div class="tp-tier__hint">${esc(hint)}</div>` : ''}<div class="tp-tier__list">${bodyHtml}</div></section>`;
 }
@@ -143,6 +246,7 @@ ${navBar(branchKey, branches)}
   <div class="tp-head__icon">${icon(44)}</div>
   <div><h1 class="tp-h1">${esc(b.label)}</h1><div class="tp-tag">${esc(b.tagline)}</div></div>
 </header>
+${renderTreeSvg(b, branches)}
 <main class="tp-tiers">
   ${tierColumn('FOUNDATIONS', rootsHtml, 'what already exists — new research combines, extends or improves these')}
   ${tierColumn('RESEARCH AVAILABLE', (grownHtml || '') + availHtml, 'the frontier — researchable now')}
@@ -150,7 +254,7 @@ ${navBar(branchKey, branches)}
   ${tierColumn('BEYOND', fogHtml, 'blind research — not yet conceptualised')}
 </main>
 <div class="tp-others">${others}</div>
-<footer class="tp-foot">rendered per request from tech-tree.json (structure) · RESEARCH_BACKLOG states · roadmap.json cutoff · reload to refresh — this page cannot go stale${techTree.absorbed ? ` · ${techTree.absorbed} pre-tree research items absorbed into the foundations` : ''}</footer>
+<footer class="tp-foot">${branchKey === 'factory' && opts.toolInventory ? `live inventory: ${opts.toolInventory.total} scripts across ${opts.toolInventory.dirs} tool directories (counted this request) · ` : ''}rendered per request from tech-tree.json (structure) · RESEARCH_BACKLOG states · roadmap.json cutoff · reload to refresh — this page cannot go stale${techTree.absorbed ? ` · ${techTree.absorbed} pre-tree research items absorbed into the foundations` : ''}</footer>
 ${SIGNAL_SCRIPT}
 </body></html>`;
 }
@@ -191,10 +295,12 @@ const CSS = `
 .tp-prelim summary { font-size: 9px; letter-spacing: 0.14em; color: #6b675a; cursor: pointer; }
 .tp-prelim summary:hover { color: #8a8778; }
 .tp-prelim__p { font-size: 10px; color: #a39f8f; margin: 6px 0 0; line-height: 1.5; }
+.tp-treeview { padding: 14px 22px 0; }
+.tp-treeview__scroll { overflow-x: auto; background: #0c0e11; border: 1px solid #232833; border-radius: 6px; padding: 6px; }
 .tp-others { display: flex; gap: 10px; padding: 4px 22px 10px; flex-wrap: wrap; }
 .tp-cross { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: #8a8778; text-decoration: none; border: 1px dashed; border-radius: 4px; padding: 5px 9px; }
 .tp-cross:hover { color: #e8e4d8; }
 .tp-foot { font-size: 9.5px; color: #6b675a; padding: 8px 22px; border-top: 1px solid #232833; }
 `;
 
-module.exports = { renderTechPage, NAV };
+module.exports = { renderTechPage, collectGraph, assignDepths, renderTreeSvg, NAV };

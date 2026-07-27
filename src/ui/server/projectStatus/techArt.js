@@ -76,6 +76,20 @@ ${[0.25, 0.5, 0.75].map((f) => `<path d="M${w * f} ${h} L${w / 2} ${h - 200}" st
 </svg>`;
 }
 
-const ICONS = { iceBulb, treeMonitor, spiderWeb };
+/** 🏭 a factory wearing a spanner badge (the tool factory). */
+function factorySpanner(size = 28) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tool factory">
+<path d="M3.5 26.5V13l6.5 4.4V13l6.5 4.4V13l8.5 5.6v7.9Z" fill="#191320" stroke="#a678c8" stroke-width="1.3" stroke-linejoin="round"/>
+<rect x="6" y="6.5" width="3.2" height="7.5" fill="#191320" stroke="#a678c8" stroke-width="1.2"/>
+<circle cx="7.6" cy="4.6" r="1.2" fill="#cfa7e0" opacity="0.55"/>
+<circle cx="10.2" cy="2.9" r="0.9" fill="#cfa7e0" opacity="0.35"/>
+<path d="M7 22.5h3.4M13 22.5h3.4" stroke="#8a5fa8" stroke-width="1.3" stroke-linecap="round"/>
+<circle cx="23.6" cy="23.6" r="7" fill="#231a2b" stroke="#cfa7e0" stroke-width="1.2"/>
+<path d="M20.6 26.6l3.4-3.4M24 23.2a2.4 2.4 0 1 0 2.4-2.4l-1.7.5-.6 1.9Z" fill="none" stroke="#e6d2f2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="20.4" cy="26.8" r="1.15" fill="none" stroke="#e6d2f2" stroke-width="1.4"/>
+</svg>`;
+}
 
-module.exports = { iceBulb, treeMonitor, spiderWeb, headerScape, ICONS };
+const ICONS = { iceBulb, treeMonitor, spiderWeb, factorySpanner };
+
+module.exports = { iceBulb, treeMonitor, spiderWeb, factorySpanner, headerScape, ICONS };
