@@ -38,13 +38,20 @@ const DEFAULT_ANNOTATIONS = path.join(ROOT, 'docs', 'agi', 'progress', 'annotati
 
 // ---- data ------------------------------------------------------------------
 
-/** Extract every `<!-- cycle:{...} -->` stanza; malformed ones are counted, not fatal. */
+/**
+ * Extract every `<!-- cycle:{...} -->` stanza; malformed ones are counted, not fatal.
+ * PLACEHOLDERS are ignored entirely: ledger prose NAMES the convention literally
+ * ("emit a `<!-- cycle:{...} -->` stanza"), and those documentation mentions matched
+ * this regex and were miscounted as 2 "malformed stanzas" for several cycles — a
+ * defect of the parser, not of the ledger.
+ */
 function parseCycleStanzas(text) {
   const cycles = [];
   let skipped = 0;
   const re = /<!--\s*cycle:(\{[\s\S]*?\})\s*-->/g;
   let m;
   while ((m = re.exec(text))) {
+    if (/^\{\s*(\.\.\.|…)\s*\}$/.test(m[1])) continue; // documentation placeholder
     try { cycles.push(JSON.parse(m[1])); } catch (_) { skipped++; }
   }
   cycles.sort((a, b) => (a.id || 0) - (b.id || 0));
@@ -230,5 +237,5 @@ function main() {
   console.log(`wrote ${path.relative(ROOT, outPath)} (${svg.length} bytes)`);
 }
 
-module.exports = { parseCycleStanzas, computeSeries, renderSvg };
+module.exports = { parseCycleStanzas, computeSeries, renderSvg, loadAnnotations, DEFAULT_LEDGER, DEFAULT_OUT, DEFAULT_ANNOTATIONS };
 if (require.main === module) main();

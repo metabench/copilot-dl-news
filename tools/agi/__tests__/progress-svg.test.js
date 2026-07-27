@@ -8,6 +8,7 @@ const FIXTURE = [
   'more prose',
   '<!-- cycle:{"id":11,"date":"2026-07-02","verified_improvements":0,"defects":[{"caught_by":"b","preship":true},{"caught_by":"c","preship":false}],"pages_crawled":0,"retracts":{"cycle":10,"claim":"x"}} -->',
   '<!-- cycle:{THIS IS NOT JSON} -->',
+  'prose that NAMES the convention: emit a <!-- cycle:{...} --> stanza per row',
   '<!-- cycle:{"id":12,"date":"2026-07-03","verified_improvements":2,"pages_crawled":50} -->'
 ].join('\n');
 
@@ -15,6 +16,7 @@ describe('progress-svg', () => {
   it('parses stanzas, skips malformed ones, sorts by id', () => {
     const { cycles, skipped } = parseCycleStanzas(FIXTURE);
     expect(cycles.map((c) => c.id)).toEqual([10, 11, 12]);
+    // truly broken JSON counts as skipped; the documentation PLACEHOLDER does not
     expect(skipped).toBe(1);
   });
 
