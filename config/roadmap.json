@@ -1,6 +1,10 @@
 {
   "_comment": "The PLANNED PATH + tech-tree lineage for the project-status page. Until cycle 136 the 'path ahead' lived only in pasted prompts and chat decisions — a fact tools had to infer from prose, which the loop's own rule (cycle 129) says must be written down as a field instead. CURATED by design: block/steps record owner direction + the on-record ▶ curation; prereqs record only lineage the ledger actually states (do not invent edges to make the tree look fuller). The tech-tree STATES themselves are NOT here — they derive live from RESEARCH_BACKLOG.md's state column, so this file cannot contradict the backlog.",
   "asOf": "2026-07-27",
+  "rootsCutoff": {
+    "date": "2026-07-27",
+    "note": "OWNER 2026-07-27: tech completed at/before this date is the tree's ROOTS — real, but not displayed and not worth pigeonholing. Rows whose state flips to done with a later last_update GROW the tree visibly. Strictly-after comparison, so everything done as of the tree's creation is a root."
+  },
   "block": {
     "label": "Live-browser test coverage",
     "why": "owner direction after c134: 95% of UI self-tests cannot observe what the client does — the defect class that actually shipped (c128.5)"

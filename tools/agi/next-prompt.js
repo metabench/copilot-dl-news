@@ -86,14 +86,16 @@ const KNOWN_STATES = new Set([...ACTIONABLE_STATES, 'blocked', 'done', 'supersed
 function parseBacklog(markdown) {
   const rows = [];
   for (const line of String(markdown).split('\n')) {
-    const m = /^\|\s*(RB-\d+)\s*\|\s*([^|]*)\|\s*([^|]+)\|[^|]*\|\s*([^|]+)\|/.exec(line);
+    const m = /^\|\s*(RB-\d+)\s*\|\s*([^|]*)\|\s*([^|]+)\|[^|]*\|\s*([^|]+)\|\s*[^|]*\|\s*([^|]*)\|/.exec(line);
     if (!m) continue;
-    const [, id, stateRaw, question, status] = m;
+    const [, id, stateRaw, question, status, lastUpdate] = m;
     const state = stateRaw.trim().toLowerCase();
     if (!KNOWN_STATES.has(state)) {
       throw new Error(`${id}: unknown backlog state ${JSON.stringify(stateRaw.trim())} — expected one of ${[...KNOWN_STATES].join('/')}`);
     }
-    rows.push({ id, state, question: question.trim(), status: status.trim() });
+    // lastUpdate feeds the tech tree's roots-vs-grown split (cycle 137): rows
+    // completed before the tree existed are roots and are not displayed.
+    rows.push({ id, state, question: question.trim(), status: status.trim(), lastUpdate: lastUpdate.trim() });
   }
   return rows;
 }

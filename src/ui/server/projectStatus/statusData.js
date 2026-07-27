@@ -69,9 +69,23 @@ function buildTechTree(backlogRows, roadmap) {
   const doneIds = new Set(backlogRows.filter((r) => r.state === 'done' || r.state === 'superseded').map((r) => r.id));
   const node = (r) => ({ id: r.id, title: shortTitle(r.question), state: r.state });
 
-  const researched = backlogRows
-    .filter((r) => doneIds.has(r.id))
-    .map((r) => ({ ...node(r), unlocked: (prereqs[r.id] || []).filter((p) => doneIds.has(p)) }));
+  // Roots vs grown (owner, 2026-07-27): tech completed at/before the cutoff is the
+  // ROOTS — real but NOT displayed, and not worth the effort of pigeonholing into
+  // tree positions. Only research completed AFTER the tree existed grows on it.
+  // Strictly-after compare on YYYY-MM-DD strings; a row with no usable date stays a
+  // root (never promoted by a parsing accident). No cutoff configured = no roots split.
+  const cutoff = roadmap && roadmap.rootsCutoff && roadmap.rootsCutoff.date;
+  const doneRows = backlogRows.filter((r) => doneIds.has(r.id));
+  const isGrown = (r) => Boolean(cutoff) && /^\d{4}-\d{2}-\d{2}$/.test(String(r.lastUpdate || '')) && r.lastUpdate > cutoff;
+
+  const roots = { count: doneRows.filter((r) => !isGrown(r)).length };
+  const grown = doneRows
+    .filter(isGrown)
+    .map((r) => ({
+      ...node(r),
+      researchedOn: r.lastUpdate,
+      buildsOn: (prereqs[r.id] || []).filter((p) => doneIds.has(p))
+    }));
 
   const available = backlogRows
     .filter((r) => r.state === 'open' || r.state === 'partial')
@@ -93,7 +107,7 @@ function buildTechTree(backlogRows, roadmap) {
     id: `future-${i + 1}`, title: 'Future Technology'
   }));
 
-  return { researched, available, gated, future };
+  return { roots, grown, available, gated, future };
 }
 
 function buildStatus() {
@@ -168,7 +182,7 @@ function buildStatus() {
   } catch (_) { /* no annotations yet */ }
 
   // tech tree + path ahead — states live in the backlog, the curated path in roadmap.json
-  let techTree = { researched: [], available: [], gated: [], future: [] };
+  let techTree = { roots: { count: 0 }, grown: [], available: [], gated: [], future: [] };
   let roadmapOut = { block: null, steps: [] };
   try {
     const backlogRows = parseBacklog(fs.readFileSync(path.join(ROOT, 'docs', 'agi', 'RESEARCH_BACKLOG.md'), 'utf8'));

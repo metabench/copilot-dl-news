@@ -45,16 +45,21 @@ const recentText = (r) => `${r.correction ? '↺' : '·'} c${r.cycle} — ${r.la
 // rows earn the 💡 (they are exactly the ▶ candidates next-prompt offers). The tree
 // is deliberately not fully visible: '❓ Future Technology' marks the fog of war.
 const TREE_COLS = [
-  { key: 'researched', head: '✓ RESEARCHED' },
+  { key: 'grown', head: '✓ RESEARCHED ON THE TREE', empty: 'none yet — the tree starts here' },
   { key: 'available', head: '💡 RESEARCH AVAILABLE' },
   { key: 'gated', head: '🔒 GATED' },
   { key: 'future', head: '❓ NOT YET REVEALED' }
 ];
+// Everything completed before the tree existed is its ROOTS: real, load-bearing,
+// and deliberately not displayed (owner: don't pigeonhole past work into the tree).
+const rootsText = (roots) =>
+  `🌱 roots — ${roots && roots.count ? roots.count : 0} technologies researched before the tree; not displayed`;
 function techNodeModel(colKey, n) {
   const sub = [];
-  if (colKey === 'researched') {
-    if (n.unlocked && n.unlocked.length) sub.push(`builds on ${n.unlocked.join(' + ')}`);
-    return { cls: 'ps-tech ps-tech--done', title: `${n.id} · ${n.title}`, sub };
+  if (colKey === 'grown') {
+    if (n.researchedOn) sub.push(`researched ${n.researchedOn}`);
+    if (n.buildsOn && n.buildsOn.length) sub.push(`builds on ${n.buildsOn.join(' + ')}`);
+    return { cls: 'ps-tech ps-tech--done', title: `✓ ${n.id} · ${n.title}`, sub };
   }
   if (colKey === 'available') {
     sub.push(`research: ${n.research}`);
@@ -193,13 +198,18 @@ class Status_Widget extends Control {
     if (s.techTree && s.techTree.error) {
       research.add(this._el('div', 'ps-quest-item ps-input', `tech tree unavailable: ${s.techTree.error}`));
     }
+    const rootsLine = this._el('div', 'ps-tree__roots', rootsText(s.techTree && s.techTree.roots));
+    rootsLine.dom.attributes['data-ps-tree-roots'] = 'true';
+    research.add(rootsLine);
     const tree = this._el('div', 'ps-tree');
     for (const col of TREE_COLS) {
       const colBox = this._el('div', 'ps-tree__col');
       colBox.add(this._el('div', 'ps-tree__head', col.head));
       const list = this._el('div', 'ps-tree__list');
       list.dom.attributes['data-ps-tree'] = col.key;
-      for (const n of ((s.techTree && s.techTree[col.key]) || [])) {
+      const items = (s.techTree && s.techTree[col.key]) || [];
+      if (!items.length && col.empty) list.add(this._el('div', 'ps-tech ps-tech--seed', col.empty));
+      for (const n of items) {
         const m = techNodeModel(col.key, n);
         const nodeEl = this._el('div', m.cls);
         nodeEl.add(this._el('div', 'ps-tech__t', m.title));
@@ -321,11 +331,19 @@ class Status_Widget extends Control {
       });
     }
     if (s.techTree) {
+      setText('[data-ps-tree-roots]', rootsText(s.techTree.roots));
       for (const col of TREE_COLS) {
         const list = q(`[data-ps-tree="${col.key}"]`);
         if (!list) continue;
         while (list.firstChild) list.removeChild(list.firstChild);
-        for (const n of (s.techTree[col.key] || [])) {
+        const items = s.techTree[col.key] || [];
+        if (!items.length && col.empty) {
+          const seed = document.createElement('div');
+          seed.className = 'ps-tech ps-tech--seed';
+          seed.textContent = col.empty;
+          list.appendChild(seed);
+        }
+        for (const n of items) {
           const m = techNodeModel(col.key, n);
           const nodeEl = document.createElement('div');
           nodeEl.className = m.cls;
@@ -432,6 +450,8 @@ Status_Widget.css = `
 .ps-road__main { font-size: 12px; font-weight: 600; color: #e8e4d8; }
 .ps-road__sub { font-size: 10px; color: #8a8778; margin-top: 4px; }
 .ps-road__arrow { align-self: center; color: #b8862e; font-size: 16px; flex: 0 0 auto; }
+.ps-tree__roots { font-size: 10px; color: #6b675a; border-bottom: 1px dashed #2e3440; padding-bottom: 6px; margin-bottom: 8px; }
+.ps-tech--seed { border-style: dashed; opacity: 0.5; color: #8a8778; font-size: 10px; text-align: center; }
 .ps-tree { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 @media (max-width: 900px) { .ps-tree { grid-template-columns: repeat(2, 1fr); } }
 .ps-tree__head { font-size: 10px; letter-spacing: 0.12em; color: #8a8778; border-bottom: 1px solid #2e3440; padding-bottom: 4px; margin-bottom: 6px; }
