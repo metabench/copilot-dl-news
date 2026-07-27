@@ -26,7 +26,20 @@
     { "ref": "RB-001", "branch": "agi", "prereqs": ["TR-DEVTOOLS", "CR-DB"] },
     { "ref": "RB-007", "branch": "agi", "prereqs": ["AG-COMPLIANCE", "TR-PROMPT"] },
     { "ref": "RB-015", "branch": "tree", "prereqs": ["TR-PICTURE"] },
-    { "id": "TECH-L3PROOF", "branch": "agi", "title": "Staged-Divergence Proof", "research": "harness base-URL mode + the staged SSR-vs-API divergence that gives L3 observed proof", "prereqs": ["AG-HARNESS", "TR-PAGE"], "state": "available" },
+    { "id": "TECH-TREEREVIEW", "branch": "agi", "title": "Tech Tree & Project Review", "research": "review the project plans and the tree itself; improve, and where needed create, the ideas for upcoming research", "prereqs": ["AG-METHOD", "TR-PROMPT"], "state": "available", "signal": "research-review",
+      "prelim": [
+        "Scope of a review pass: every open/partial backlog row, every tech node on this tree, the roadmap steps, and the fog slots. The output is not a report — it is EDITS: sharpened research texts, corrected prereq edges, new tech nodes, and (rarely) a retired one, each traceable to a reason.",
+        "Idea quality has a measurable proxy here: a research text is good when it names the REMAINDER (what to build next), not the answered question — the c129 rule. A review should rewrite any node whose text a newcomer could not act on tomorrow.",
+        "Sources to mine for NEW tech ideas, in order of signal strength: (1) the ledger's second_order slugs — every earned rule implies a tool that enforces it; (2) defects caught post-ship — each is a missing check wanting to become a node; (3) owed[] items that recur; (4) branch imbalance — a branch whose available list runs dry needs ideation before it needs code.",
+        "Prereq edges are claims, and reviews should re-verify them: does TECH-DASH2B still genuinely combine CR-ENGINE + TR-PAGE, or has the design drifted? An edge nobody believes is worse than no edge.",
+        "Fog promotion is the creative act: a Future Technology slot becomes a named tech when two foundations suggest a combination nobody has written down. Candidate seeds noticed so far: probe results rendered onto the tree nodes themselves (TR-PROBES + TR-PAGE); a crawl-quality scoreboard fed by content intelligence (CR-INTEL + TR-PICTURE); signal-driven research queues generalised beyond this one button (this very node + TR-PROMPT).",
+        "Anti-goal: the review must not inflate the tree. SMAC's discipline applies to ideation too — a node that cannot name its two foundations is not ready to leave the fog."
+      ] },
+    { "id": "TECH-L3PROOF", "branch": "agi", "title": "Staged-Divergence Proof", "research": "harness base-URL mode + the staged SSR-vs-API divergence that gives L3 observed proof", "prereqs": ["AG-HARNESS", "TR-PAGE"], "state": "available",
+      "prelim": [
+        "The gap being closed: L3 (DOM agrees with live API) is reasoned, not observed — a freshly spawned server renders current SSR, so DOM and API agree by construction. The proof needs data to MOVE after boot.",
+        "Sketch: start the server against a fixture ledger, load the page once, append a stanza to the fixture, reload WITHOUT restarting — assert the DOM shows the new count while a frozen page would show the old one. Run it both with and without the c128.5 refresh() line to see the assertion flip."
+      ] },
     { "id": "TECH-CSLIVE", "branch": "crawler", "title": "Crawl-Status Live Checks", "research": "extend the live harness to the crawler's own UI — the page with the most client behaviour", "prereqs": ["AG-HARNESS", "CR-FRONTIER"], "state": "available" },
     { "id": "TECH-P5AUTO", "branch": "crawler", "title": "Place-Hub Refresh Automation", "research": "scheduled place-hub redownload driven by hub staleness", "prereqs": ["CR-FRONTIER", "CR-INTEL"], "state": "available" },
     { "id": "TECH-HEADLINE2", "branch": "crawler", "title": "Frontier Headline Quality II", "research": "push real-headline yield further via shape preference + host density", "prereqs": ["CR-FRONTIER", "CR-INTEL"], "state": "available" },

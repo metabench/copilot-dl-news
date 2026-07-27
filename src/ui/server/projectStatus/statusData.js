@@ -109,6 +109,7 @@ function buildTechTree(backlogRows, roadmap, spec) {
       const row = byId.get(t.ref);
       if (!row) throw new Error(`${owner}: no such backlog row — a ref must point at a real RB id`);
       const node = { id: row.id, title: shortTitle(row.question), prereqs };
+      if (Array.isArray(t.prelim) && t.prelim.length) node.prelim = t.prelim;
       if (row.state === 'done' || row.state === 'superseded') {
         const grownDate = /^\d{4}-\d{2}-\d{2}$/.test(String(row.lastUpdate || '')) && cutoff && row.lastUpdate > cutoff;
         if (grownDate) dest.grown.push({ ...node, researchedOn: row.lastUpdate });
@@ -124,7 +125,14 @@ function buildTechTree(backlogRows, roadmap, spec) {
       if (t.state !== 'available') {
         throw new Error(`${owner}: curated techs may only be "available" — completion belongs in the ledger/backlog, then the node is promoted`);
       }
-      dest.available.push({ id: t.id, title: t.title, research: t.research || '', prereqs });
+      const extra = {};
+      // 'Preliminary Data' (owner 2026-07-27): a tech may carry extensive ideation
+      // about accomplishing it — rendered as a collapsible block on its branch page.
+      if (Array.isArray(t.prelim) && t.prelim.length) extra.prelim = t.prelim;
+      // A signal-bearing tech renders the big lightbulb REQUEST button; the click
+      // lands in data/agi-signals.jsonl and reaches the agent via orient + prompt.
+      if (t.signal) extra.signal = t.signal;
+      dest.available.push({ id: t.id, title: t.title, research: t.research || '', prereqs, ...extra });
     }
   }
 
@@ -223,8 +231,14 @@ function buildStatus() {
     techTree.error = e.message;
   }
 
+  // owner signals — the big-lightbulb queue; pending ones surface here, at orient
+  // (agi-signal probe) and in the generated next-prompt, so a click cannot be missed
+  let pendingSignals = [];
+  try { pendingSignals = require('./signals').pending(); } catch (_) {}
+
   const data = {
     player,
+    pendingSignals,
     stats: {
       cycles: totals.cycles,
       preShipPct: totals.defectsPre + totals.defectsPost

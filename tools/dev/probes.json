@@ -139,6 +139,14 @@
       "timeoutMs": 180000
     },
     {
+      "id": "agi-signal",
+      "description": "the owner's big-lightbulb research signal (cycle 139): a click on a signal-bearing tech node POSTs to the status server, which appends a pending record to data/agi-signals.jsonl. RED here is not breakage - it is the OWNER TALKING: orient cannot pass until the requested research is taken up and acknowledged (node tools/agi/ack-signal.js <id> \"note\"). The same pending records render as a ⚡ OWNER SIGNAL line above the ▶ selection in the generated next-prompt, so the click reaches the agent on both surfaces it provably reads every cycle",
+      "cmd": "node",
+      "args": ["tools/dev/checks/agi-signal.check.js"],
+      "needsServer": false,
+      "timeoutMs": 10000
+    },
+    {
       "id": "workflow-scorecard-ratchet",
       "description": "no workflow task-type with >=5 recorded runs exceeds the cost-to-catch ceiling (turns spent per validation-CONFIRMED real catch) — a degrading/bloating workflow surface (one that stops earning its cost) is a regression, caught at orient. Bootstrapped 2026-07-21 (cycle 48) with 13 labeled runs; diagnosis=0.9, delegation-safety=1.0, equivalence=0.4. See docs/agi/WORKFLOW_MEASUREMENT.md §2 (cost-to-catch is the sound ratchet signal; verdict-accuracy is a diagnostic-to-read, not a gate, because a REFUTED verdict can be the workflow correctly refuting a bad premise)",
       "cmd": "node",

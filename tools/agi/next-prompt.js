@@ -160,7 +160,8 @@ function buildPromptModel({ cycles, status, backlogText }) {
     owed: (status && status.sideQuests) || [],
     decisions: (status && status.playerInput) || [],
     method: collectMethod(cycles),
-    options: backlogCandidates(backlogText)
+    options: backlogCandidates(backlogText),
+    signals: (status && status.pendingSignals) || []
   };
 }
 
@@ -175,6 +176,11 @@ function render(m) {
   if (m.owed.length) {
     L.push('  OWED (from stanzas, closures applied):');
     for (const o of m.owed) L.push(`  ⚠ ${o.label} (from cycle ${o.cycle})`);
+  }
+  // Owner signals PREEMPT the curated pick: a clicked lightbulb is the owner
+  // choosing the next research directly, and the prompt must say so above ▶.
+  for (const s of (m.signals || [])) {
+    L.push(`  ⚡ OWNER SIGNAL (clicked ${s.at}): ${s.tech} — ${s.requested || 'requested via the big lightbulb'} [preempts ▶; ack with node tools/agi/ack-signal.js ${s.id}]`);
   }
   L.push('  ▶ Pick ONE — [CURATE: selection is judgment; candidates = backlog rows in state open/partial]');
   for (const o of m.options) {

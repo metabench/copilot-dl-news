@@ -56,26 +56,70 @@ function prereqChips(prereqs, branches) {
 
 function node(cls, inner) { return `<div class="tp-node ${cls}">${inner}</div>`; }
 
+/** 'Preliminary Data' — a tech's ideation, collapsed until the reader wants it. */
+function prelimBlock(prelim) {
+  if (!prelim || !prelim.length) return '';
+  const notes = prelim.map((p) => `<p class="tp-prelim__p">${esc(p)}</p>`).join('');
+  return `<details class="tp-prelim"><summary>PRELIMINARY DATA — ${prelim.length} note${prelim.length === 1 ? '' : 's'}</summary>${notes}</details>`;
+}
+
+/**
+ * The big lightbulb REQUEST button for a signal-bearing tech. A click POSTs to
+ * /api/research-signal; the agent picks the signal up at its next orient (the
+ * agi-signal probe goes red + the next-prompt carries a ⚡ line). If a matching
+ * signal is already pending, the button renders in its "requested" state.
+ */
+function signalButton(tech, pendingSignals) {
+  const already = (pendingSignals || []).find((s) => s.tech === tech.id && s.status === 'pending');
+  if (already) {
+    return `<div class="tp-signal tp-signal--sent">${ICONS.iceBulb(40)}<div><div class="tp-signal__t">RESEARCH REQUESTED</div><div class="tp-signal__s">signal ${esc(already.id)} pending — the agent picks it up at its next orient</div></div></div>`;
+  }
+  return `<button class="tp-signal" data-signal-tech="${esc(tech.id)}" data-signal-req="${esc(tech.research || tech.title)}" type="button">${ICONS.iceBulb(40)}<div><div class="tp-signal__t">REQUEST THIS RESEARCH</div><div class="tp-signal__s">sends a signal the agent reads at its next orient</div></div></button>`;
+}
+
+const SIGNAL_SCRIPT = `<script>
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('button.tp-signal');
+  if (!btn) return;
+  btn.disabled = true;
+  fetch('/api/research-signal', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tech: btn.getAttribute('data-signal-tech'), requested: btn.getAttribute('data-signal-req') })
+  }).then(function (r) { return r.json(); }).then(function (j) {
+    btn.classList.add('tp-signal--sent');
+    btn.querySelector('.tp-signal__t').textContent = j.ok ? 'RESEARCH REQUESTED' : 'SIGNAL FAILED';
+    btn.querySelector('.tp-signal__s').textContent = j.ok
+      ? ('signal ' + j.id + ' pending — the agent picks it up at its next orient')
+      : (j.error || 'unknown error');
+  }).catch(function () {
+    btn.disabled = false;
+    btn.querySelector('.tp-signal__s').textContent = 'send failed — is the server up?';
+  });
+});
+</script>`;
+
 function tierColumn(title, bodyHtml, hint) {
   return `<section class="tp-tier"><h2 class="tp-tier__head">${esc(title)}</h2>${hint ? `<div class="tp-tier__hint">${esc(hint)}</div>` : ''}<div class="tp-tier__list">${bodyHtml}</div></section>`;
 }
 
-function renderTechPage(branchKey, techTree) {
+function renderTechPage(branchKey, techTree, opts = {}) {
   const branches = techTree.branches || [];
   const b = branches.find((x) => x.key === branchKey);
   if (!b) return null;
   const icon = ICONS[b.icon] || (() => '');
+  const pendingSignals = opts.pendingSignals || [];
 
   const rootsHtml = b.roots.map((r) => node('tp-node--root',
     `<div class="tp-node__t">${esc(r.id)} · ${esc(r.title)}</div><div class="tp-node__s">${esc(r.note)}</div>`)).join('')
     || node('tp-node--seed', 'no foundations recorded for this branch');
 
   const grownHtml = b.grown.map((g) => node('tp-node--grown',
-    `<div class="tp-node__t">✓ ${esc(g.id)} · ${esc(g.title)}</div><div class="tp-node__s">researched ${esc(g.researchedOn)}</div>${prereqChips(g.prereqs, branches)}`)).join('');
+    `<div class="tp-node__t">✓ ${esc(g.id)} · ${esc(g.title)}</div><div class="tp-node__s">researched ${esc(g.researchedOn)}</div>${prereqChips(g.prereqs, branches)}${prelimBlock(g.prelim)}`)).join('');
 
   const availHtml = b.available.map((a) => node('tp-node--avail',
     `<div class="tp-node__t">${branchKey === 'agi' ? ICONS.iceBulb(15) : '💡'} ${esc(a.id)} · ${esc(a.title)}</div>` +
-    `<div class="tp-node__s">research: ${esc(a.research)}</div>${prereqChips(a.prereqs, branches)}`)).join('')
+    `<div class="tp-node__s">research: ${esc(a.research)}</div>${prereqChips(a.prereqs, branches)}` +
+    `${a.signal ? signalButton(a, pendingSignals) : ''}${prelimBlock(a.prelim)}`)).join('')
     || node('tp-node--seed', 'no research currently available on this branch');
 
   const gatedHtml = b.gated.map((g) => node('tp-node--gated',
@@ -107,6 +151,7 @@ ${navBar(branchKey, branches)}
 </main>
 <div class="tp-others">${others}</div>
 <footer class="tp-foot">rendered per request from tech-tree.json (structure) · RESEARCH_BACKLOG states · roadmap.json cutoff · reload to refresh — this page cannot go stale${techTree.absorbed ? ` · ${techTree.absorbed} pre-tree research items absorbed into the foundations` : ''}</footer>
+${SIGNAL_SCRIPT}
 </body></html>`;
 }
 
@@ -136,6 +181,16 @@ const CSS = `
 .tp-node--gated { border-left-color: #b34d4d; opacity: 0.85; }
 .tp-node--fog { border-style: dashed; opacity: 0.45; text-align: center; }
 .tp-node--seed { border-style: dashed; opacity: 0.55; font-size: 10px; color: #8a8778; text-align: center; }
+.tp-signal { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px; padding: 10px 12px; background: #0c1218; border: 2px solid #4d9ec8; border-radius: 6px; color: #e8f4fb; cursor: pointer; text-align: left; font-family: inherit; box-shadow: 0 0 14px rgba(77,158,200,0.35); }
+.tp-signal:hover:not(:disabled) { box-shadow: 0 0 22px rgba(77,158,200,0.55); background: #0e1620; }
+.tp-signal:disabled { cursor: default; }
+.tp-signal--sent { border-style: dashed; box-shadow: none; opacity: 0.85; }
+.tp-signal__t { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; }
+.tp-signal__s { font-size: 9.5px; color: #8fb8cf; margin-top: 3px; }
+.tp-prelim { margin-top: 8px; border-top: 1px dashed #2e3440; padding-top: 6px; }
+.tp-prelim summary { font-size: 9px; letter-spacing: 0.14em; color: #6b675a; cursor: pointer; }
+.tp-prelim summary:hover { color: #8a8778; }
+.tp-prelim__p { font-size: 10px; color: #a39f8f; margin: 6px 0 0; line-height: 1.5; }
 .tp-others { display: flex; gap: 10px; padding: 4px 22px 10px; flex-wrap: wrap; }
 .tp-cross { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: #8a8778; text-decoration: none; border: 1px dashed; border-radius: 4px; padding: 5px 9px; }
 .tp-cross:hover { color: #e8e4d8; }

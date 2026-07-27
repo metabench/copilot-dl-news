@@ -54,6 +54,28 @@ async function main() {
       }
     });
 
+    // The big-lightbulb signal (owner 2026-07-27): a click on a signal-bearing
+    // tech node POSTs here; the record lands in data/agi-signals.jsonl and reaches
+    // the agent through the orient probe + the generated next-prompt.
+    const signals = require('./signals');
+    router.set_route('/api/research-signal', null, (req, res) => {
+      if (req.method !== 'POST') { res.writeHead(405); res.end('POST only'); return; }
+      let body = '';
+      req.on('data', (c) => { body += c; if (body.length > 4096) req.destroy(); });
+      req.on('end', () => {
+        try {
+          const { tech, requested } = JSON.parse(body || '{}');
+          if (!tech) { res.writeHead(400); res.end('tech required'); return; }
+          const rec = signals.raise(String(tech).slice(0, 60), requested);
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+          res.end(JSON.stringify({ ok: true, id: rec.id, at: rec.at }));
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      });
+    });
+
     // SMAC-style branch pages (owner 2026-07-27): /tech/agi, /tech/tree,
     // /tech/crawler. RENDERED PER REQUEST inside the handler — unlike the main
     // page's publish-once SSR, these can never serve a boot-time snapshot.
@@ -61,7 +83,8 @@ async function main() {
     for (const branchKey of ['agi', 'tree', 'crawler']) {
       router.set_route(`/tech/${branchKey}`, null, (req, res) => {
         try {
-          const html = renderTechPage(branchKey, buildStatus().techTree);
+          const st = buildStatus();
+          const html = renderTechPage(branchKey, st.techTree, { pendingSignals: st.pendingSignals });
           if (!html) { res.writeHead(404); res.end('unknown branch'); return; }
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
           res.end(html);
