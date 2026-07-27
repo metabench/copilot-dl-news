@@ -30,8 +30,11 @@ function main() {
     process.exit(1);
   }
   const { cycles } = parseCycleStanzas(fs.readFileSync(DEFAULT_LEDGER, 'utf8'));
-  const expected = renderSvg(computeSeries(cycles), loadAnnotations(DEFAULT_ANNOTATIONS));
-  const committed = fs.readFileSync(DEFAULT_OUT, 'utf8');
+  // CRLF-normalize both sides: git autocrlf may rewrite the working-copy SVG's
+  // line endings on checkout, which is not staleness. Any content change still differs.
+  const norm = (s) => s.replace(/\r\n/g, '\n');
+  const expected = norm(renderSvg(computeSeries(cycles), loadAnnotations(DEFAULT_ANNOTATIONS)));
+  const committed = norm(fs.readFileSync(DEFAULT_OUT, 'utf8'));
   if (committed === expected) {
     console.log(`✅ progress.svg is current (${cycles.length} cycles, byte-identical to a fresh render).`);
     return;
