@@ -181,8 +181,8 @@ const CSS = `
 .tp-node--gated { border-left-color: #b34d4d; opacity: 0.85; }
 .tp-node--fog { border-style: dashed; opacity: 0.45; text-align: center; }
 .tp-node--seed { border-style: dashed; opacity: 0.55; font-size: 10px; color: #8a8778; text-align: center; }
-.tp-signal { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px; padding: 10px 12px; background: #0c1218; border: 2px solid #4d9ec8; border-radius: 6px; color: #e8f4fb; cursor: pointer; text-align: left; font-family: inherit; box-shadow: 0 0 14px rgba(77,158,200,0.35); }
-.tp-signal:hover:not(:disabled) { box-shadow: 0 0 22px rgba(77,158,200,0.55); background: #0e1620; }
+.tp-signal { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px; padding: 10px 12px; background: #0c1218; border: 2px solid __ACCENT__; border-radius: 6px; color: #e8f4fb; cursor: pointer; text-align: left; font-family: inherit; box-shadow: 0 0 14px color-mix(in srgb, __ACCENT__ 40%, transparent); }
+.tp-signal:hover:not(:disabled) { box-shadow: 0 0 22px color-mix(in srgb, __ACCENT__ 60%, transparent); background: #0e1620; }
 .tp-signal:disabled { cursor: default; }
 .tp-signal--sent { border-style: dashed; box-shadow: none; opacity: 0.85; }
 .tp-signal__t { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; }
