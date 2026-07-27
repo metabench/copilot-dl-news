@@ -12,6 +12,7 @@
  */
 
 const path = require('path');
+const fs = require('fs');
 // Sibling-path require; jsgui3-server is consume-only per owner ruling 2026-07-27.
 const jsgui_server = require(path.resolve(__dirname, '..', '..', '..', '..', '..', 'jsgui3-server'));
 const { Server } = jsgui_server;
@@ -37,6 +38,33 @@ async function main() {
 
   // Never start immediately — wait for 'ready' (audit lifecycle rule).
   server.on('ready', () => {
+    // Custom routes via the server router (same API the framework uses internally:
+    // set_route(route, responder|null, (req, res) => ...)).
+    const router = server.server_router;
+
+    // Live game-state JSON for the page's in-place refresh (no reload).
+    router.set_route('/api/status', null, (req, res) => {
+      try {
+        const body = JSON.stringify(buildStatus());
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(body);
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+
+    // The committed progress SVG, embedded by the page's HISTORY panel. Served from
+    // disk each request so a regenerated picture shows on the next refresh.
+    const svg_path = path.resolve(__dirname, '..', '..', '..', '..', 'docs', 'agi', 'progress', 'progress.svg');
+    router.set_route('/progress.svg', null, (req, res) => {
+      fs.readFile(svg_path, (err, buf) => {
+        if (err) { res.writeHead(404); res.end('no progress.svg yet — run tools/agi/progress-svg.js'); return; }
+        res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-store' });
+        res.end(buf);
+      });
+    });
+
     server.start(port, (err) => {
       if (err) { console.error('[project-status] start failed:', err); process.exit(1); }
       console.log(`[project-status] ready on http://127.0.0.1:${port}/`);

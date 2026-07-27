@@ -37,7 +37,7 @@ const PLAYER_INPUT_REQUIRED = [
 let cache = { at: 0, data: null };
 
 function humanize(s) {
-  return String(s || '').replace(/[_+]/g, ' ').replace(/\s+/g, ' ').trim();
+  return String(s || '').replace(/[-_+]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function buildStatus() {

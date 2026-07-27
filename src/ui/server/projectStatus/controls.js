@@ -1,34 +1,43 @@
 'use strict';
 
 /**
- * controls.js — project-status page controls (isomorphic esbuild entry).
+ * controls.js — project-status page controls (isomorphic esbuild entry). v2.
  *
- * Uses the full jsgui3 trio per the owner ask:
- *   server: jsgui3-html composes + jsgui3-server SSRs and bundles this file;
- *   browser: jsgui3-client (required below) SELF-ACTIVATES on window load —
- *   it builds a Client_Page_Context, merges jsgui.controls, and reattaches by
- *   data-jsgui-id/type. Custom controls therefore must be REGISTERED on
- *   jsgui.controls before load fires (done at the bottom). Missing that
- *   registration + the jsgui3-client require was why activation silently
- *   no-opped on the first build of this page.
+ * jsgui3 trio: jsgui3-html composes server-side, jsgui3-server SSRs + bundles this
+ * file, jsgui3-client (required in the browser branch) SELF-ACTIVATES on window
+ * load and reattaches by data-jsgui-id/type through jsgui.controls — hence the
+ * registrations at the bottom. (Omitting either was a proven silent no-op.)
  *
- * Data flow: server.js injects Project_Status_Page.get_status before render;
- * compose runs only server-side (!spec.el). statusData.js (fs/git) is never
- * required from here, so the browser bundle stays clean.
+ * v2: in-place refresh. Key nodes carry data-ps-* attributes at compose time;
+ * activate() fetches /api/status (60 s interval + the REFRESH button) and updates
+ * the DOM in place — no page reload, matching the ThroughputStrip idiom of
+ * "update the cells, don't re-render". CHIP_DEFS is shared between server compose
+ * and client apply so the two sides cannot drift. A HISTORY panel embeds the
+ * committed progress SVG (served at /progress.svg, cache-busted on refresh).
  *
- * Design per owner (2026-07-27, refined mid-review): game-UI VISUAL language —
- * chunky panels, striped progress bar, status cards, badges — but plain
- * engineering VOCABULARY. Palette = the validated progress-SVG set.
+ * Visual design: game-UI look, plain engineering vocabulary (owner, 2026-07-27).
  */
 
 const IS_BROWSER = typeof window !== 'undefined' && typeof document !== 'undefined';
-// Both branches are statically bundled by esbuild; only one executes per environment.
-// jsgui3-client/jsgui3-server are consume-only siblings (owner ruling 2026-07-27).
+// Both branches bundle statically; only one executes per environment.
 const jsgui = IS_BROWSER
   ? require('../../../../../jsgui3-client/client')
   : require('jsgui3-html');
 const { Control } = jsgui;
 const Active_HTML_Document = require('../../../../../jsgui3-server/controls/Active_HTML_Document');
+
+// Shared by server compose AND client apply — one definition, no drift.
+const CHIP_DEFS = [
+  { key: 'cycles', label: 'cycles recorded', fmt: (st) => String(st.cycles) },
+  { key: 'preShipPct', label: 'defects caught pre-ship', fmt: (st) => `${st.preShipPct}%` },
+  { key: 'defectsPre', label: 'defects found', fmt: (st) => String(st.defectsPre) },
+  { key: 'corrections', label: 'corrections issued', fmt: (st) => String(st.corrections) },
+  { key: 'pages', label: 'pages archived', fmt: (st) => `${(st.pages / 1000).toFixed(1)}k` }
+];
+const xpLabelText = (p) =>
+  `${p.xpPerLevel - p.xpInLevel} to the next ${p.xpPerLevel}-improvement milestone · data through ${p.dataThrough}`;
+const owedText = (q) => `▸ ${q.label} (from cycle ${q.cycle})`;
+const recentText = (r) => `${r.correction ? '↺' : '·'} c${r.cycle} — ${r.label}`;
 
 class Status_Widget extends Control {
   constructor(spec = {}) {
@@ -48,32 +57,34 @@ class Status_Widget extends Control {
   compose(s) {
     if (!s) { this.add(this._el('p', 'ps-empty', 'No status data — is the ledger readable?')); return; }
 
-    // ---- header: totals + progress toward the next improvement milestone ----
+    // ---- header ----
     const bar = this._el('header', 'ps-player');
     bar.add(this._el('div', 'ps-studio', 'PROJECT STATUS — news-crawler ecosystem'));
     const lvl = this._el('div', 'ps-level');
-    lvl.add(this._el('span', 'ps-level__num', String(s.player.xpTotal)));
+    const big = this._el('span', 'ps-level__num', String(s.player.xpTotal));
+    big.dom.attributes['data-ps-total'] = 'true';
+    lvl.add(big);
     lvl.add(this._el('span', 'ps-level__title', 'verified improvements'));
     bar.add(lvl);
     const xp = this._el('div', 'ps-xp');
     const fill = this._el('div', 'ps-xp__fill');
+    fill.dom.attributes['data-ps-xp-fill'] = 'true';
     fill.dom.attributes.style = `width:${Math.round((s.player.xpInLevel / s.player.xpPerLevel) * 100)}%;`;
     xp.add(fill);
     bar.add(xp);
-    bar.add(this._el('div', 'ps-xp__label',
-      `${s.player.xpPerLevel - s.player.xpInLevel} to the next ${s.player.xpPerLevel}-improvement milestone · data through ${s.player.dataThrough}`));
+    const xpl = this._el('div', 'ps-xp__label', xpLabelText(s.player));
+    xpl.dom.attributes['data-ps-xp-label'] = 'true';
+    bar.add(xpl);
     this.add(bar);
 
     // ---- stat chips ----
     const chips = this._el('div', 'ps-chips');
-    for (const [v, l] of [
-      [s.stats.cycles, 'cycles recorded'], [`${s.stats.preShipPct}%`, 'defects caught pre-ship'],
-      [s.stats.defectsPre, 'defects found'], [s.stats.corrections, 'corrections issued'],
-      [`${(s.stats.pages / 1000).toFixed(1)}k`, 'pages archived']
-    ]) {
+    for (const def of CHIP_DEFS) {
       const chip = this._el('div', 'ps-chip');
-      chip.add(this._el('span', 'ps-chip__v', v));
-      chip.add(this._el('span', 'ps-chip__l', l));
+      const v = this._el('span', 'ps-chip__v', def.fmt(s.stats));
+      v.dom.attributes['data-ps-chip'] = def.key;
+      chip.add(v);
+      chip.add(this._el('span', 'ps-chip__l', def.label));
       chips.add(chip);
     }
     this.add(chips);
@@ -84,18 +95,23 @@ class Status_Widget extends Control {
     const work = this._el('section', 'ps-panel');
     work.add(this._el('h2', 'ps-h', 'WORK'));
     work.add(this._el('div', 'ps-quest-tag', 'CURRENT FOCUS'));
-    work.add(this._el('div', 'ps-quest-main', `cycle ${s.mainQuest.cycle}: ${s.mainQuest.label}`));
-    if (s.sideQuests.length) {
-      work.add(this._el('div', 'ps-quest-tag', 'FOLLOW-UPS OWED'));
-      for (const q of s.sideQuests) work.add(this._el('div', 'ps-quest-item', `▸ ${q.label} (from cycle ${q.cycle})`));
-    }
+    const focus = this._el('div', 'ps-quest-main', `cycle ${s.mainQuest.cycle}: ${s.mainQuest.label}`);
+    focus.dom.attributes['data-ps-focus'] = 'true';
+    work.add(focus);
+    work.add(this._el('div', 'ps-quest-tag', 'FOLLOW-UPS OWED'));
+    // Containers always exist (even when empty) so the client can repopulate them.
+    const owedBox = this._el('div', 'ps-list');
+    owedBox.dom.attributes['data-ps-owed'] = 'true';
+    if (s.sideQuests.length) for (const q of s.sideQuests) owedBox.add(this._el('div', 'ps-quest-item', owedText(q)));
+    else owedBox.add(this._el('div', 'ps-quest-item ps-muted', 'none — all clear'));
+    work.add(owedBox);
     work.add(this._el('div', 'ps-quest-tag ps-blink', 'AWAITING OWNER DECISION'));
     for (const p of s.playerInput) work.add(this._el('div', 'ps-quest-item ps-input', p));
     work.add(this._el('div', 'ps-quest-tag', 'RECENT CYCLES'));
-    for (const r of s.recent) {
-      work.add(this._el('div', `ps-quest-item${r.correction ? ' ps-retcon' : ''}`,
-        `${r.correction ? '↺' : '·'} c${r.cycle} — ${r.label}`));
-    }
+    const recentBox = this._el('div', 'ps-list');
+    recentBox.dom.attributes['data-ps-recent'] = 'true';
+    for (const r of s.recent) recentBox.add(this._el('div', `ps-quest-item${r.correction ? ' ps-retcon' : ''}`, recentText(r)));
+    work.add(recentBox);
     cols.add(work);
 
     const modules = this._el('section', 'ps-panel');
@@ -103,12 +119,15 @@ class Status_Widget extends Control {
     const grid = this._el('div', 'ps-party');
     for (const m of s.party) {
       const card = this._el('div', `ps-card${m.danger ? ' ps-card--danger' : ''}`);
+      card.dom.attributes['data-ps-card'] = m.name;
       card.add(this._el('div', 'ps-card__name', m.name));
       card.add(this._el('div', 'ps-card__role', m.role));
       const meta = this._el('div', 'ps-card__meta');
       meta.add(this._el('span', `ps-badge${m.status === 'ACTIVE' ? '' : ' ps-badge--dim'}`, m.status));
-      meta.add(this._el('span', `ps-cond${m.danger ? ' ps-cond--danger' : ''}`,
-        m.danger ? `⚠ ${m.condition}` : m.condition));
+      const cond = this._el('span', `ps-cond${m.danger ? ' ps-cond--danger' : ''}`,
+        m.danger ? `⚠ ${m.condition}` : m.condition);
+      cond.dom.attributes['data-ps-cond'] = m.name;
+      meta.add(cond);
       card.add(meta);
       if (m.lastCommit) card.add(this._el('div', 'ps-card__commit', `last commit ${m.lastCommit}`));
       grid.add(card);
@@ -116,6 +135,16 @@ class Status_Widget extends Control {
     modules.add(grid);
     cols.add(modules);
     this.add(cols);
+
+    // ---- history: the committed progress SVG, same data substrate ----
+    const hist = this._el('section', 'ps-panel');
+    hist.add(this._el('h2', 'ps-h', 'HISTORY'));
+    const img = this._el('img', 'ps-history__img');
+    img.dom.attributes.src = '/progress.svg';
+    img.dom.attributes.alt = 'Cycle history: cumulative verified improvements and defects caught, rendered from the ledger';
+    img.dom.attributes['data-ps-history'] = 'true';
+    hist.add(img);
+    this.add(hist);
 
     // ---- milestones ----
     const mile = this._el('section', 'ps-panel');
@@ -136,18 +165,86 @@ class Status_Widget extends Control {
     const btn = this._el('button', 'ps-refresh', '↻ REFRESH');
     btn.dom.attributes['data-ps-refresh'] = 'true';
     foot.add(btn);
+    const stamp = this._el('span', 'ps-stamp', '');
+    stamp.dom.attributes['data-ps-stamp'] = 'true';
+    foot.add(stamp);
     this.add(foot);
+  }
+
+  // Apply fresh /api/status data to the existing DOM — no reload, no re-render.
+  _apply(s) {
+    const root = this.dom.el;
+    if (!root || !s || !s.player) return;
+    const q = (sel) => root.querySelector(sel);
+    const setText = (sel, text) => { const el = q(sel); if (el) el.textContent = text; };
+
+    setText('[data-ps-total]', String(s.player.xpTotal));
+    const fill = q('[data-ps-xp-fill]');
+    if (fill) fill.style.width = `${Math.round((s.player.xpInLevel / s.player.xpPerLevel) * 100)}%`;
+    setText('[data-ps-xp-label]', xpLabelText(s.player));
+    for (const def of CHIP_DEFS) setText(`[data-ps-chip="${def.key}"]`, def.fmt(s.stats));
+    setText('[data-ps-focus]', `cycle ${s.mainQuest.cycle}: ${s.mainQuest.label}`);
+
+    const rebuild = (sel, items, build, emptyText) => {
+      const box = q(sel);
+      if (!box) return;
+      while (box.firstChild) box.removeChild(box.firstChild);
+      if (!items.length && emptyText) {
+        const d = document.createElement('div');
+        d.className = 'ps-quest-item ps-muted';
+        d.textContent = emptyText;
+        box.appendChild(d);
+        return;
+      }
+      for (const it of items) box.appendChild(build(it));
+    };
+    rebuild('[data-ps-owed]', s.sideQuests, (it) => {
+      const d = document.createElement('div');
+      d.className = 'ps-quest-item';
+      d.textContent = owedText(it);
+      return d;
+    }, 'none — all clear');
+    rebuild('[data-ps-recent]', s.recent, (it) => {
+      const d = document.createElement('div');
+      d.className = `ps-quest-item${it.correction ? ' ps-retcon' : ''}`;
+      d.textContent = recentText(it);
+      return d;
+    }, null);
+
+    for (const m of s.party) {
+      const cond = q(`[data-ps-cond="${m.name}"]`);
+      if (cond) {
+        cond.textContent = m.danger ? `⚠ ${m.condition}` : m.condition;
+        cond.className = `ps-cond${m.danger ? ' ps-cond--danger' : ''}`;
+      }
+      const card = q(`[data-ps-card="${m.name}"]`);
+      if (card) card.className = `ps-card${m.danger ? ' ps-card--danger' : ''}`;
+    }
+
+    const img = q('[data-ps-history]');
+    if (img) img.src = `/progress.svg?t=${Date.now()}`; // regenerated picture shows next refresh
+    setText('[data-ps-stamp]', `updated ${new Date().toLocaleTimeString()}`);
   }
 
   activate() {
     if (!this.__active) {
       super.activate();
-      // Visible proof the client bundle activated (checked by the verification pass).
+      // Visible proof activation ran (checked by the verification pass).
       this.add_class('ps-client-active');
+      const refresh = () => {
+        fetch('/api/status', { cache: 'no-store' })
+          .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+          .then((s) => this._apply(s))
+          .catch(() => {
+            const el = this.dom.el && this.dom.el.querySelector('[data-ps-stamp]');
+            if (el) el.textContent = 'refresh failed — server away?';
+          });
+      };
       this.add_dom_event_listener('click', (e) => {
         const t = e && (e.target || e.srcElement);
-        if (t && t.getAttribute && t.getAttribute('data-ps-refresh')) window.location.reload();
+        if (t && t.getAttribute && t.getAttribute('data-ps-refresh')) refresh();
       });
+      setInterval(refresh, 60000);
     }
   }
 }
@@ -176,6 +273,7 @@ Status_Widget.css = `
 .ps-quest-item { font-size: 12px; color: #b9b4a4; padding: 2px 0 2px 8px; }
 .ps-quest-item.ps-input { color: #e8e4d8; border-left: 3px solid #b34d4d; margin: 2px 0; }
 .ps-quest-item.ps-retcon { color: #b34d4d; }
+.ps-muted { color: #6b675a; font-style: italic; }
 .ps-blink { color: #b34d4d; animation: ps-blink 1.4s steps(2) infinite; }
 @keyframes ps-blink { 50% { opacity: 0.35; } }
 .ps-party { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
@@ -189,14 +287,16 @@ Status_Widget.css = `
 .ps-cond { font-size: 10px; color: #8a8778; }
 .ps-cond--danger { color: #b34d4d; font-weight: 700; }
 .ps-card__commit { font-size: 9px; color: #6b675a; margin-top: 5px; }
+.ps-history__img { display: block; width: 100%; height: auto; border: 2px solid #2e3440; border-radius: 6px; background: #101216; }
 .ps-ach { display: flex; gap: 10px; flex-wrap: wrap; }
 .ps-ach__badge { border: 2px solid #b8862e; border-radius: 6px; padding: 8px 12px; background: #12151a; min-width: 150px; }
 .ps-ach__icon { font-size: 18px; color: #b8862e; }
 .ps-ach__label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; }
 .ps-ach__detail { font-size: 10px; color: #8a8778; }
-.ps-foot { font-size: 10px; color: #6b675a; margin-top: 4px; display: flex; align-items: center; gap: 10px; }
+.ps-foot { font-size: 10px; color: #6b675a; margin-top: 4px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .ps-refresh { background: #171a20; color: #b8862e; border: 2px solid #b8862e; border-radius: 4px; font-size: 10px; letter-spacing: 0.1em; padding: 4px 10px; cursor: pointer; }
 .ps-refresh:hover { background: #b8862e; color: #0c0e11; }
+.ps-stamp { color: #8a8778; font-variant-numeric: tabular-nums; }
 `;
 
 class Project_Status_Page extends Active_HTML_Document {
@@ -214,9 +314,8 @@ class Project_Status_Page extends Active_HTML_Document {
 // Injected by server.js before rendering; stays null in the browser bundle.
 Project_Status_Page.get_status = null;
 
-// Register for client-side reattachment: jsgui3-client's window-load activation
-// resolves DOM nodes by data-jsgui-type through jsgui.controls. Register both key
-// casings — the lookup casing differs between paths, and the extra key is harmless.
+// Registration for client reattachment — jsgui3-client resolves data-jsgui-type
+// through jsgui.controls; both key casings registered (lookup casing varies).
 jsgui.controls = jsgui.controls || {};
 jsgui.controls.status_widget = Status_Widget;
 jsgui.controls.Status_Widget = Status_Widget;
