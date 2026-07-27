@@ -20,8 +20,8 @@ const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const {
-  parseCycleStanzas, computeSeries, renderSvg, loadAnnotations,
-  DEFAULT_LEDGER, DEFAULT_OUT, DEFAULT_ANNOTATIONS
+  parseCycleStanzas, computeSeries, renderSvg, loadAnnotations, loadRepoActivity,
+  DEFAULT_LEDGER, DEFAULT_OUT, DEFAULT_ANNOTATIONS, DEFAULT_ACTIVITY
 } = require(path.join(ROOT, 'tools', 'agi', 'progress-svg.js'));
 
 function main() {
@@ -33,7 +33,9 @@ function main() {
   // CRLF-normalize both sides: git autocrlf may rewrite the working-copy SVG's
   // line endings on checkout, which is not staleness. Any content change still differs.
   const norm = (s) => s.replace(/\r\n/g, '\n');
-  const expected = norm(renderSvg(computeSeries(cycles), loadAnnotations(DEFAULT_ANNOTATIONS)));
+  // all three inputs are COMMITTED files — the repo-activity snapshot keeps live git
+  // state out of the render (see tools/agi/repo-activity.js), preserving determinism
+  const expected = norm(renderSvg(computeSeries(cycles), loadAnnotations(DEFAULT_ANNOTATIONS), loadRepoActivity(DEFAULT_ACTIVITY)));
   const committed = norm(fs.readFileSync(DEFAULT_OUT, 'utf8'));
   if (committed === expected) {
     console.log(`✅ progress.svg is current (${cycles.length} cycles, byte-identical to a fresh render).`);
@@ -41,7 +43,7 @@ function main() {
   }
   console.log('❌ progress.svg is STALE — the ledger/annotations changed after the last render.');
   console.log(`   committed ${committed.length} bytes vs expected ${expected.length} bytes.`);
-  console.log('   Fix: node tools/agi/progress-svg.js   (the close-the-cycle ritual includes this)');
+  console.log('   Fix: node tools/agi/repo-activity.js && node tools/agi/progress-svg.js   (the close-the-cycle ritual includes this)');
   process.exit(1);
 }
 

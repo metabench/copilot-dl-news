@@ -35,6 +35,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const DEFAULT_LEDGER = path.join(ROOT, 'docs', 'agi', 'IMPROVEMENT_LEDGER.md');
 const DEFAULT_OUT = path.join(ROOT, 'docs', 'agi', 'progress', 'progress.svg');
 const DEFAULT_ANNOTATIONS = path.join(ROOT, 'docs', 'agi', 'progress', 'annotations.json');
+const DEFAULT_ACTIVITY = path.join(ROOT, 'docs', 'agi', 'progress', 'repo-activity.json');
 
 // ---- data ------------------------------------------------------------------
 
@@ -99,8 +100,22 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 const fmtK = (n) => (n >= 10000 ? (n / 1000).toFixed(1) + 'k' : String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','));
 const r1 = (n) => Math.round(n * 10) / 10;
 
-function renderSvg({ rows, totals }, annotations = []) {
-  const W = 980, H = 664, PAD = 28;
+/** Enumerate YYYY-MM-DD dates from..to inclusive (UTC math on data dates — deterministic). */
+function enumDays(from, to) {
+  const out = [];
+  let t = Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10));
+  const end = Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10));
+  while (t <= end && out.length < 400) { out.push(new Date(t).toISOString().slice(0, 10)); t += 86400000; }
+  return out;
+}
+
+function renderSvg({ rows, totals }, annotations = [], activity = null) {
+  const W = 980, PAD = 28;
+  // repo lanes (Workflow v3, cycle 127) render only when a committed snapshot exists —
+  // without one the output is byte-identical to the pre-lanes layout (backward compat).
+  const lanes = activity && activity.window && Array.isArray(activity.repos) && activity.repos.length ? activity : null;
+  const laneStride = 16, laneY0 = 668;
+  const H = lanes ? laneY0 + lanes.repos.length * laneStride + 46 : 664;
   const s = [];
   s.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="AGI loop progress dashboard">`);
   s.push(`<rect width="${W}" height="${H}" fill="${C.bg}"/>`);
@@ -190,9 +205,46 @@ function renderSvg({ rows, totals }, annotations = []) {
   rows.forEach((r, i) => { if (i % tickEvery === 0 || i === rows.length - 1) T(xi(i), bBot + 14, String(r.id), 9, C.muted, 'text-anchor="middle"'); });
   s.push(`<line x1="${x0}" y1="${bBot}" x2="${x1}" y2="${bBot}" stroke="${C.axis}" stroke-width="1"/>`);
 
+  // ---- repo activity lanes (from the committed repo-activity.json snapshot) ----
+  if (lanes) {
+    const days = enumDays(lanes.window.from, lanes.window.to);
+    const gX0 = 262, gW = x1 - gX0, cellW = gW / Math.max(days.length, 1);
+    const cw = r1(Math.max(1, cellW - (cellW > 6 ? 2 : 0.5)));
+    T(PAD, laneY0 - 12, 'Repo activity — commits landed per day', 13, C.ink, 'font-weight="600"');
+    T(PAD + 268, laneY0 - 12, `${lanes.window.from} → ${lanes.window.to} · landing date, not work date (bulk catch-up commits cluster)`, 10, C.muted);
+    const maxCount = Math.max(1, ...lanes.repos.flatMap((r) => (r.days || []).map(([, n]) => n)));
+    lanes.repos.forEach((r, k) => {
+      const y = laneY0 + k * laneStride;
+      const active = (r.total || 0) > 0;
+      T(gX0 - 10, y + 11, r.name, 10, active ? C.ink : C.muted, `text-anchor="end"${r.status === 'consume-only' ? ' font-style="italic"' : ''}`);
+      if (r.note) {
+        // an unversioned in-scope repo is the case that most needs to stay visible
+        s.push(`<rect x="${gX0}" y="${y}" width="${r1(gW)}" height="14" rx="3" fill="none" stroke="${C.red}" stroke-width="1" stroke-dasharray="4,3" opacity="0.7"/>`);
+        T(gX0 + 8, y + 11, `${r.note} — not in the record`, 9, C.red, 'opacity="0.85"');
+        return;
+      }
+      const byDay = new Map(r.days || []);
+      days.forEach((d, i) => {
+        const x = r1(gX0 + i * cellW), n = byDay.get(d) || 0;
+        if (n > 0) {
+          const op = r1(0.3 + 0.7 * (n / maxCount));
+          s.push(`<rect x="${x}" y="${y}" width="${cw}" height="14" rx="2" fill="${C.gold}" opacity="${op}"><title>${esc(r.name)} · ${d} · ${n} commit${n === 1 ? '' : 's'}</title></rect>`);
+        } else {
+          s.push(`<rect x="${x}" y="${y}" width="${cw}" height="14" rx="2" fill="${C.panel}" stroke="${C.grid}" stroke-width="0.5"/>`);
+        }
+      });
+    });
+    const laneBot = laneY0 + lanes.repos.length * laneStride;
+    const dTick = Math.max(1, Math.ceil(days.length / 8));
+    days.forEach((d, i) => {
+      if (i % dTick === 0 || i === days.length - 1) T(gX0 + i * cellW + cellW / 2, laneBot + 12, d.slice(5), 9, C.muted, 'text-anchor="middle"');
+    });
+  }
+
   // footer — no silent caps: say what was truncated
   const dropped = annotations.length - shown.length;
-  T(PAD, H - 18, `regenerate: node tools/agi/progress-svg.js · annotate: --annotate "cycleId=label" · red diamonds = corrections/retractions${dropped > 0 ? ` · ${dropped} older annotation(s) not shown` : ''}`, 10, C.muted);
+  const hiddenLanes = lanes && Array.isArray(lanes.hiddenZeroConsumeOnly) ? lanes.hiddenZeroConsumeOnly.length : 0;
+  T(PAD, H - 18, `regenerate: node tools/agi/repo-activity.js && node tools/agi/progress-svg.js · annotate: --annotate "cycleId=label" · red diamonds = corrections/retractions${dropped > 0 ? ` · ${dropped} older annotation(s) not shown` : ''}${hiddenLanes > 0 ? ` · ${hiddenLanes} zero-activity consume-only repo(s) not shown` : ''}`, 10, C.muted);
 
   s.push('</svg>');
   return s.join('\n');
@@ -202,6 +254,11 @@ function renderSvg({ rows, totals }, annotations = []) {
 
 function loadAnnotations(p) {
   try { const a = JSON.parse(fs.readFileSync(p, 'utf8')); return Array.isArray(a) ? a : []; } catch (_) { return []; }
+}
+
+/** Committed repo-activity snapshot (tools/agi/repo-activity.js writes it); null = no lanes. */
+function loadRepoActivity(p) {
+  try { const a = JSON.parse(fs.readFileSync(p, 'utf8')); return a && a.window ? a : null; } catch (_) { return null; }
 }
 
 function main() {
@@ -231,11 +288,14 @@ function main() {
   console.log(`cycles: ${series.totals.cycles} · improvements: ${series.totals.improvements} · defects pre/post: ${series.totals.defectsPre}/${series.totals.defectsPost} · corrections: ${series.totals.corrections} · pages: ${series.totals.pages}`);
 
   if (process.argv.includes('--print-metrics')) return;
-  const svg = renderSvg(series, loadAnnotations(annPath));
+  const svg = renderSvg(series, loadAnnotations(annPath), loadRepoActivity(arg('activity') || DEFAULT_ACTIVITY));
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, svg);
   console.log(`wrote ${path.relative(ROOT, outPath)} (${svg.length} bytes)`);
 }
 
-module.exports = { parseCycleStanzas, computeSeries, renderSvg, loadAnnotations, DEFAULT_LEDGER, DEFAULT_OUT, DEFAULT_ANNOTATIONS };
+module.exports = {
+  parseCycleStanzas, computeSeries, renderSvg, loadAnnotations, loadRepoActivity,
+  DEFAULT_LEDGER, DEFAULT_OUT, DEFAULT_ANNOTATIONS, DEFAULT_ACTIVITY
+};
 if (require.main === module) main();

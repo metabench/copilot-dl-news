@@ -1,0 +1,115 @@
+{
+  "window": {
+    "from": "2026-07-21",
+    "to": "2026-07-27"
+  },
+  "repos": [
+    {
+      "name": "copilot-dl-news",
+      "status": "in",
+      "days": [
+        [
+          "2026-07-27",
+          8
+        ]
+      ],
+      "total": 8
+    },
+    {
+      "name": "news-crawler-itself",
+      "status": "in",
+      "note": "no .git",
+      "days": [],
+      "total": 0
+    },
+    {
+      "name": "news-crawler-db",
+      "status": "in",
+      "days": [
+        [
+          "2026-07-27",
+          2
+        ]
+      ],
+      "total": 2
+    },
+    {
+      "name": "news-db-pure-analysis",
+      "status": "in",
+      "days": [],
+      "total": 0
+    },
+    {
+      "name": "news-db-analysis",
+      "status": "in",
+      "days": [],
+      "total": 0
+    },
+    {
+      "name": "news-crawler-document-intelligence",
+      "status": "in",
+      "days": [],
+      "total": 0
+    },
+    {
+      "name": "news-crawler-url-intelligence",
+      "status": "in",
+      "days": [],
+      "total": 0
+    },
+    {
+      "name": "news-crawler-places-intelligence",
+      "status": "in",
+      "days": [],
+      "total": 0
+    },
+    {
+      "name": "news-crawler-general-intelligence",
+      "status": "in",
+      "days": [],
+      "total": 0
+    },
+    {
+      "name": "news-dev-tools",
+      "status": "in",
+      "days": [],
+      "total": 0
+    },
+    {
+      "name": "jsgui3-html",
+      "status": "consume-only",
+      "days": [
+        [
+          "2026-07-25",
+          1
+        ]
+      ],
+      "total": 1
+    },
+    {
+      "name": "jsgui3-server",
+      "status": "consume-only",
+      "days": [
+        [
+          "2026-07-25",
+          1
+        ]
+      ],
+      "total": 1
+    },
+    {
+      "name": "jsgui3-ecosystem",
+      "status": "consume-only",
+      "days": [
+        [
+          "2026-07-25",
+          1
+        ]
+      ],
+      "total": 1
+    }
+  ],
+  "hiddenZeroConsumeOnly": [
+    "jsgui3-client"
+  ]
+}

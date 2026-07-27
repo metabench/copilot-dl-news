@@ -45,7 +45,7 @@ const STATIC = {
   reference: 'CAPABILITY_RESEARCH_2026-07-27.md · repo-scope.json · progress-svg.js · projectStatus page v2 (launch: project-status, :3184 — /api/status, /progress.svg)',
   orient: 'node tools/dev/run-probes.js — expect green except bridge-health (environmental) · frontier-api skips when :3170 down.',
   gated: 'live news.db writes · backups · Defender · politeness · concurrency >3 · hooks.',
-  onCompletion: 'ledger row + stanza (owed/owed_closed as applicable) · node tools/agi/progress-svg.js · commit + push · regenerate this prompt (node tools/agi/next-prompt.js, then curate the ▶ selection).'
+  onCompletion: 'ledger row + stanza (owed/owed_closed as applicable) · node tools/agi/repo-activity.js && node tools/agi/progress-svg.js · commit + push · regenerate this prompt (node tools/agi/next-prompt.js, then curate the ▶ selection).'
 };
 
 const humanize = (s) => String(s || '').replace(/[-_+]/g, ' ').replace(/\s+/g, ' ').trim();

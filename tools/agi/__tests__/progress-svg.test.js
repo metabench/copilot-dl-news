@@ -56,4 +56,29 @@ describe('progress-svg', () => {
     expect(svg).not.toContain('<script>');
     expect(svg).toContain('&lt;script&gt;');
   });
+
+  it('renders repo lanes from an activity snapshot; no snapshot = pre-lanes layout', () => {
+    const series = computeSeries(parseCycleStanzas(FIXTURE).cycles);
+    const activity = {
+      window: { from: '2026-07-01', to: '2026-07-03' },
+      repos: [
+        { name: 'copilot-dl-news', status: 'in', days: [['2026-07-01', 3], ['2026-07-03', 1]], total: 4 },
+        { name: 'news-crawler-itself', status: 'in', note: 'no .git', days: [], total: 0 },
+        { name: 'jsgui3-html', status: 'consume-only', days: [['2026-07-02', 1]], total: 1 }
+      ],
+      hiddenZeroConsumeOnly: ['jsgui3-client']
+    };
+    const withLanes = renderSvg(series, [], activity);
+    expect(withLanes).toContain('Repo activity');
+    expect(withLanes).toContain('copilot-dl-news · 2026-07-01 · 3 commits');
+    // the unversioned repo is a loud warning lane, not a silent omission
+    expect(withLanes).toContain('no .git — not in the record');
+    expect(withLanes).toContain('1 zero-activity consume-only repo(s) not shown');
+    expect(withLanes).not.toContain('NaN');
+
+    const without = renderSvg(series, [], null);
+    expect(without).not.toContain('Repo activity');
+    expect(without).toContain('height="664"');       // base layout unchanged
+    expect(withLanes).not.toContain('height="664"'); // lanes extend the canvas
+  });
 });
