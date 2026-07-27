@@ -13,6 +13,12 @@
  *   B. owner-GATED directives that a well-meaning agent could quietly violate while
  *      "improving" something — currently the crawler concurrency default, which the
  *      owner capped at 3 (raising it needs per-action approval in chat).
+ *   C. the STANDING gates that bind during a turn, not just at its close (cycle 130,
+ *      RB-008 remainder): hooks/skills installation, deleting either ~30 GB backup,
+ *      loosening politeness, and the "verify honestly" directive's own paper trail.
+ *      Baseline lives in config/gated-surfaces.json — a diff against the tree means a
+ *      gated action happened (or the owner approved one and the record was not
+ *      updated; both must surface at orient rather than pass silently).
  *
  * WHY THIS EXISTS (cycle 127's finding): the repo-activity lanes showed cycles 47-120
  * were ledger-dated 07-21..07-26 but LANDED as bulk catch-up commits days later — the
@@ -24,9 +30,14 @@
  * violation. They are read AT ORIENT, where red means the PREVIOUS cycle skipped a step.
  * This is the same contract as progress-svg-staleness.
  *
- * HONEST LIMIT — not everything in the ritual is checkable. "Regenerate the next prompt"
- * leaves no committed artifact, so this probe cannot verify it and does not pretend to;
- * it is listed as UNVERIFIED in the output rather than silently dropped.
+ * HONEST LIMITS — not every directive leaves evidence, and the ones that do not are
+ * NAMED in the output rather than quietly excluded, so the green line never reads as
+ * fuller coverage than it is:
+ *   · "regenerate the next prompt" leaves no committed artifact
+ *   · whether BOOT.md was actually READ at orient is unobservable (running the probes
+ *     is a proxy for orienting, not proof of reading)
+ *   · a write to the live news.db cannot be attributed to an agent vs the crawler's
+ *     normal operation, so the live-DB gate stays a human-judgement gate
  *
  *   node tools/dev/checks/ritual-compliance.check.js [--json]
  *   node tools/dev/checks/ritual-compliance.check.js --history   # retrospective audit
@@ -49,6 +60,17 @@ const RECORD_PATHS = [
 
 const CONCURRENCY_CAP = 3; // owner decision 2026-07-26: default 3; above 3 is GATED
 const CRAWLER_REL = 'src/core/crawler/NewsCrawler.js';
+
+/**
+ * Directives this probe deliberately does NOT claim to check. Printed every run: a
+ * compliance report that lists only what it can prove invites the reader to assume
+ * the rest is covered.
+ */
+const UNVERIFIABLE = [
+  { id: 'next-prompt-regen', why: 'leaves no committed artifact' },
+  { id: 'boot-md-read', why: 'reading is unobservable; running the probes is a proxy for orienting, not proof' },
+  { id: 'live-db-writes', why: 'a write cannot be attributed to an agent vs the crawler — stays a human-judgement gate' }
+];
 
 // ---- pure helpers (unit-tested) ---------------------------------------------
 
@@ -119,6 +141,45 @@ function evaluateCompliance(state) {
       `raising the default above ${CONCURRENCY_CAP} is GATED — needs per-action owner approval in chat, not an agent's judgment`);
   }
 
+  // --- C. standing gates that bind DURING a turn (RB-008 remainder, cycle 130) ---
+  const g = state.gated || {};
+  const surf = state.surfaces || {};
+
+  add('C1-no-hooks-installed', (surf.hooks || []).length === 0,
+    (surf.hooks || []).length ? `hooks present: ${surf.hooks.join(', ')}` : 'no hooks declared (settings or .claude/hooks)',
+    'installing hooks is GATED — remove them, or get per-action owner approval and record it in config/gated-surfaces.json');
+
+  const skillsExtra = (surf.skills || []).filter((s) => !(g.skills || []).includes(s));
+  const skillsGone = (g.skills || []).filter((s) => !(surf.skills || []).includes(s));
+  add('C2-skills-baseline', skillsExtra.length === 0 && skillsGone.length === 0,
+    skillsExtra.length || skillsGone.length
+      ? `skills drift — added: ${skillsExtra.join(', ') || 'none'} · missing: ${skillsGone.join(', ') || 'none'}`
+      : `${(surf.skills || []).length} skill(s), matching the approved baseline`,
+    'installing skills is GATED — get approval, then update config/gated-surfaces.json so the record matches');
+
+  const missingBackups = (surf.missingBackups || []);
+  add('C3-backups-intact', missingBackups.length === 0,
+    missingBackups.length ? `MISSING backup(s): ${missingBackups.join(', ')}` : 'both gated backups present',
+    'deleting either backup is GATED and irreversible — if the owner approved it, update config/gated-surfaces.json');
+
+  if (surf.politeness === null) {
+    add('C4-politeness-backoff', false,
+      'could not read the politeness file — the gate is unenforced',
+      'restore the file or update config/gated-surfaces.json deliberately');
+  } else {
+    add('C4-politeness-backoff', surf.politeness.length === 0,
+      surf.politeness.length ? `429 backoff escalation MISSING: ${surf.politeness.join(' · ')}` : '429 backoff escalation intact',
+      'loosening politeness is GATED — restore the escalation, or get per-action owner approval');
+  }
+
+  // The "verify honestly" directive's own paper trail: a cycle that claims work but
+  // records no verification is a claim shipped without evidence.
+  add('C5-verification-recorded', (state.stanzasWithoutVerification || []).length === 0,
+    (state.stanzasWithoutVerification || []).length
+      ? `stanza(s) with no verification[]: ${state.stanzasWithoutVerification.join(', ')}`
+      : 'every stanza records how it was verified',
+    'add the verification[] field — a cycle with no recorded evidence cannot be re-checked later');
+
   return { checks, violations: checks.filter((c) => !c.ok) };
 }
 
@@ -150,14 +211,61 @@ function gatherState() {
   let concurrencyDefault = null;
   try { concurrencyDefault = parseConcurrencyDefault(fs.readFileSync(path.join(ROOT, CRAWLER_REL), 'utf8')); } catch (_) {}
 
+  let gated = {};
+  try { gated = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'gated-surfaces.json'), 'utf8')); } catch (_) {}
+
   return {
     workingNewest: newestStanza(workingLedger),
     headNewest: headLedger ? newestStanza(headLedger) : null,
     dirtyRecordPaths: dirty,
     aheadCount: ahead === null ? null : Number(ahead),
     activityWindowTo,
-    concurrencyDefault
+    concurrencyDefault,
+    gated: { skills: (gated.skills && gated.skills.allowed) || [] },
+    surfaces: gatherSurfaces(gated),
+    stanzasWithoutVerification: parseCycleStanzas(workingLedger).cycles
+      .filter((c) => !Array.isArray(c.verification) || c.verification.length === 0)
+      .map((c) => `c${c.id}`)
   };
+}
+
+/** Reads the gated surfaces off disk. Kept separate so evaluateCompliance stays pure. */
+function gatherSurfaces(gated) {
+  const dotClaude = path.join(ROOT, '.claude');
+
+  // A hook needs no .claude/hooks directory — a `hooks` key in any settings file is
+  // enough, so both are inspected. Missing/!unreadable settings are not hooks.
+  const hooks = [];
+  for (const f of ['settings.json', 'settings.local.json']) {
+    try {
+      const j = JSON.parse(fs.readFileSync(path.join(dotClaude, f), 'utf8'));
+      if (j && j.hooks && Object.keys(j.hooks).length) hooks.push(`${f}:hooks`);
+    } catch (_) {}
+  }
+  try {
+    for (const e of fs.readdirSync(path.join(dotClaude, 'hooks'))) hooks.push(`hooks/${e}`);
+  } catch (_) {}
+
+  let skills = [];
+  try {
+    skills = fs.readdirSync(path.join(dotClaude, 'skills'), { withFileTypes: true })
+      .filter((d) => d.isDirectory()).map((d) => d.name).sort();
+  } catch (_) {}
+
+  const mustExist = (gated.backups && gated.backups.mustExist) || [];
+  const missingBackups = mustExist.filter((rel) => !fs.existsSync(path.join(ROOT, rel)));
+
+  // null = file unreadable (gate unenforced); [] = all required patterns present.
+  let politeness = null;
+  const pol = gated.politeness || {};
+  if (pol.file && Array.isArray(pol.requiredPatterns)) {
+    try {
+      const src = fs.readFileSync(path.join(ROOT, pol.file), 'utf8');
+      politeness = pol.requiredPatterns.filter((p) => !src.includes(p));
+    } catch (_) { politeness = null; }
+  } else { politeness = []; }
+
+  return { hooks, skills, missingBackups, politeness };
 }
 
 /**
@@ -207,7 +315,7 @@ function main() {
     console.log(JSON.stringify({ checks, violations: violations.length }, null, 2));
   } else {
     for (const c of checks) console.log(`  ${c.ok ? '✅' : '❌'} ${c.id.padEnd(22)} ${c.detail}`);
-    console.log(`  ⚪ regenerate-next-prompt  UNVERIFIED — leaves no committed artifact; this probe does not claim to check it`);
+    for (const u of UNVERIFIABLE) console.log(`  ⚪ ${u.id.padEnd(22)} UNVERIFIED — ${u.why}`);
   }
 
   if (violations.length) {
@@ -219,5 +327,5 @@ function main() {
   console.log(`\n✅ ritual + gated directives followed (${checks.length} checks).`);
 }
 
-module.exports = { newestStanza, parseConcurrencyDefault, evaluateCompliance, auditHistory, RECORD_PATHS, CONCURRENCY_CAP };
+module.exports = { newestStanza, parseConcurrencyDefault, evaluateCompliance, auditHistory, gatherSurfaces, RECORD_PATHS, CONCURRENCY_CAP, UNVERIFIABLE };
 if (require.main === module) main();

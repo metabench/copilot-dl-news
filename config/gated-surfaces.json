@@ -1,0 +1,24 @@
+{
+  "_comment": "Baseline for the owner-GATED surfaces an agent must not change without per-action approval in chat. Verified by the `ritual-compliance` probe (RB-008). This file is the RECORD of what was approved as of asOf; a diff between it and the tree means a gated action was taken (or that the owner approved something and this file was not updated — either way it must surface at orient, not pass silently). Same principle as config/repo-scope.json: write the fact down as a field rather than leaving a tool to infer it (cycle 129).",
+  "asOf": "2026-07-27",
+  "hooks": {
+    "_rule": "Installing hooks is GATED. Hooks can be declared WITHOUT a .claude/hooks directory — a `hooks` key in any .claude/settings*.json is enough, which is why the check looks at both.",
+    "allowed": []
+  },
+  "skills": {
+    "_rule": "Installing skills is GATED. These three predate the gate and are the approved baseline; a NEW directory here means a skill was installed.",
+    "allowed": ["singularity", "wlilo", "wlilo-workspace"]
+  },
+  "backups": {
+    "_rule": "Deleting either backup is GATED and irreversible (~29-30 GB each, owner decision pending). The check asserts they still EXIST — it is a tripwire against the deletion, not a size assertion.",
+    "mustExist": ["data/news.db.pre-placenames-bak", "data/news.db.predup-bak"]
+  },
+  "politeness": {
+    "_rule": "Loosening politeness is GATED. There is no single floor CONSTANT to assert (the effective floor is max() of robots + stored values, and adaptive speed-up is pre-existing behaviour), so the check guards the part that matters most and IS static: the 429 backoff escalation must not be weakened or deleted.",
+    "file": "src/core/crawler/DomainThrottleManager.js",
+    "requiredPatterns": [
+      "err429Streak >= 2",
+      "err429Streak >= 3"
+    ]
+  }
+}

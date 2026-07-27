@@ -1,7 +1,8 @@
 'use strict';
 
 const {
-  newestStanza, parseConcurrencyDefault, evaluateCompliance, CONCURRENCY_CAP
+  newestStanza, parseConcurrencyDefault, evaluateCompliance, gatherSurfaces,
+  CONCURRENCY_CAP, UNVERIFIABLE
 } = require('../checks/ritual-compliance.check');
 
 /** A fully-compliant state; each test perturbs exactly one field. */
@@ -11,7 +12,10 @@ const OK = {
   dirtyRecordPaths: [],
   aheadCount: 0,
   activityWindowTo: '2026-07-27',
-  concurrencyDefault: 3
+  concurrencyDefault: 3,
+  gated: { skills: ['singularity', 'wlilo'] },
+  surfaces: { hooks: [], skills: ['singularity', 'wlilo'], missingBackups: [], politeness: [] },
+  stanzasWithoutVerification: []
 };
 const run = (over) => evaluateCompliance({ ...OK, ...over });
 const idsOf = (r) => r.violations.map((v) => v.id);
@@ -20,7 +24,7 @@ describe('ritual-compliance', () => {
   it('passes when every ritual step and gate was honoured', () => {
     const r = run({});
     expect(r.violations).toEqual([]);
-    expect(r.checks).toHaveLength(5);
+    expect(r.checks).toHaveLength(10); // A1-A4, B1, C1-C5
   });
 
   it('A1 fires when the newest stanza is only in the working copy (row appended, not committed)', () => {
@@ -62,6 +66,69 @@ describe('ritual-compliance', () => {
     expect(parseConcurrencyDefault("concurrency: { type: 'number', default: 3, processor: (v) => v }")).toBe(3);
     expect(parseConcurrencyDefault('concurrency: { type: "number",\n  default: 12 }')).toBe(12);
     expect(parseConcurrencyDefault('const concurrency = 3;')).toBeNull();
+  });
+
+  describe('C. standing gates that bind during a turn (RB-008 remainder)', () => {
+    it('C1 fires on a hook declared in settings OR dropped in .claude/hooks', () => {
+      expect(idsOf(run({ surfaces: { ...OK.surfaces, hooks: ['settings.json:hooks'] } }))).toContain('C1-no-hooks-installed');
+      expect(idsOf(run({ surfaces: { ...OK.surfaces, hooks: ['hooks/pre-commit.sh'] } }))).toContain('C1-no-hooks-installed');
+    });
+
+    it('C2 fires on a skill added OR removed relative to the approved baseline', () => {
+      const added = run({ surfaces: { ...OK.surfaces, skills: ['singularity', 'wlilo', 'sneaky-new'] } });
+      expect(idsOf(added)).toContain('C2-skills-baseline');
+      expect(added.violations.find((v) => v.id === 'C2-skills-baseline').detail).toContain('sneaky-new');
+      expect(idsOf(run({ surfaces: { ...OK.surfaces, skills: ['singularity'] } }))).toContain('C2-skills-baseline');
+    });
+
+    it('C3 fires when a gated backup has vanished', () => {
+      const r = run({ surfaces: { ...OK.surfaces, missingBackups: ['data/news.db.predup-bak'] } });
+      expect(idsOf(r)).toContain('C3-backups-intact');
+      expect(r.violations.find((v) => v.id === 'C3-backups-intact').fix).toMatch(/GATED and irreversible/);
+    });
+
+    it('C4 fires when 429 backoff escalation is weakened, and when the file is unreadable', () => {
+      expect(idsOf(run({ surfaces: { ...OK.surfaces, politeness: ['err429Streak >= 3'] } }))).toContain('C4-politeness-backoff');
+      // unreadable gate must FAIL, not silently pass (the c128 rule)
+      expect(idsOf(run({ surfaces: { ...OK.surfaces, politeness: null } }))).toContain('C4-politeness-backoff');
+    });
+
+    it('C5 fires when a cycle claims work but records no verification', () => {
+      const r = run({ stanzasWithoutVerification: ['c131'] });
+      expect(idsOf(r)).toContain('C5-verification-recorded');
+      expect(r.violations.find((v) => v.id === 'C5-verification-recorded').detail).toContain('c131');
+    });
+
+    it('names the directives it cannot check, so green never implies full coverage', () => {
+      expect(UNVERIFIABLE.map((u) => u.id)).toEqual(
+        expect.arrayContaining(['next-prompt-regen', 'boot-md-read', 'live-db-writes'])
+      );
+      for (const u of UNVERIFIABLE) expect(typeof u.why).toBe('string');
+    });
+  });
+
+  describe('gatherSurfaces (reads the real tree)', () => {
+    it('detects a required backup that is absent', () => {
+      const s = gatherSurfaces({ backups: { mustExist: ['data/definitely-not-here.bak'] } });
+      expect(s.missingBackups).toEqual(['data/definitely-not-here.bak']);
+    });
+
+    it('reports a required politeness pattern that is not in the real file', () => {
+      const s = gatherSurfaces({
+        politeness: { file: 'src/core/crawler/DomainThrottleManager.js', requiredPatterns: ['err429Streak >= 2', 'NOT_A_REAL_TOKEN'] }
+      });
+      expect(s.politeness).toEqual(['NOT_A_REAL_TOKEN']); // the real one matched; the fake did not
+    });
+
+    it('returns null politeness (gate unenforced) when the file cannot be read', () => {
+      expect(gatherSurfaces({ politeness: { file: 'nope/missing.js', requiredPatterns: ['x'] } }).politeness).toBeNull();
+    });
+
+    it('lists the real installed skills as directories', () => {
+      const s = gatherSurfaces({});
+      expect(Array.isArray(s.skills)).toBe(true);
+      expect(s.skills).toContain('singularity');
+    });
   });
 
   // Static tripwire (same pattern as resilience-wiring.check.js). The dirty-file
