@@ -95,7 +95,7 @@ function nodeDataIsland(techTree) {
 // ROOT font size; every rem measurement follows. Stored in localStorage ('tp-settings')
 // so it persists across the four pages and across visits. EARLY_SETTINGS applies the
 // stored size immediately after <body> opens — before first paint, so no size flash.
-const SETTINGS_RANGE = { min: 80, max: 140, step: 5, def: 100 };
+const SETTINGS_RANGE = { min: 80, max: 250, step: 5, def: 100 }; // max 250 (owner, 2026-07-28)
 const EARLY_SETTINGS = `<script>try{var s=JSON.parse(localStorage.getItem('tp-settings')||'{}');if(s.fontPct)document.documentElement.style.fontSize=(16*s.fontPct/100)+'px';}catch(e){}</script>`;
 const SETTINGS_HTML = `<dialog class="tp-modal tp-settings" id="tp-settings-dlg">
   <div class="tp-modal__bar"><span class="tp-modal__id">SETTINGS</span><button class="tp-modal__x" id="tp-settings-close" type="button" aria-label="close">✕</button></div>
