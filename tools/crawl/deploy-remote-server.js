@@ -72,9 +72,13 @@ function parseArgv(argv = []) {
     skipHealthCheck: false,
     help: false,
     sshHost: DEFAULT_SSH_HOST,
+    // Explicit env/flag choices are respected verbatim; only the fleet-resolver
+    // default is eligible for ~/.ssh/config alias substitution (see run()).
+    sshHostExplicit: Boolean(process.env.REMOTE_CRAWLER_SSH_HOST),
     sshUser: process.env.REMOTE_CRAWLER_SSH_USER || null,
     sshPort: parsePositiveInteger(process.env.REMOTE_CRAWLER_SSH_PORT, 22),
     sshKey: process.env.REMOTE_CRAWLER_SSH_KEY || null,
+    busyRecheckSeconds: 45,
     statusHost: getFleetHostSync(),
     statusPort: 3200,
     statusUrl: null,
@@ -115,7 +119,8 @@ function parseArgv(argv = []) {
     else if (flag === '--skip-busy-check') opts.skipBusyCheck = true;
     else if (flag === '--skip-db-build') opts.skipDbBuild = true;
     else if (flag === '--skip-health-check') opts.skipHealthCheck = true;
-    else if (flag === '--ssh-host' || flag === '--host') opts.sshHost = nextValue();
+    else if (flag === '--ssh-host' || flag === '--host') { opts.sshHost = nextValue(); opts.sshHostExplicit = true; }
+    else if (flag === '--busy-recheck-seconds') opts.busyRecheckSeconds = parsePositiveInteger(nextValue(), 45);
     else if (flag === '--ssh-user' || flag === '--user') opts.sshUser = nextValue();
     else if (flag === '--ssh-port') opts.sshPort = parsePositiveInteger(nextValue(), 22);
     else if (flag === '--ssh-key' || flag === '--key') opts.sshKey = nextValue();
@@ -162,6 +167,65 @@ function splitSshTarget(value) {
 
 function sshTarget(opts) {
   return opts.sshUser ? `${opts.sshUser}@${opts.sshHost}` : opts.sshHost;
+}
+
+/**
+ * resolveSshAliasForHost — find a ~/.ssh/config alias whose HostName is this
+ * host. ssh matches config stanzas on the NAME TYPED, so the default
+ * `ubuntu@<ip>` form silently bypasses the alias's IdentityFile and fails with
+ * "Permission denied (publickey)" even though `ssh oracle-worker` works
+ * (2026-07-28). Returns the alias to use instead, or null. A stanza with a
+ * User that contradicts the requested user is skipped; wildcard patterns are
+ * never returned.
+ */
+function resolveSshAliasForHost(host, user, sshConfigText) {
+  if (!host || !sshConfigText) return null;
+  let aliases = [];
+  let hostName = null;
+  let stanzaUser = null;
+  let inIgnoredBlock = false;
+  const candidates = [];
+  const flush = () => {
+    if (!aliases.length || hostName !== host) return;
+    if (user && stanzaUser && stanzaUser !== user) return;
+    for (const alias of aliases) {
+      if (alias === host || /[*?]/.test(alias)) continue;
+      candidates.push(alias);
+    }
+  };
+  for (const rawLine of String(sshConfigText).split(/\r?\n/)) {
+    const line = rawLine.replace(/#.*$/, '').trim();
+    if (!line) continue;
+    // ssh_config allows `Key Value` AND `Key=Value` (with optional spaces).
+    const match = /^([A-Za-z][A-Za-z0-9]*)(?:\s*=\s*|\s+)(.+)$/.exec(line);
+    if (!match) continue;
+    const key = match[1].toLowerCase();
+    const value = match[2].trim();
+    if (key === 'host') {
+      flush();
+      aliases = value.split(/\s+/);
+      hostName = null;
+      stanzaUser = null;
+      inIgnoredBlock = false;
+    } else if (key === 'match') {
+      // A Match block ENDS the current Host stanza; its body must not be
+      // attributed to the preceding Host (real misattribution bug, caught in
+      // review). We don't evaluate Match conditions — just skip the block.
+      flush();
+      aliases = [];
+      hostName = null;
+      stanzaUser = null;
+      inIgnoredBlock = true;
+    } else if (inIgnoredBlock) {
+      continue;
+    } else if (key === 'hostname') {
+      hostName = value;
+    } else if (key === 'user') {
+      stanzaUser = value;
+    }
+  }
+  flush();
+  return candidates.length ? candidates[0] : null;
 }
 
 function sshArgs(opts) {
@@ -234,14 +298,40 @@ Options:
   --skip-db-build             Do not run npm run build in news-crawler-db
   --skip-busy-check           Do not query /api/status before deploy
   --skip-health-check         Do not poll /api/status after restart
+  --busy-recheck-seconds <n>  Corroboration delay when domain states claim 'running'
+                              with no live evidence (default: 45 — must exceed the
+                              slowest per-host crawl-delay so a polite crawl moves
+                              its counters between the two samples)
   --json                     Emit JSON plan/result
   --no-color --no-emoji       Plain output
+
+SSH auth:
+  The default target is ubuntu@<fleet-host>. ssh matches ~/.ssh/config stanzas on
+  the NAME TYPED, so a raw user@ip bypasses an alias's IdentityFile; when a config
+  alias exists for the fleet host it is used automatically. Override with
+  REMOTE_CRAWLER_SSH_HOST / --ssh-host (respected verbatim) or --ssh-key.
 `);
 }
 
+/**
+ * classifyBusyStatus — one status sample, evidence SEPARATED BY FAILURE MODE.
+ *
+ * Only THROUGHPUT is measured from activity itself and cannot lie about it.
+ * Everything else can go stale: per-domain state strings did (2026-07-28: four
+ * domains claimed 'running' for 6.8 days after their workers died, totals
+ * frozen at 12, and this gate refused deploys on the corpse), and on engines
+ * WITHOUT the heartbeat fix, orchestrator.running is a setInterval flag and
+ * currentlyRunning counts those same stale-able state strings — derived, not
+ * live. The asymmetry of the two failure costs decides the shape: refusing on
+ * a corpse blocks a deploy (recoverable, --force), deploying onto live work
+ * kills a crawl (not recoverable) — so orchestrator evidence still refuses,
+ * but marks itself for corroboration; only BARE domain-state (nothing else)
+ * may be downgraded to not-busy by the second sample. Pending URLs are a
+ * queued backlog, not activity, and never refuse on their own.
+ */
 function classifyBusyStatus(status) {
   if (!status || typeof status !== 'object') {
-    return { busy: false, reasons: ['status unavailable'], runningDomains: [], pending: 0 };
+    return { busy: false, needsCorroboration: false, reasons: ['status unavailable'], runningDomains: [], pending: 0, counters: {} };
   }
 
   const domains = Array.isArray(status.domains) ? status.domains : [];
@@ -253,22 +343,82 @@ function classifyBusyStatus(status) {
   const pending = Number(status.totals && status.totals.pending || 0);
   const throughput = status.throughput || {};
   const activeThroughput = Number(throughput.fetchesPerSec || 0) > 0 || Number(throughput.writesPerSec || 0) > 0;
-  const reasons = [];
+  const counters = {
+    fetched: Number(status.totals && status.totals.fetched || 0),
+    stored: Number(status.totals && status.totals.stored || 0),
+    errors: Number(status.totals && status.totals.errors || 0),
+  };
 
-  if (orchestratorRunning) reasons.push('orchestrator is running');
-  if (currentlyRunning > 0) reasons.push(`${currentlyRunning} domain worker(s) currently running`);
+  const liveReasons = [];
+  if (orchestratorRunning) liveReasons.push('orchestrator is running');
+  if (currentlyRunning > 0) liveReasons.push(`${currentlyRunning} domain worker(s) currently running`);
+  if (activeThroughput) liveReasons.push(`active throughput: fetch=${throughput.fetchesPerSec || 0}/s write=${throughput.writesPerSec || 0}/s`);
+
+  const reasons = [...liveReasons];
   if (runningDomains.length > 0) reasons.push(`running domains: ${runningDomains.join(', ')}`);
-  if (pending > 0) reasons.push(`${pending} pending URL(s)`);
-  if (activeThroughput) reasons.push(`active throughput: fetch=${throughput.fetchesPerSec || 0}/s write=${throughput.writesPerSec || 0}/s`);
+  if (pending > 0) reasons.push(`${pending} pending URL(s) (informational — a queued backlog is not activity)`);
 
+  const orchestratorEvidence = orchestratorRunning || currentlyRunning > 0;
   return {
-    busy: reasons.length > 0,
+    busy: liveReasons.length > 0,
+    // Anything short of measured throughput deserves a second sample: bare
+    // domain-state to decide, orchestrator evidence to annotate (see header).
+    needsCorroboration: !activeThroughput && (orchestratorEvidence || runningDomains.length > 0),
+    orchestratorEvidence,
+    liveReasons,
     reasons,
     runningDomains,
     pending,
     currentlyRunning,
     orchestratorRunning,
     activeThroughput,
+    counters,
+  };
+}
+
+/**
+ * corroborateBusyStatus — the second look. A real crawl moves counters between
+ * spaced samples (the recheck delay must exceed the slowest per-host
+ * crawl-delay, ~33s for Guardian, hence the 45s default); a zombie's counters
+ * are frozen. Frozen counters downgrade to not-busy ONLY for bare domain-state
+ * — orchestrator evidence keeps refusing (deploying onto live work costs more
+ * than a blocked deploy) but says loudly that it could not be corroborated,
+ * so a human can decide --force with open eyes.
+ */
+function corroborateBusyStatus(first, secondStatus) {
+  const second = classifyBusyStatus(secondStatus);
+  if (second.activeThroughput) {
+    return { ...second, corroborated: 'live-evidence-appeared' };
+  }
+  const moved = ['fetched', 'stored', 'errors']
+    .filter((key) => (second.counters[key] || 0) !== ((first.counters && first.counters[key]) || 0));
+  if (moved.length > 0) {
+    return {
+      ...second,
+      busy: true,
+      corroborated: 'counters-moving',
+      reasons: [...second.reasons, `counters moved between samples (${moved.join(', ')}) — workers are alive`],
+    };
+  }
+  if (first.orchestratorEvidence || second.orchestratorEvidence) {
+    return {
+      ...second,
+      busy: true,
+      corroborated: 'uncorroborated-orchestrator',
+      reasons: [
+        ...second.reasons,
+        'orchestrator claims work but throughput is zero and counters are frozen across spaced samples — on an engine without the heartbeat fix this can itself be stale state; verify, then --force if confirmed dead',
+      ],
+    };
+  }
+  return {
+    ...second,
+    busy: false,
+    corroborated: 'zombie-state',
+    zombie: {
+      domains: second.runningDomains,
+      note: 'domain states claim running but orchestrator is stopped, throughput is zero, and counters are frozen across spaced samples — stale state from a dead crawl; a restart clears it',
+    },
   };
 }
 
@@ -879,12 +1029,52 @@ async function run(argv = process.argv.slice(2)) {
     return 0;
   }
 
+  if (!opts.sshHostExplicit) {
+    try {
+      const sshConfigText = fs.readFileSync(path.join(os.homedir(), '.ssh', 'config'), 'utf8');
+      const alias = resolveSshAliasForHost(opts.sshHost, opts.sshUser, sshConfigText);
+      if (alias) {
+        // json mode: stdout must stay pure JSON — the substitution is visible
+        // there via the plan's sshTarget field instead. sshUser is KEPT: the
+        // stanza may omit User (ssh would fall back to the local OS username),
+        // and an explicit user@alias still matches the stanza and its
+        // IdentityFile while agreeing with any stanza User we accepted.
+        if (!opts.json) console.log(`${icon('info', opts)}Using ssh alias '${alias}' for ${sshTarget(opts)} (~/.ssh/config supplies its IdentityFile; the raw user@ip form bypasses it)`);
+        opts.sshHost = alias;
+      }
+    } catch (_) { /* no ssh config — keep the raw target */ }
+  }
+
   let remoteStatus = null;
   let busy = null;
   if (!opts.skipBusyCheck) {
     try {
       remoteStatus = await readJsonUrl(opts.statusUrl, 10000);
       busy = classifyBusyStatus(remoteStatus);
+      // Bare domain-state with zero live evidence is either a slow polite crawl
+      // or the 2026-07-28 zombie class — a second spaced sample tells them
+      // apart (skipped under --force: the gate would not refuse anyway).
+      if (busy.needsCorroboration && !opts.force) {
+        if (!opts.json) console.log(`${icon('busy', opts)}Busy evidence without measured throughput (${busy.reasons[0] || 'domain states'}) — re-sampling in ${opts.busyRecheckSeconds}s to tell real work from stale state...`);
+        await new Promise((resolve) => setTimeout(resolve, opts.busyRecheckSeconds * 1000));
+        const secondStatus = await readJsonUrl(opts.statusUrl, 10000).catch(() => null);
+        if (secondStatus) {
+          busy = corroborateBusyStatus(busy, secondStatus);
+          if (busy.corroborated === 'zombie-state' && !opts.json) {
+            console.log(`${icon('warn', opts)}${color(`Stale state, not work: ${busy.zombie.domains.join(', ')} claim 'running' but ${busy.zombie.note}`, 'yellow', opts)}`);
+          }
+          if (busy.corroborated === 'uncorroborated-orchestrator' && !opts.json) {
+            console.log(`${icon('warn', opts)}${color('Orchestrator claims work but nothing moved across the samples — still refusing (deploying onto live work costs more than a blocked deploy), but on a pre-heartbeat-fix engine this can itself be stale state. Verify, then --force if confirmed dead.', 'yellow', opts)}`);
+          }
+        } else {
+          // Asymmetric with the first-sample catch above by design: a box that
+          // was serving status and went dark MID-CHECK is a state change under
+          // our feet, not a benign always-down server — refuse and let a human
+          // look. (First-sample-unreachable keeps the pre-existing semantics:
+          // a server that is down holds no work to protect.)
+          busy = { ...busy, busy: true, reasons: [...busy.reasons, 'corroboration sample unavailable — box went dark mid-check; refusing conservatively'] };
+        }
+      }
     } catch (error) {
       busy = { busy: false, reasons: [`status check unavailable: ${error.message}`], runningDomains: [], pending: 0 };
     }
@@ -1016,6 +1206,8 @@ module.exports = {
   buildDeployTroubleshootingHints,
   collectSourceSnapshot,
   classifyBusyStatus,
+  corroborateBusyStatus,
+  resolveSshAliasForHost,
   compareRemoteBuild,
   createRemoteInstallScript,
   dependencyVersions,

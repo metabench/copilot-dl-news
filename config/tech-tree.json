@@ -1,6 +1,6 @@
 {
   "_comment": "SMAC-style tech tree structure (owner directive 2026-07-27, researched against Sid Meier's Alpha Centauri: categories form an INTERTWINING tree; every tech has AT MOST TWO prerequisites; tiers flow foundations -> frontier; blind research means the far tree is fog). Three branches for now (owner: 'just 3 pages for the moment'). RULES: roots are the FINITE set of already-built capabilities — curated at the CAPABILITY level, deliberately not a per-RB retrofit; techs reference either a backlog row (ref: RB-*, state read LIVE from RESEARCH_BACKLOG's state column — that file stays the single state source for RB items) or are curated near-frontier items (allowed state: available only; completion later lands in the ledger/backlog and promotes the node). Every tech's prereqs list existing root/tech ids and is capped at 2, per SMAC; edges are design statements about what COMBINES into what. Colors validated 2026-07-27 with the dataviz palette validator on the dark surface (all four checks pass; gold-green tritan dE 9.9 sits in the legal-with-secondary-encoding band, and every node carries its branch icon + text label, never color alone).",
-  "asOf": "2026-07-27",
+  "asOf": "2026-07-29",
   "branches": {
     "agi": {
       "label": "AGI",
@@ -115,7 +115,7 @@
       "id": "TR-PROBES",
       "branch": "tree",
       "title": "Probe Manifest",
-      "note": "17 runnable re-verifications at orient; false greens hunted on sight"
+      "note": "the runnable re-verifications at orient (tools/dev/probes.json is the live register — counts baked into prose rot); false greens hunted on sight"
     },
     {
       "id": "TR-PICTURE",
@@ -191,9 +191,9 @@
       "id": "TF-PROBES",
       "branch": "factory",
       "title": "Probe & Check Rig",
-      "note": "tools/dev (~131 scripts): run-probes + 18 registered probes, ncdb-debt-scan, churn-scan, ui-check-inventory, workflow-scorecard",
+      "note": "tools/dev (~131 scripts): run-probes + the registered probes (probes.json is the live register), ncdb-debt-scan, churn-scan, ui-check-inventory, workflow-scorecard",
       "detail": [
-        "tools/dev/probes.json registers 19 probes run by node tools/dev/run-probes.js at every orient; needsServer probes (frontier-api) are skipped, not failed, when nothing serves :3170 — recent ledger rows report '17 probes pass'.",
+        "tools/dev/probes.json is the live probe register, run by node tools/dev/run-probes.js at every orient; needsServer probes (frontier-api) are skipped, not failed, when nothing serves :3170. Counts are deliberately not baked here — the 2026-07-29 audit found three different stale counts for this one rig in this one file.",
         "Three probes are explicit RATCHETS: ncdb-debt-scan --max 241 (raw-SQL signatures outside ncdb, ratcheted down 269→258→249→241 as delegations landed), workflow-scorecard --max-cost-to-catch 4 (no task type with ≥5 runs may exceed 4 turns per confirmed real catch), and ui-check-inventory --min-live 5 (a floor raised 4→5 in cycle 135 when the first real-browser check landed).",
         "The ui-browser-coverage probe encodes a brutal measurement from 2026-07-27: of 82 UI self-tests totalling ~10,600 lines, only 4 (5%) drove a real browser — the other 91% are in-process string assertions that are blind by construction to the cycle-128.5 defect class (SSR frozen while the client silently repairs the DOM).",
         "The timed-probe-guard probe deliberately runs an UNBOUNDED query against timed-probe.js and asserts exit code 3 — proving the WAL-pin incident guard still refuses no-LIMIT SQL.",
@@ -426,7 +426,7 @@
       "state": "available",
       "detail": [
         "The pitch is machine-PROPOSED work orders from observable patterns: two tools sharing a data source → a combine candidate; a tool named in a defect → an improve candidate with the defect as the measured axis; a tool manually run every cycle → an extend-to-automation candidate.",
-        "Its prereqs are TF-PROBES + TECH-TYPEDEDGES — the 19-probe rig and defect-bearing ledger stanzas supply the raw signals, and the typed-edge grammar gives each suggestion its verb.",
+        "Its prereqs are TF-PROBES + TECH-TYPEDEDGES — the probe rig and defect-bearing ledger stanzas supply the raw signals, and the typed-edge grammar gives each suggestion its verb.",
         "The improve-candidate heuristic has real fuel: ledger stanzas carry structured defects[] entries (e.g. cycle 90's crawl-rate timezone bug), so a defect-named tool is machine-findable today.",
         "One of the five factory integrations the owner selected all-at-once on 2026-07-28 (cycle 141) after the agent presented the menu — the same scope-elicitation pattern that in cycle 140 saved a rebuild ('eliciting scope cost one question; guessing wrong would have cost a rebuild')."
       ]
@@ -443,7 +443,7 @@
       "state": "available",
       "detail": [
         "The idea: tool families wear LIVE status badges derived entirely from existing substrate — probe pass/fail results, churn-scan git activity, and workflow-scorecard cost-to-catch — no new instrumentation.",
-        "All three feeds already run at every orient: 19 registered probes via run-probes.js, churn-scan.js --json (itself probe-checked, RB-004), and workflow-scorecard.js whose cost-to-catch ratchet (≤4 turns per confirmed catch, ≥5 runs) was bootstrapped in cycle 48 with 13 labeled runs.",
+        "All three feeds already run at every orient: the registered probes via run-probes.js (probes.json is the live count), churn-scan.js --json (itself probe-checked, RB-004), and workflow-scorecard.js whose cost-to-catch ratchet (≤4 turns per confirmed catch, ≥5 runs) was bootstrapped in cycle 48 with 13 labeled runs.",
         "Prereqs are TF-PROBES + TR-PAGE; it was adopted 2026-07-28 as one of the five owner-approved cycle-141 factory integrations.",
         "The factory page it would badge was DOM-verified live in cycle 141 by measurement rather than pixels (the pane wasn't compositing): 22 node rects, 10 edge paths, 6 layer positions confirmed the drawn tree."
       ]
@@ -597,7 +597,7 @@
       "detail": [
         "Delivered cycles 149-150 (2026-07-28, owner-signalled sig-20260728015536): ActivityHeadlinesControl + esbuild IIFE bundle (built on Windows, committed into news-crawler-itself/public because jsgui3 npm tarballs are case-broken on Linux) + /dashboard and /dashboard-client.js routes on multi-domain-server.js; deployed build 20260728223411 and browser-verified live at 141.144.193.218:3200/dashboard — promotion waited one extra deploy-gated day because 'served from the remote worker' is this tech's own definition and the tree does not round up.",
         "The deploy surfaced a busy-gate FALSE POSITIVE worth its own fix: the gate read 4 domains as 'running' while throughput was 0, total fetches were 12 over a 6.8-day uptime, and the counters were frozen across spaced samples — zombie domain states from a crawl that died just after boot. Triangulation (three instruments with different failure modes) beat the single stale instrument, again.",
-        "D4 slice 2b (activity/headline control + esbuild bundle served from the remote worker) is the loop's longest-deferred slice: task #54 is still pending, having been explicitly deferred across cycles 73-74 for the engine extraction and again at cycles 77-80.",
+        "History: this was the loop's longest-deferred slice — task #54 was explicitly deferred across cycles 73-74 for the engine extraction and again at cycles 77-80, until the owner's cycle-149 signal resumed it (delivered; see the first detail entry).",
         "Cycle 79's consumer-grep found the D4 slice-2 controls (ThroughputStripControl, HostHealthBadgesControl from cycles 71-72) were UNMOUNTED scaffold — zero live pages rendered them and the only /api/v1/crawl/dashboard-model consumers were the controls themselves plus a dev tool — so instead of building slice 2b on unmounted scaffold, the cycle gave the endpoint its first real consumer.",
         "That first consumer is the live crawl-throughput strip on the home control center (docs/s down · docs/s stored · MB/s · queue), hydrated client-side in the existing 5s poll and built backslash-free/textContent-only so it is template-trap-safe by construction; a live mid-crawl screenshot showed it updating with 0 console errors.",
         "The slice's real home is the remote multi-domain-server route on the Oracle box — the ledger notes \"the controls' real home; latent until the remote-serving lift\" — which is why the tech-tree edge combines CR-ENGINE with TR-PAGE.",
@@ -630,7 +630,11 @@
         "TR-LEDGER",
         "AG-METHOD"
       ],
-      "state": "available"
+      "state": "available",
+      "prelim": [
+        "Source material is the ledger's own lesson sentences — each cycle row ends with a bolded lesson, and the best of them already read like flavor text (\"a gate that refuses on a single instrument inherits that instrument's failure mode\"). The work is curation and attribution, not invention.",
+        "SMAC's discipline: one quote per node, attributed, short enough to read in the modal without scrolling. Never borrowed text — the record is the only source, which is also what makes each quote verifiable against a cycle id."
+      ]
     },
     {
       "id": "TECH-PAGESLIVE",
@@ -654,7 +658,11 @@
       "prereqs": [
         "TR-PICTURE"
       ],
-      "state": "available"
+      "state": "available",
+      "prelim": [
+        "The hard constraint is progress-svg.js's purity contract (probe-guarded, RB-011/P1): the render reads only COMMITTED inputs, so the tree counts must come from the committed config/tech-tree.json + RESEARCH_BACKLOG.md, never from a live server — the same buildTechTree call the tech-tree-schema probe already runs.",
+        "Smallest honest slice: one line per branch in the existing side panel (available/grown), colored with the branch palette. Anything fancier (drawing the tree itself into the SVG) is a different, bigger tech."
+      ]
     },
     {
       "id": "TECH-PROMOTE",

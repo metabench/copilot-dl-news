@@ -155,6 +155,14 @@
       "timeoutMs": 15000
     },
     {
+      "id": "crawl-liveness",
+      "description": "zombie crawl-state tripwire on the Oracle box (task #70, cycle 151): RED when domain states claim 'running' while the orchestrator reports nothing running and throughput is zero — the exact signature that sat unnoticed for 6.8 days on 2026-07-28 (totals.fetched frozen at 12 against a 10,048 queue) hiding a dead crawl AND falsely blocking deploys. Uses the deploy tool's own classifyBusyStatus so probe and busy-gate can never disagree about the signature. With the engine's heartbeat-loss transition deployed, zombies self-heal in ~2 min, so a persistent red = that fix regressed or a new stale-state class. An unreachable box is NOT red here (reachability belongs to remote-endpoints)",
+      "cmd": "node",
+      "args": ["tools/dev/checks/crawl-liveness.check.js"],
+      "needsServer": false,
+      "timeoutMs": 15000
+    },
+    {
       "id": "workflow-scorecard-ratchet",
       "description": "no workflow task-type with >=5 recorded runs exceeds the cost-to-catch ceiling (turns spent per validation-CONFIRMED real catch) — a degrading/bloating workflow surface (one that stops earning its cost) is a regression, caught at orient. Bootstrapped 2026-07-21 (cycle 48) with 13 labeled runs; diagnosis=0.9, delegation-safety=1.0, equivalence=0.4. See docs/agi/WORKFLOW_MEASUREMENT.md §2 (cost-to-catch is the sound ratchet signal; verdict-accuracy is a diagnostic-to-read, not a gate, because a REFUTED verdict can be the workflow correctly refuting a bad premise)",
       "cmd": "node",
