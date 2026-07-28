@@ -24,7 +24,7 @@
  * the refresh model for these reference pages, exactly like SMAC's datalinks.
  */
 
-const { ICONS, headerScape } = require('./techArt');
+const { ICONS, headerScape, gearIcon } = require('./techArt');
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -43,7 +43,8 @@ function navBar(currentKey, branches) {
     const cur = n.key === currentKey;
     return `<a class="tp-nav__item${cur ? ' tp-nav__item--cur' : ''}" href="${n.href}"${cur ? ' aria-current="page"' : ''}>${icon}<span>${esc(n.label)}</span></a>`;
   }).join('');
-  return `<nav class="tp-nav">${items}</nav>`;
+  const settings = `<button class="tp-nav__settings" id="tp-settings-btn" type="button" aria-label="settings" title="settings">${gearIcon(17)}</button>`;
+  return `<nav class="tp-nav">${items}${settings}</nav>`;
 }
 
 function prereqChips(prereqs, branches) {
@@ -88,6 +89,54 @@ function nodeDataIsland(techTree) {
   // </script> inside JSON would end the island early; \u003c keeps it inert.
   return `<script type="application/json" id="tp-node-data">${JSON.stringify(out).replace(/</g, '\\u003c')}</script>`;
 }
+
+// ---- settings (owner 2026-07-28: gear top right → modal dialog; font size). ----
+// The pages' text sizes are rem-based precisely so this works: the adjuster sets the
+// ROOT font size; every rem measurement follows. Stored in localStorage ('tp-settings')
+// so it persists across the four pages and across visits. EARLY_SETTINGS applies the
+// stored size immediately after <body> opens — before first paint, so no size flash.
+const SETTINGS_RANGE = { min: 80, max: 140, step: 5, def: 100 };
+const EARLY_SETTINGS = `<script>try{var s=JSON.parse(localStorage.getItem('tp-settings')||'{}');if(s.fontPct)document.documentElement.style.fontSize=(16*s.fontPct/100)+'px';}catch(e){}</script>`;
+const SETTINGS_HTML = `<dialog class="tp-modal tp-settings" id="tp-settings-dlg">
+  <div class="tp-modal__bar"><span class="tp-modal__id">SETTINGS</span><button class="tp-modal__x" id="tp-settings-close" type="button" aria-label="close">✕</button></div>
+  <div class="tp-modal__sec">FONT SIZE</div>
+  <div class="tp-settings__row">
+    <button class="tp-settings__step" id="tps-minus" type="button" aria-label="smaller">A−</button>
+    <input type="range" id="tps-range" min="${SETTINGS_RANGE.min}" max="${SETTINGS_RANGE.max}" step="${SETTINGS_RANGE.step}" value="${SETTINGS_RANGE.def}" aria-label="font size percent">
+    <button class="tp-settings__step" id="tps-plus" type="button" aria-label="larger">A+</button>
+    <span class="tp-settings__pct" id="tps-pct">100%</span>
+    <button class="tp-settings__reset" id="tps-reset" type="button">reset</button>
+  </div>
+  <p class="tp-modal__p tp-settings__note">applies to text on the tech pages (stored in this browser); diagram text in the tree view keeps its drawn size</p>
+</dialog>`;
+const SETTINGS_SCRIPT = `<script>
+(function () {
+  var R = { min: ${SETTINGS_RANGE.min}, max: ${SETTINGS_RANGE.max}, step: ${SETTINGS_RANGE.step}, def: ${SETTINGS_RANGE.def} };
+  var dlg = document.getElementById('tp-settings-dlg');
+  var range = document.getElementById('tps-range');
+  var pctEl = document.getElementById('tps-pct');
+  function load() { try { return JSON.parse(localStorage.getItem('tp-settings') || '{}'); } catch (e) { return {}; } }
+  function apply(pct, save) {
+    pct = Math.max(R.min, Math.min(R.max, Math.round(pct / R.step) * R.step));
+    document.documentElement.style.fontSize = (16 * pct / 100) + 'px';
+    range.value = pct;
+    pctEl.textContent = pct + '%';
+    if (save) {
+      var st = load(); st.fontPct = pct;
+      try { localStorage.setItem('tp-settings', JSON.stringify(st)); } catch (e) {}
+    }
+    return pct;
+  }
+  apply(load().fontPct || R.def, false);
+  document.getElementById('tp-settings-btn').addEventListener('click', function () { if (!dlg.open) dlg.showModal(); });
+  document.getElementById('tp-settings-close').addEventListener('click', function () { dlg.close(); });
+  dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+  range.addEventListener('input', function () { apply(Number(range.value), true); });
+  document.getElementById('tps-minus').addEventListener('click', function () { apply(Number(range.value) - R.step, true); });
+  document.getElementById('tps-plus').addEventListener('click', function () { apply(Number(range.value) + R.step, true); });
+  document.getElementById('tps-reset').addEventListener('click', function () { apply(R.def, true); });
+})();
+</script>`;
 
 const MODAL_HTML = `<dialog class="tp-modal" id="tp-modal">
   <div class="tp-modal__bar"><span class="tp-modal__id" id="tpm-id"></span><button class="tp-modal__x" id="tpm-close" type="button" aria-label="close">✕</button></div>
@@ -369,6 +418,7 @@ function renderTechPage(branchKey, techTree, opts = {}) {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>${CSS.replace(/__ACCENT__/g, b.color)}</style></head>
 <body class="tp-body">
+${EARLY_SETTINGS}
 ${navBar(branchKey, branches)}
 <div class="tp-scape">${headerScape(b.color)}</div>
 <header class="tp-head">
@@ -386,8 +436,10 @@ ${renderTreeSvg(b, branches)}
 <footer class="tp-foot">${branchKey === 'factory' && opts.toolInventory ? `live inventory: ${opts.toolInventory.total} scripts across ${opts.toolInventory.dirs} tool directories (counted this request) · ` : ''}rendered per request from tech-tree.json (structure) · RESEARCH_BACKLOG states · roadmap.json cutoff · reload to refresh — this page cannot go stale${techTree.absorbed ? ` · ${techTree.absorbed} pre-tree research items absorbed into the foundations` : ''}</footer>
 ${nodeDataIsland(techTree)}
 ${MODAL_HTML}
+${SETTINGS_HTML}
 ${SIGNAL_SCRIPT}
 ${MODAL_SCRIPT}
+${SETTINGS_SCRIPT}
 </body></html>`;
 }
 
@@ -395,38 +447,38 @@ const CSS = `
 * { box-sizing: border-box; margin: 0; }
 .tp-body { background: #101216; color: #e8e4d8; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; padding-bottom: 24px; }
 .tp-nav { display: flex; gap: 6px; padding: 10px 18px; background: #0c0e11; border-bottom: 1px solid #232833; }
-.tp-nav__item { display: inline-flex; align-items: center; gap: 6px; color: #8a8778; text-decoration: none; font-size: 11px; letter-spacing: 0.12em; padding: 5px 10px; border: 1px solid transparent; border-radius: 4px; }
+.tp-nav__item { display: inline-flex; align-items: center; gap: 6px; color: #8a8778; text-decoration: none; font-size: 0.6875rem; letter-spacing: 0.12em; padding: 5px 10px; border: 1px solid transparent; border-radius: 4px; }
 .tp-nav__item:hover { color: #e8e4d8; border-color: #2e3440; }
 .tp-nav__item--cur { color: __ACCENT__; border-color: __ACCENT__; }
 .tp-scape { border-bottom: 1px solid #232833; }
 .tp-head { display: flex; align-items: center; gap: 14px; padding: 16px 22px 6px; }
-.tp-h1 { font-size: 22px; letter-spacing: 0.18em; color: __ACCENT__; }
-.tp-tag { font-size: 11px; color: #8a8778; margin-top: 3px; }
+.tp-h1 { font-size: 1.375rem; letter-spacing: 0.18em; color: __ACCENT__; }
+.tp-tag { font-size: 0.6875rem; color: #8a8778; margin-top: 3px; }
 .tp-tiers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 14px 22px; }
 @media (max-width: 980px) { .tp-tiers { grid-template-columns: repeat(2, 1fr); } }
-.tp-tier__head { font-size: 11px; letter-spacing: 0.16em; color: #8a8778; border-bottom: 2px solid __ACCENT__; padding-bottom: 5px; }
-.tp-tier__hint { font-size: 9.5px; color: #6b675a; margin: 5px 0 8px; }
+.tp-tier__head { font-size: 0.6875rem; letter-spacing: 0.16em; color: #8a8778; border-bottom: 2px solid __ACCENT__; padding-bottom: 5px; }
+.tp-tier__hint { font-size: 0.5938rem; color: #6b675a; margin: 5px 0 8px; }
 .tp-node { background: #14171c; border: 1px solid #2e3440; border-left: 3px solid #2e3440; border-radius: 5px; padding: 8px 10px; margin-bottom: 8px; }
-.tp-node__t { font-size: 11.5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.tp-node__s { font-size: 10px; color: #8a8778; margin-top: 4px; }
-.tp-node__req { font-size: 9.5px; color: #6b675a; margin-top: 6px; }
-.tp-chip { display: inline-block; border: 1px solid; border-radius: 3px; padding: 0 5px; font-size: 9px; letter-spacing: 0.06em; }
+.tp-node__t { font-size: 0.7188rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tp-node__s { font-size: 0.625rem; color: #8a8778; margin-top: 4px; }
+.tp-node__req { font-size: 0.5938rem; color: #6b675a; margin-top: 6px; }
+.tp-chip { display: inline-block; border: 1px solid; border-radius: 3px; padding: 0 5px; font-size: 0.5625rem; letter-spacing: 0.06em; }
 .tp-node--root { border-left-color: #8a8778; }
 .tp-node--grown { border-left-color: __ACCENT__; opacity: 0.85; }
 .tp-node--avail { border-color: __ACCENT__; border-left-width: 3px; box-shadow: 0 0 8px color-mix(in srgb, __ACCENT__ 22%, transparent); }
 .tp-node--gated { border-left-color: #b34d4d; opacity: 0.85; }
 .tp-node--fog { border-style: dashed; opacity: 0.45; text-align: center; }
-.tp-node--seed { border-style: dashed; opacity: 0.55; font-size: 10px; color: #8a8778; text-align: center; }
+.tp-node--seed { border-style: dashed; opacity: 0.55; font-size: 0.625rem; color: #8a8778; text-align: center; }
 .tp-signal { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px; padding: 10px 12px; background: #0c1218; border: 2px solid __ACCENT__; border-radius: 6px; color: #e8f4fb; cursor: pointer; text-align: left; font-family: inherit; box-shadow: 0 0 14px color-mix(in srgb, __ACCENT__ 40%, transparent); }
 .tp-signal:hover:not(:disabled) { box-shadow: 0 0 22px color-mix(in srgb, __ACCENT__ 60%, transparent); background: #0e1620; }
 .tp-signal:disabled { cursor: default; }
 .tp-signal--sent { border-style: dashed; box-shadow: none; opacity: 0.85; }
-.tp-signal__t { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; }
-.tp-signal__s { font-size: 9.5px; color: #8fb8cf; margin-top: 3px; }
+.tp-signal__t { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.14em; }
+.tp-signal__s { font-size: 0.5938rem; color: #8fb8cf; margin-top: 3px; }
 .tp-prelim { margin-top: 8px; border-top: 1px dashed #2e3440; padding-top: 6px; }
-.tp-prelim summary { font-size: 9px; letter-spacing: 0.14em; color: #6b675a; cursor: pointer; }
+.tp-prelim summary { font-size: 0.5625rem; letter-spacing: 0.14em; color: #6b675a; cursor: pointer; }
 .tp-prelim summary:hover { color: #8a8778; }
-.tp-prelim__p { font-size: 10px; color: #a39f8f; margin: 6px 0 0; line-height: 1.5; }
+.tp-prelim__p { font-size: 0.625rem; color: #a39f8f; margin: 6px 0 0; line-height: 1.5; }
 .tp-treeview { padding: 14px 22px 0; }
 .tp-treeview__scroll { overflow-x: auto; background: #0c0e11; border: 1px solid #232833; border-radius: 6px; padding: 6px; }
 [data-node-id] { cursor: pointer; }
@@ -434,23 +486,32 @@ const CSS = `
 .tp-modal { background: #14171c; color: #e8e4d8; border: 2px solid var(--accent, #8a8778); border-radius: 8px; padding: 0 18px 16px; max-width: 640px; width: min(92vw, 640px); max-height: 84vh; box-shadow: 0 0 40px rgba(0,0,0,0.7), 0 0 18px color-mix(in srgb, var(--accent, #8a8778) 25%, transparent); }
 .tp-modal::backdrop { background: rgba(6, 8, 11, 0.75); }
 .tp-modal__bar { display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #14171c; padding: 12px 0 6px; }
-.tp-modal__id { font-size: 10px; letter-spacing: 0.16em; color: var(--accent, #8a8778); }
-.tp-modal__x { background: none; border: 1px solid #2e3440; color: #8a8778; border-radius: 4px; cursor: pointer; font-size: 11px; padding: 2px 8px; }
+.tp-modal__id { font-size: 0.625rem; letter-spacing: 0.16em; color: var(--accent, #8a8778); }
+.tp-modal__x { background: none; border: 1px solid #2e3440; color: #8a8778; border-radius: 4px; cursor: pointer; font-size: 0.6875rem; padding: 2px 8px; }
 .tp-modal__x:hover { color: #e8e4d8; border-color: #8a8778; }
-.tp-modal__title { font-size: 17px; letter-spacing: 0.04em; margin: 2px 0 4px; }
-.tp-modal__meta { font-size: 10px; color: #8a8778; border-bottom: 1px solid #232833; padding-bottom: 8px; }
-.tp-modal__sec { font-size: 9.5px; letter-spacing: 0.16em; color: var(--accent, #8a8778); margin: 14px 0 4px; }
-.tp-modal__p { font-size: 11.5px; line-height: 1.55; color: #cfcabd; margin: 4px 0; }
-.tp-modal__p--prose { font-size: 10.5px; color: #a39f8f; }
+.tp-modal__title { font-size: 1.0625rem; letter-spacing: 0.04em; margin: 2px 0 4px; }
+.tp-modal__meta { font-size: 0.625rem; color: #8a8778; border-bottom: 1px solid #232833; padding-bottom: 8px; }
+.tp-modal__sec { font-size: 0.5938rem; letter-spacing: 0.16em; color: var(--accent, #8a8778); margin: 14px 0 4px; }
+.tp-modal__p { font-size: 0.7188rem; line-height: 1.55; color: #cfcabd; margin: 4px 0; }
+.tp-modal__p--prose { font-size: 0.6562rem; color: #a39f8f; }
 .tp-modal__p--fact { color: #d8d3c4; }
 .tp-modal__chips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
-.tp-modal__chiplabel { font-size: 9px; color: #6b675a; margin-right: 3px; }
+.tp-modal__chiplabel { font-size: 0.5625rem; color: #6b675a; margin-right: 3px; }
 .tp-chip--hop { cursor: pointer; background: none; font-family: inherit; padding: 2px 7px; }
 .tp-chip--hop:hover { background: #1b1f26; }
+.tp-nav__settings { margin-left: auto; background: none; border: 1px solid #2e3440; border-radius: 4px; color: #8a8778; cursor: pointer; padding: 4px 8px; display: inline-flex; align-items: center; }
+.tp-nav__settings:hover { color: __ACCENT__; border-color: __ACCENT__; }
+.tp-settings { max-width: 420px; }
+.tp-settings__row { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; }
+.tp-settings__row input[type=range] { flex: 1; accent-color: __ACCENT__; }
+.tp-settings__step, .tp-settings__reset { background: none; border: 1px solid #2e3440; border-radius: 4px; color: #cfcabd; cursor: pointer; font-family: inherit; font-size: 0.6875rem; padding: 3px 9px; }
+.tp-settings__step:hover, .tp-settings__reset:hover { border-color: __ACCENT__; color: __ACCENT__; }
+.tp-settings__pct { font-size: 0.6875rem; color: #8a8778; min-width: 2.6em; text-align: right; font-variant-numeric: tabular-nums; }
+.tp-settings__note { color: #6b675a; }
 .tp-others { display: flex; gap: 10px; padding: 4px 22px 10px; flex-wrap: wrap; }
-.tp-cross { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: #8a8778; text-decoration: none; border: 1px dashed; border-radius: 4px; padding: 5px 9px; }
+.tp-cross { display: inline-flex; align-items: center; gap: 6px; font-size: 0.625rem; color: #8a8778; text-decoration: none; border: 1px dashed; border-radius: 4px; padding: 5px 9px; }
 .tp-cross:hover { color: #e8e4d8; }
-.tp-foot { font-size: 9.5px; color: #6b675a; padding: 8px 22px; border-top: 1px solid #232833; }
+.tp-foot { font-size: 0.5938rem; color: #6b675a; padding: 8px 22px; border-top: 1px solid #232833; }
 `;
 
 module.exports = { renderTechPage, collectGraph, assignDepths, renderTreeSvg, NAV };

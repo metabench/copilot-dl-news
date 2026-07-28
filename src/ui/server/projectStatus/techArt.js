@@ -100,6 +100,14 @@ function faviconSvg() {
 </svg>`;
 }
 
+/** ⚙ settings gear (nav, top right). */
+function gearIcon(size = 16) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Settings">
+<path d="M16 3l1.6 3.6a9.6 9.6 0 0 1 3.2 1.3l3.7-1.4 2 3.4-2.9 2.7a9.7 9.7 0 0 1 0 3.5l2.9 2.7-2 3.4-3.7-1.4a9.6 9.6 0 0 1-3.2 1.3L16 26l-1.6-3.6a9.6 9.6 0 0 1-3.2-1.3l-3.7 1.4-2-3.4 2.9-2.7a9.7 9.7 0 0 1 0-3.5L5.5 10l2-3.4 3.7 1.4a9.6 9.6 0 0 1 3.2-1.3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" transform="translate(0,1.5)"/>
+<circle cx="16" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+</svg>`;
+}
+
 const ICONS = { iceBulb, treeMonitor, spiderWeb, factorySpanner };
 
-module.exports = { iceBulb, treeMonitor, spiderWeb, factorySpanner, headerScape, faviconSvg, ICONS };
+module.exports = { iceBulb, treeMonitor, spiderWeb, factorySpanner, headerScape, faviconSvg, gearIcon, ICONS };
