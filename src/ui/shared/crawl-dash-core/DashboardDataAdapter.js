@@ -43,11 +43,16 @@ class DashboardDataAdapter {
    * the panels it can and surfaces the failure on the one it can't.
    */
   async getModel() {
-    const caps = this.describe().capabilities;
+    const desc = this.describe();
+    const caps = desc.capabilities;
+    // notes[piece] rides along on the unsupported fallback — getX() is never
+    // called for an unsupported piece (the skip protects against absent
+    // endpoints), so a why-explanation has to travel via describe() instead.
+    const notes = desc.notes || {};
     const [throughput, hostHealth, headlines] = await Promise.all([
-      caps.throughput ? this.getThroughput().catch((e) => ({ error: e.message })) : Promise.resolve({ supported: false }),
-      caps.hostHealth ? this.getHostHealth().catch((e) => ({ error: e.message, badges: [] })) : Promise.resolve({ supported: false, badges: [] }),
-      caps.headlines ? this.getHeadlines().catch((e) => ({ error: e.message, items: [] })) : Promise.resolve({ supported: false, items: [] }),
+      caps.throughput ? this.getThroughput().catch((e) => ({ error: e.message })) : Promise.resolve({ supported: false, note: notes.throughput }),
+      caps.hostHealth ? this.getHostHealth().catch((e) => ({ error: e.message, badges: [] })) : Promise.resolve({ supported: false, badges: [], note: notes.hostHealth }),
+      caps.headlines ? this.getHeadlines().catch((e) => ({ error: e.message, items: [] })) : Promise.resolve({ supported: false, items: [], note: notes.headlines }),
     ]);
     return { source: this.label, capabilities: caps, throughput, hostHealth, headlines };
   }
@@ -99,7 +104,13 @@ class RemoteDataAdapter extends DashboardDataAdapter {
   describe() {
     // headlines:false is load-bearing — getModel skips the call entirely so the
     // panel reads "unsupported" instead of erroring against an absent endpoint.
-    return { label: 'remote', capabilities: { throughput: true, hostHealth: 'domain-state', headlines: false } };
+    // The note travels here (not in getHeadlines) because the skip means
+    // getHeadlines is never reached from getModel.
+    return {
+      label: 'remote',
+      capabilities: { throughput: true, hostHealth: 'domain-state', headlines: false },
+      notes: { headlines: REMOTE_HEADLINES_NOTE },
+    };
   }
 
   async getThroughput() {
@@ -127,9 +138,11 @@ class RemoteDataAdapter extends DashboardDataAdapter {
   }
 
   async getHeadlines() {
-    return { items: [], supported: false, note: 'remote spool has no analysed headlines; local news.db is the source of record' };
+    return { items: [], supported: false, note: REMOTE_HEADLINES_NOTE };
   }
 }
+
+const REMOTE_HEADLINES_NOTE = 'remote spool has no analysed headlines; local news.db is the source of record';
 
 /**
  * makeHttpSource — a source backed by an injected async fetchJson(path) over the

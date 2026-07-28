@@ -80,9 +80,17 @@ describe('RemoteDataAdapter', () => {
 
   it('getModel SKIPS the unsupported headlines call and reports it as unsupported', async () => {
     const m = await adapter.getModel();
-    expect(m.headlines).toEqual({ supported: false, items: [] });
+    expect(m.headlines.supported).toBe(false);
+    expect(m.headlines.items).toEqual([]);
     expect(m.throughput.totals.queue).toBe(42);
     expect(m.hostHealth.badges).toHaveLength(2);
+  });
+
+  it('getModel carries the WHY note for the skipped headlines piece (describe().notes path)', async () => {
+    // getHeadlines is never called for an unsupported piece, so the explanatory
+    // note must travel via describe().notes — a fallback-only note is dead code.
+    const m = await adapter.getModel();
+    expect(m.headlines.note).toMatch(/local news\.db is the source of record/);
   });
 });
 
