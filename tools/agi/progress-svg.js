@@ -147,9 +147,31 @@ function renderSvg({ rows, totals }, annotations = [], activity = null) {
   const xi = (i) => x0 + ((i + 0.5) * plotW) / Math.max(rows.length, 1);
   const tickEvery = Math.max(1, Math.ceil(rows.length / 8));
 
-  // ---- chart A: cumulative verified improvements ----
+  // ---- chart A: cumulative verified improvements ON A TRUE TIME AXIS ----
+  // Owner observation (2026-07-28): plotted per-cycle the line could never be flat,
+  // because almost every cycle lands an improvement — the apparent steadiness was an
+  // axis artifact, not a fact about the work. The x-axis is now CALENDAR DAYS at
+  // uniform width; cycles spread within their day band in sequence. Idle days render
+  // as genuinely flat line segments (2026-07-24, zero cycles, is the proof case).
   const aTop = 208, aBot = 386, aH = aBot - aTop;
   T(PAD, 196, 'Cumulative verified improvements', 13, C.ink, 'font-weight="600"');
+  T(PAD + 268, 196, 'x-axis: calendar days, uniform width — flat = an idle day', 10, C.muted);
+  const datedRows = rows.filter((r) => /^\d{4}-\d{2}-\d{2}$/.test(String(r.date)));
+  const days = datedRows.length
+    ? enumDays(datedRows.reduce((a, r) => (r.date < a ? r.date : a), datedRows[0].date),
+               datedRows.reduce((a, r) => (r.date > a ? r.date : a), datedRows[0].date))
+    : [];
+  const dayIdx = new Map(days.map((d, i) => [d, i]));
+  const perDay = new Map();
+  for (const r of datedRows) perDay.set(r.date, (perDay.get(r.date) || 0) + 1);
+  const seen = new Map();
+  const dayW = plotW / Math.max(days.length, 1);
+  const xiTime = new Map();
+  for (const r of datedRows) {
+    const j = seen.get(r.date) || 0;
+    seen.set(r.date, j + 1);
+    xiTime.set(r.id, x0 + (dayIdx.get(r.date) + (j + 0.5) / perDay.get(r.date)) * dayW);
+  }
   const maxCum = Math.max(1, ...rows.map((r) => r.cum));
   const aNice = Math.max(5, Math.ceil(maxCum / 5) * 5);
   const yA = (v) => aBot - (v / aNice) * aH;
@@ -158,30 +180,41 @@ function renderSvg({ rows, totals }, annotations = [], activity = null) {
     s.push(`<line x1="${x0}" y1="${r1(y)}" x2="${x1}" y2="${r1(y)}" stroke="${C.grid}" stroke-width="1"/>`);
     T(x0 - 8, y + 4, String(Math.round(v)), 10, C.muted, 'text-anchor="end"');
   }
-  if (rows.length) {
-    const pts = rows.map((r, i) => `${r1(xi(i))},${r1(yA(r.cum))}`);
-    s.push(`<path d="M${r1(xi(0))},${aBot} L${pts.join(' L')} L${r1(xi(rows.length - 1))},${aBot} Z" fill="${C.gold}" opacity="0.12"/>`);
+  // day boundaries + date labels: the time units, stated on the axis itself
+  const dayLabelEvery = Math.max(1, Math.ceil(days.length / 12));
+  days.forEach((d, i) => {
+    const bx = r1(x0 + i * dayW);
+    s.push(`<line x1="${bx}" y1="${aTop}" x2="${bx}" y2="${aBot}" stroke="${C.grid}" stroke-width="1" opacity="0.6"/>`);
+    if (i % dayLabelEvery === 0 || i === days.length - 1) {
+      T(x0 + (i + 0.5) * dayW, aBot + 14, d.slice(5), 9, C.muted, 'text-anchor="middle"');
+    }
+  });
+  if (datedRows.length) {
+    const pts = datedRows.map((r) => `${r1(xiTime.get(r.id))},${r1(yA(r.cum))}`);
+    const firstX = r1(xiTime.get(datedRows[0].id)), lastX = r1(xiTime.get(datedRows[datedRows.length - 1].id));
+    s.push(`<path d="M${firstX},${aBot} L${pts.join(' L')} L${lastX},${aBot} Z" fill="${C.gold}" opacity="0.12"/>`);
     s.push(`<path d="M${pts.join(' L')}" fill="none" stroke="${C.gold}" stroke-width="2" stroke-linejoin="round"/>`);
     // correction markers: red diamonds ON the line — reversals are part of the record
-    rows.forEach((r, i) => {
+    datedRows.forEach((r) => {
       if (!r.correction) return;
-      const x = r1(xi(i)), y = r1(yA(r.cum));
+      const x = r1(xiTime.get(r.id)), y = r1(yA(r.cum));
       s.push(`<path d="M${x},${y - 5} L${x + 5},${y} L${x},${y + 5} L${x - 5},${y} Z" fill="${C.red}" stroke="${C.bg}" stroke-width="1.5"><title>cycle ${r.id}: correction/retraction issued</title></path>`);
     });
   }
   // annotations (sidecar): latest 4, dashed markers — the "modify" pathway
-  const byId = new Map(rows.map((r, i) => [r.id, i]));
-  const shown = annotations.filter((a) => byId.has(a.cycle)).slice(-4);
+  const shown = annotations.filter((a) => xiTime.has(a.cycle)).slice(-4);
   shown.forEach((a, k) => {
-    const i = byId.get(a.cycle), x = r1(xi(i));
+    const x = r1(xiTime.get(a.cycle));
     s.push(`<line x1="${x}" y1="${aTop - 2}" x2="${x}" y2="${aBot}" stroke="${C.gold}" stroke-width="1" stroke-dasharray="3,3" opacity="0.55"/>`);
     T(Math.min(x + 4, x1 - 150), aTop + 12 + k * 13, `${a.cycle} · ${a.label}`, 10, C.muted);
   });
-  rows.forEach((r, i) => { if (i % tickEvery === 0 || i === rows.length - 1) T(xi(i), aBot + 14, String(r.id), 9, C.muted, 'text-anchor="middle"'); });
 
   // ---- chart B: defects caught per cycle, pre-ship vs post-ship ----
+  // Deliberately stays on the CYCLE-SEQUENCE axis (one bar per cycle) — and says so:
+  // an unlabeled axis that could be time is how chart A misled until 2026-07-28.
   const bTop = 452, bBot = 606, bH = bBot - bTop;
   T(PAD, 440, 'Defects caught per cycle', 13, C.ink, 'font-weight="600"');
+  T(PAD + 178, 440, 'x-axis: cycle sequence (ticks = cycle ids, not time)', 10, C.muted);
   // legend: color + label, identity never color-alone (position also encodes: pre-ship sits on the baseline)
   s.push(`<rect x="${x1 - 218}" y="430" width="9" height="9" rx="2" fill="${C.green}"/>`);
   T(x1 - 205, 439, 'pre-ship', 10, C.muted);

@@ -43,6 +43,28 @@ describe('progress-svg', () => {
     expect(svg).toContain('correction/retraction'); // marker title present
   });
 
+  it('chart A runs on a true calendar-day axis, and both axes NAME their units', () => {
+    const series = computeSeries(parseCycleStanzas(FIXTURE).cycles);
+    const svg = renderSvg(series, []);
+    // fixture dates 07-01..07-03 become uniform day bands with date labels
+    expect(svg).toContain('calendar days');
+    expect(svg).toContain('>07-01<');
+    expect(svg).toContain('>07-03<');
+    expect(svg).toContain('cycle sequence'); // chart B says what its axis is
+  });
+
+  it('an idle day occupies real width — the flat the time axis exists to show', () => {
+    // cycles on 07-01 and 07-05 with NOTHING between: days 02-04 must still be
+    // enumerated (uniform time), so the cumulative line crosses them flat
+    const gapped = [
+      '<!-- cycle:{"id":1,"date":"2026-07-01","verified_improvements":2} -->',
+      '<!-- cycle:{"id":2,"date":"2026-07-05","verified_improvements":1} -->'
+    ].join('\n');
+    const svg = renderSvg(computeSeries(parseCycleStanzas(gapped).cycles), []);
+    for (const d of ['>07-01<', '>07-02<', '>07-03<', '>07-04<', '>07-05<']) expect(svg).toContain(d);
+    expect(svg).not.toContain('NaN');
+  });
+
   it('handles an empty ledger without throwing', () => {
     const series = computeSeries([]);
     const svg = renderSvg(series, []);
