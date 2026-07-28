@@ -592,8 +592,11 @@
         "CR-ENGINE",
         "TR-PAGE"
       ],
-      "state": "available",
+      "state": "done",
+      "researchedOn": "2026-07-28",
       "detail": [
+        "Delivered cycles 149-150 (2026-07-28, owner-signalled sig-20260728015536): ActivityHeadlinesControl + esbuild IIFE bundle (built on Windows, committed into news-crawler-itself/public because jsgui3 npm tarballs are case-broken on Linux) + /dashboard and /dashboard-client.js routes on multi-domain-server.js; deployed build 20260728223411 and browser-verified live at 141.144.193.218:3200/dashboard — promotion waited one extra deploy-gated day because 'served from the remote worker' is this tech's own definition and the tree does not round up.",
+        "The deploy surfaced a busy-gate FALSE POSITIVE worth its own fix: the gate read 4 domains as 'running' while throughput was 0, total fetches were 12 over a 6.8-day uptime, and the counters were frozen across spaced samples — zombie domain states from a crawl that died just after boot. Triangulation (three instruments with different failure modes) beat the single stale instrument, again.",
         "D4 slice 2b (activity/headline control + esbuild bundle served from the remote worker) is the loop's longest-deferred slice: task #54 is still pending, having been explicitly deferred across cycles 73-74 for the engine extraction and again at cycles 77-80.",
         "Cycle 79's consumer-grep found the D4 slice-2 controls (ThroughputStripControl, HostHealthBadgesControl from cycles 71-72) were UNMOUNTED scaffold — zero live pages rendered them and the only /api/v1/crawl/dashboard-model consumers were the controls themselves plus a dev tool — so instead of building slice 2b on unmounted scaffold, the cycle gave the endpoint its first real consumer.",
         "That first consumer is the live crawl-throughput strip on the home control center (docs/s down · docs/s stored · MB/s · queue), hydrated client-side in the existing 5s poll and built backslash-free/textContent-only so it is template-trap-safe by construction; a live mid-crawl screenshot showed it updating with 0 console errors.",
