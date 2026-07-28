@@ -77,8 +77,24 @@ describe('buildTechTree v3 (SMAC branches)', () => {
     expect(() => buildTechTree(ROWS, ROADMAP, badBranch)).toThrow(/unknown branch/);
     const badRef = { ...SPEC, techs: [{ ref: 'RB-999', branch: 'agi', prereqs: [] }] };
     expect(() => buildTechTree(ROWS, ROADMAP, badRef)).toThrow(/real RB id/);
-    const doneCurated = { ...SPEC, techs: [{ id: 'T', branch: 'agi', title: 't', prereqs: [], state: 'done' }] };
-    expect(() => buildTechTree(ROWS, ROADMAP, doneCurated)).toThrow(/only be "available"/);
+    // curated promotion (cycle 148): done is legal ONLY with a researchedOn date
+    const datelessDone = { ...SPEC, techs: [{ id: 'T', branch: 'agi', title: 't', prereqs: [], state: 'done' }] };
+    expect(() => buildTechTree(ROWS, ROADMAP, datelessDone)).toThrow(/never dateless/);
+    const otherState = { ...SPEC, techs: [{ id: 'T', branch: 'agi', title: 't', prereqs: [], state: 'shipped' }] };
+    expect(() => buildTechTree(ROWS, ROADMAP, otherState)).toThrow(/only be "available"/);
+  });
+
+  it('promotes a done+dated curated tech to GROWN — the hand-edit promotion path (cycle 148)', () => {
+    const promoted = {
+      ...SPEC,
+      techs: [...SPEC.techs, { id: 'TECH-X2', branch: 'agi', title: 'Finished thing', research: 'was: do it', prereqs: ['AG-HARNESS'], state: 'done', researchedOn: '2026-07-28' }]
+    };
+    const t = buildTechTree(ROWS, ROADMAP, promoted);
+    const agi2 = t.branches.find((b) => b.key === 'agi');
+    const g = agi2.grown.find((n) => n.id === 'TECH-X2');
+    expect(g).toBeTruthy();
+    expect(g.researchedOn).toBe('2026-07-28');
+    expect(agi2.available.map((n) => n.id)).not.toContain('TECH-X2');
   });
 
   it('THROWS on a missing/malformed spec rather than rendering a guess', () => {

@@ -71,7 +71,7 @@ function node(cls, inner, nodeId) {
  * branch to branch without a page load. The island is the same objects the tiers
  * render from — one source, no drift.
  */
-function nodeDataIsland(techTree) {
+function buildNodeIndex(techTree) {
   const out = {};
   for (const b of (techTree.branches || [])) {
     const base = { branch: b.key, branchLabel: b.label, color: b.color };
@@ -86,8 +86,12 @@ function nodeDataIsland(techTree) {
       };
     }
   }
+  return out;
+}
+
+function nodeDataIsland(techTree) {
   // </script> inside JSON would end the island early; \u003c keeps it inert.
-  return `<script type="application/json" id="tp-node-data">${JSON.stringify(out).replace(/</g, '\\u003c')}</script>`;
+  return `<script type="application/json" id="tp-node-data">${JSON.stringify(buildNodeIndex(techTree)).replace(/</g, '\\u003c')}</script>`;
 }
 
 // ---- settings (owner 2026-07-28: gear top right → modal dialog; font size). ----
@@ -141,7 +145,7 @@ const SETTINGS_SCRIPT = `<script>
 const MODAL_HTML = `<dialog class="tp-modal" id="tp-modal">
   <div class="tp-modal__bar"><span class="tp-modal__id" id="tpm-id"></span><button class="tp-modal__x" id="tpm-close" type="button" aria-label="close">✕</button></div>
   <h2 class="tp-modal__title" id="tpm-title"></h2>
-  <div class="tp-modal__meta" id="tpm-meta"></div>
+  <div class="tp-modal__meta" id="tpm-meta"><a class="tp-modal__page" id="tpm-page" href="#">open datalinks page ↗</a></div>
   <div class="tp-modal__body" id="tpm-body"></div>
 </dialog>`;
 
@@ -180,7 +184,14 @@ const MODAL_SCRIPT = `<script>
     if (n.priority) meta.push('priority ' + n.priority);
     if (n.researchedOn) meta.push('researched ' + n.researchedOn);
     if (n.lastUpdate) meta.push('updated ' + n.lastUpdate);
-    document.getElementById('tpm-meta').textContent = meta.filter(Boolean).join(' · ');
+    var metaEl = document.getElementById('tpm-meta');
+    while (metaEl.firstChild) metaEl.removeChild(metaEl.firstChild);
+    metaEl.appendChild(document.createTextNode(meta.filter(Boolean).join(' · ') + ' · '));
+    var pageLink = document.createElement('a');
+    pageLink.className = 'tp-modal__page';
+    pageLink.href = '/tech/node?id=' + encodeURIComponent(id);
+    pageLink.textContent = 'open datalinks page ↗';
+    metaEl.appendChild(pageLink);
     dlg.style.setProperty('--accent', n.color || '#8a8778');
     var body = document.getElementById('tpm-body');
     while (body.firstChild) body.removeChild(body.firstChild);
@@ -472,6 +483,60 @@ ${SETTINGS_SCRIPT}
 </body></html>`;
 }
 
+/**
+ * renderNodePage — the SMAC datalinks page proper (cycle 148, owner-signalled
+ * TECH-DATALINKS): one page per technology at /tech/node?id=<ID>, with everything
+ * the modal shows PLUS the room the modal lacks — the LEDGER TRAIL (every cycle
+ * whose record mentions the node, from statusData.ledgerMentions) and Preliminary
+ * Data expanded by default. BUILT FROM / UNLOCKS render as server-side LINKS to
+ * sibling datalinks pages, so the tree is walkable with no JS at all.
+ */
+function renderNodePage(id, techTree, opts = {}) {
+  const index = buildNodeIndex(techTree);
+  const n = index[id];
+  if (!n) return null;
+  const branches = techTree.branches || [];
+  const accent = n.color || '#8a8778';
+  const linkChip = (pid) => {
+    const t = index[pid] || {};
+    const c = t.color || '#8a8778';
+    return `<a class="tp-chip tp-chip--link" style="border-color:${c};color:${c}" href="/tech/node?id=${encodeURIComponent(pid)}">${esc(pid)}</a>`;
+  };
+  const sec = (title) => `<div class="tp-modal__sec">${esc(title)}</div>`;
+  const para = (cls, text) => `<p class="tp-modal__p${cls ? ' ' + cls : ''}">${esc(text)}</p>`;
+  let body = '';
+  if (n.research) body += sec('RESEARCH MEANS') + para('', n.research);
+  if (n.note && !n.research) body += sec(n.kind === 'fog' ? 'THE FOG' : 'WHAT THIS IS') + para('', n.note);
+  if (n.question) body += sec('THE QUESTION') + para('', n.question);
+  if ((n.prereqs || []).length) body += sec('BUILT FROM') + `<div class="tp-modal__chips">${n.prereqs.map((p) => linkChip(p.id)).join(' ')}</div>`;
+  if ((n.unlocks || []).length) body += sec('UNLOCKS') + `<div class="tp-modal__chips">${n.unlocks.map(linkChip).join(' ')}</div>`;
+  if (n.statusProse) body += sec('FULL RECORD (research backlog, live)') + para('tp-modal__p--prose', n.statusProse);
+  if ((n.detail || []).length) body += sec('DETAIL — from the project record') + n.detail.map((d) => para('tp-modal__p--fact', '▪ ' + d)).join('');
+  if ((n.prelim || []).length) body += sec('PRELIMINARY DATA — ' + n.prelim.length + ' notes') + n.prelim.map((x) => para('', x)).join('');
+  const trail = opts.ledgerTrail || [];
+  if (trail.length) {
+    body += sec('LEDGER TRAIL — ' + trail.length + ' cycle' + (trail.length === 1 ? '' : 's') + ' mention this') +
+      trail.map((t) => `<div class="tp-trail__row"><span class="tp-trail__c">c${esc(String(t.cycle))}</span><span class="tp-trail__d">${esc(t.date)}</span><span class="tp-trail__l">${esc(t.label)}</span></div>`).join('');
+  } else if (n.kind !== 'fog') {
+    body += sec('LEDGER TRAIL') + para('tp-modal__p--prose', 'no ledger cycle mentions this id yet — the trail writes itself as work lands');
+  }
+  const meta = [n.kind, n.priority ? 'priority ' + n.priority : '', n.researchedOn ? 'researched ' + n.researchedOn : '', n.lastUpdate ? 'updated ' + n.lastUpdate : ''].filter(Boolean).join(' · ');
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(id)} — datalinks</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>${CSS.replace(/__ACCENT__/g, accent)}</style></head>
+<body class="tp-body">
+${EARLY_SETTINGS}
+${navBar(n.branch, branches)}
+<header class="tp-head"><div><div class="tp-modal__id" style="color:${accent}">${esc(n.branchLabel || '')} · DATALINKS</div><h1 class="tp-h1" style="color:#e8e4d8">${esc(n.title || id)}</h1><div class="tp-tag">${esc(meta)}</div></div></header>
+<main class="tp-node-page">${body}</main>
+<footer class="tp-foot">rendered per request · <a class="tp-foot__back" href="/tech/${esc(n.branch)}">◀ back to ${esc(n.branchLabel || 'branch')}</a></footer>
+${SETTINGS_HTML}
+${SETTINGS_SCRIPT}
+</body></html>`;
+}
+
 const CSS = `
 * { box-sizing: border-box; margin: 0; }
 .tp-body { background: #101216; color: #e8e4d8; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; padding-bottom: 24px; }
@@ -545,10 +610,20 @@ const CSS = `
 .tp-sig-log__state { min-width: 9.5em; color: #cfcabd; }
 .tp-sig-log__tech { min-width: 10em; color: __ACCENT__; }
 .tp-sig-log__note { flex: 1; color: #6b675a; }
+.tp-node-page { max-width: 720px; padding: 6px 22px 18px; }
+.tp-chip--link { text-decoration: none; }
+.tp-chip--link:hover { background: #1b1f26; }
+.tp-modal__page { color: #8fb8cf; font-size: 0.625rem; text-decoration: none; }
+.tp-modal__page:hover { text-decoration: underline; }
+.tp-trail__row { display: flex; gap: 10px; align-items: baseline; font-size: 0.6563rem; padding: 3px 0; border-bottom: 1px dashed #1b1f26; }
+.tp-trail__c { min-width: 3.2em; color: __ACCENT__; }
+.tp-trail__d { min-width: 6.5em; color: #6b675a; }
+.tp-trail__l { flex: 1; color: #a39f8f; }
+.tp-foot__back { color: #8a8778; }
 .tp-others { display: flex; gap: 10px; padding: 4px 22px 10px; flex-wrap: wrap; }
 .tp-cross { display: inline-flex; align-items: center; gap: 6px; font-size: 0.625rem; color: #8a8778; text-decoration: none; border: 1px dashed; border-radius: 4px; padding: 5px 9px; }
 .tp-cross:hover { color: #e8e4d8; }
 .tp-foot { font-size: 0.5938rem; color: #6b675a; padding: 8px 22px; border-top: 1px solid #232833; }
 `;
 
-module.exports = { renderTechPage, collectGraph, assignDepths, renderTreeSvg, NAV };
+module.exports = { renderTechPage, renderNodePage, buildNodeIndex, collectGraph, assignDepths, renderTreeSvg, NAV };

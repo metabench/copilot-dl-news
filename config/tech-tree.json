@@ -611,10 +611,12 @@
         "TR-PAGE",
         "TR-LEDGER"
       ],
-      "state": "available",
+      "state": "done",
       "prelim": [
-        "Review verdict 2026-07-28: the c142 modal already serves most reading needs, so this ranked below the shipped slice — it earns its build when a node's record outgrows a dialog."
-      ]
+        "Review verdict 2026-07-28: the c142 modal already serves most reading needs, so this ranked below the shipped slice — it earns its build when a node's record outgrows a dialog.",
+        "DELIVERED 2026-07-28 (cycle 148, owner-signalled sig-20260728014356): /tech/node?id=<ID> renders a per-request datalinks page for every node — everything the modal shows plus the LEDGER TRAIL (cycles mentioning the node, mined from the record with zero new bookkeeping) and expanded Preliminary Data; BUILT FROM / UNLOCKS are plain links, so the tree is walkable with no JS. The modal links to it. First curated tech promoted to GROWN via the new done+researchedOn path."
+      ],
+      "researchedOn": "2026-07-28"
     },
     {
       "id": "TECH-FLAVOR",

@@ -130,9 +130,22 @@ function buildTechTree(backlogRows, roadmap, spec) {
         // a partial row is offered by its REMAINDER — researching it means the remainder
         dest.available.push({ ...node, research: remainder ? shortTitle(remainder, 90) : shortTitle(row.question, 90) });
       }
+    } else if (t.state === 'done') {
+      // Curated-tech promotion (cycle 148, first used by TECH-DATALINKS): a curated
+      // tech completes by hand-editing its spec entry to state 'done' with a
+      // researchedOn date — it then renders as GROWN on the tree. Mechanising this
+      // edit is TECH-PROMOTE's research; the rule that completion must carry a date
+      // is enforced now so a promotion can never be dateless.
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(t.researchedOn || ''))) {
+        throw new Error(`${owner}: a done curated tech needs researchedOn (YYYY-MM-DD) — promotion is never dateless`);
+      }
+      const extra = {};
+      if (Array.isArray(t.prelim) && t.prelim.length) extra.prelim = t.prelim;
+      if (Array.isArray(t.detail) && t.detail.length) extra.detail = t.detail;
+      dest.grown.push({ id: t.id, title: t.title, research: t.research || '', prereqs, researchedOn: t.researchedOn, ...extra });
     } else {
       if (t.state !== 'available') {
-        throw new Error(`${owner}: curated techs may only be "available" — completion belongs in the ledger/backlog, then the node is promoted`);
+        throw new Error(`${owner}: curated techs may only be "available" or "done"+researchedOn — completion belongs in the ledger, then the node is promoted`);
       }
       const extra = {};
       // 'Preliminary Data' (owner 2026-07-27): a tech may carry extensive ideation
@@ -168,6 +181,39 @@ function buildTechTree(backlogRows, roadmap, spec) {
   }
 
   return { branches, absorbed };
+}
+
+/**
+ * ledgerMentions(nodeId) — the datalinks pages' revision trail (cycle 148, built for
+ * the owner-signalled TECH-DATALINKS): every ledger cycle whose row prose or stanza
+ * mentions the node id, newest first. Derived entirely from the existing record —
+ * the TECH-PRODUCTS philosophy: zero new bookkeeping, the trail writes itself as
+ * cycles land. Case-sensitive match (ids are uppercase) to keep prose hits honest.
+ */
+let mentionCache = { at: 0, blocks: null };
+function ledgerBlocks() {
+  if (mentionCache.blocks && Date.now() - mentionCache.at < 30000) return mentionCache.blocks;
+  const text = fs.readFileSync(path.join(ROOT, 'docs', 'agi', 'IMPROVEMENT_LEDGER.md'), 'utf8');
+  const blocks = [];
+  const re = /<!--\s*cycle:(\{[\s\S]*?\})\s*-->/g;
+  let m, prevEnd = 0;
+  while ((m = re.exec(text))) {
+    if (/^\{\s*(\.\.\.|…)\s*\}$/.test(m[1])) continue; // documentation placeholder
+    try {
+      const c = JSON.parse(m[1]);
+      blocks.push({ id: c.id, date: c.date || '', label: (typeof c.headline === 'string' && c.headline) || humanize(c.result || 'cycle logged'), text: text.slice(prevEnd, re.lastIndex) });
+    } catch (_) { /* stanza-schema probe owns malformed stanzas */ }
+    prevEnd = re.lastIndex;
+  }
+  mentionCache = { at: Date.now(), blocks };
+  return blocks;
+}
+function ledgerMentions(nodeId) {
+  if (!nodeId) return [];
+  return ledgerBlocks()
+    .filter((b) => b.text.includes(nodeId))
+    .map(({ id, date, label }) => ({ cycle: id, date, label }))
+    .reverse();
 }
 
 function buildStatus() {
@@ -310,4 +356,4 @@ function buildStatus() {
   return data;
 }
 
-module.exports = { buildStatus, buildTechTree, shortTitle };
+module.exports = { buildStatus, buildTechTree, shortTitle, ledgerMentions };

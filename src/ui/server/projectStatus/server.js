@@ -79,7 +79,25 @@ async function main() {
     // SMAC-style branch pages (owner 2026-07-27): /tech/agi, /tech/tree,
     // /tech/crawler. RENDERED PER REQUEST inside the handler — unlike the main
     // page's publish-once SSR, these can never serve a boot-time snapshot.
-    const { renderTechPage } = require('./techPages');
+    const { renderTechPage, renderNodePage } = require('./techPages');
+    const { ledgerMentions } = require('./statusData');
+
+    // Datalinks page per node (cycle 148, owner-signalled TECH-DATALINKS): a query
+    // param rather than a path segment because the router matches exact paths — and
+    // this way NEW nodes get pages with no route registration and no restart.
+    router.set_route('/tech/node', null, (req, res) => {
+      try {
+        const id = new URL(req.url, 'http://localhost').searchParams.get('id') || '';
+        const html = renderNodePage(id, buildStatus().techTree, { ledgerTrail: ledgerMentions(id) });
+        if (!html) { res.writeHead(404, { 'Content-Type': 'text/plain' }); res.end('unknown node: ' + id); return; }
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end(html);
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('datalinks page failed: ' + e.message);
+      }
+    });
+
     for (const branchKey of ['agi', 'tree', 'crawler', 'factory']) {
       router.set_route(`/tech/${branchKey}`, null, (req, res) => {
         try {
