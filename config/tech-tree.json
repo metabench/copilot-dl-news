@@ -467,7 +467,8 @@
         "4 · Automation & write-back: the review operation itself producing tech-tree.json edits with provenance notes; an auto-promotion path for curated techs when their work completes (RB-refs already promote themselves via backlog state; curated nodes need manual edits today); a tech-tree-schema orient probe so a malformed spec cannot ship — the builder throws at render time, but a probe catches it at orient.",
         "5 · Progress-picture tie-in: per-branch research counts (or the frontier itself) rendered into the committed progress.svg so the lanes and the tree tell one story — via committed inputs only, preserving the byte-compare staleness guarantee; grown nodes linking to the ledger cycle that researched them.",
         "6 · App self-testing: extend the live browser harness to the three tech pages — nothing currently clicks a signal button or opens a Preliminary Data block in a real browser; the check must ack its own test click as a test click (the c139 rule) so the queue stays honest.",
-        "Constraint carried from the tree's own rules: every improvement item the review proposes must name its ≤2 foundations before it leaves the fog — the review is subject to the discipline it audits."
+        "Constraint carried from the tree's own rules: every improvement item the review proposes must name its ≤2 foundations before it leaves the fog — the review is subject to the discipline it audits.",
+        "REVIEW LOG 2026-07-28 (first owner-signalled run, sig-20260728002811): audited all six categories against cycles 141-146, which had already delivered the drawn tree, detail modals with UNLOCKS, and settings. SHIPPED top slice: a tech-tree-schema orient probe (automation), a compact request button on EVERY available tech generalising the signal path (interactivity), and the SIGNAL LOG on the factory page (interactivity/transparency). PROMOTED to named techs: TECH-DATALINKS, TECH-FLAVOR, TECH-PAGESLIVE, TECH-SVGTIE, TECH-PROMOTE. DECLINED below the bar: tier-change motion and hover previews (the modal covers them), the fog idea box (compact buttons + chat cover the need for now). Ranking rule applied: value-per-effort, with the anti-inflation constraint holding."
       ],
       "detail": [
         "config/tech-tree.json line 46: tree-branch tech 'Tech Tree App Review', combines TR-PAGE + AG-METHOD (the ≤2-prereq SMAC cap), state available, wired to signal 'app-review' — a second lightbulb button so the tree branch can request review of the tech-tree system itself.",
@@ -600,6 +601,66 @@
         "The remote target already runs a dashboard-capable server: Oracle's v2 responds \"Multi-Domain Crawl Server v4\" on /api/health, and the documented /status.json health path was found to 404 (deploy drift caught and corrected in cycle 64's unification research).",
         "Cycle 79 also demonstrated the electron-restart-gotcha en route: the first restart probe reported httpOk:false, and the agent verified its own code rendered standalone before blaming it — the failure was transient, banked as its own memory rule."
       ]
+    },
+    {
+      "id": "TECH-DATALINKS",
+      "branch": "tree",
+      "title": "Per-Tech Datalinks Pages",
+      "research": "a dedicated page per technology (SMAC datalinks proper) with room beyond the modal — per-node ledger history, revision trail",
+      "prereqs": [
+        "TR-PAGE",
+        "TR-LEDGER"
+      ],
+      "state": "available",
+      "prelim": [
+        "Review verdict 2026-07-28: the c142 modal already serves most reading needs, so this ranked below the shipped slice — it earns its build when a node's record outgrows a dialog."
+      ]
+    },
+    {
+      "id": "TECH-FLAVOR",
+      "branch": "tree",
+      "title": "Flavor Text",
+      "research": "an original one-line quote per node in SMAC's tradition, distilled from the project's own record — never borrowed text",
+      "prereqs": [
+        "TR-LEDGER",
+        "AG-METHOD"
+      ],
+      "state": "available"
+    },
+    {
+      "id": "TECH-PAGESLIVE",
+      "branch": "agi",
+      "title": "Tech-Pages Live Harness",
+      "research": "extend the live browser harness to the four tech pages: node click opens a populated modal, settings scale text, a signal button posts (and acks its own test click)",
+      "prereqs": [
+        "AG-HARNESS",
+        "TR-PAGE"
+      ],
+      "state": "available",
+      "prelim": [
+        "Review verdict 2026-07-28: highest-value unshipped item — the pages now carry modal + settings + signal scripts with zero browser-driven tests; the c133 blindness measurement applies to the loop's own newest surface."
+      ]
+    },
+    {
+      "id": "TECH-SVGTIE",
+      "branch": "tree",
+      "title": "Research Frontier in the Picture",
+      "research": "per-branch available/grown counts rendered into the committed progress.svg — the lanes and the tree telling one story, via committed inputs only",
+      "prereqs": [
+        "TR-PICTURE"
+      ],
+      "state": "available"
+    },
+    {
+      "id": "TECH-PROMOTE",
+      "branch": "factory",
+      "title": "Curated-Tech Promotion",
+      "research": "when a curated tech's work completes, promote it to grown mechanically (RB refs already self-promote via backlog state; curated nodes need the path)",
+      "prereqs": [
+        "TF-LOOP",
+        "TR-LEDGER"
+      ],
+      "state": "available"
     }
   ],
   "fogPerBranch": 2

@@ -84,7 +84,7 @@ async function main() {
       router.set_route(`/tech/${branchKey}`, null, (req, res) => {
         try {
           const st = buildStatus();
-          const html = renderTechPage(branchKey, st.techTree, { pendingSignals: st.pendingSignals, toolInventory: st.toolInventory });
+          const html = renderTechPage(branchKey, st.techTree, { pendingSignals: st.pendingSignals, toolInventory: st.toolInventory, signalHistory: signals.effective() });
           if (!html) { res.writeHead(404); res.end('unknown branch'); return; }
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
           res.end(html);

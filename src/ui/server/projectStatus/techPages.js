@@ -200,7 +200,7 @@ const MODAL_SCRIPT = `<script>
     dlg.scrollTop = 0;
   }
   document.addEventListener('click', function (e) {
-    if (e.target.closest('button.tp-signal') || e.target.closest('.tp-prelim')) return;
+    if (e.target.closest('button.tp-signal') || e.target.closest('button.tp-signal-mini') || e.target.closest('.tp-prelim')) return;
     var host = e.target.closest('[data-node-id]');
     if (host) openNode(host.getAttribute('data-node-id'));
   });
@@ -235,15 +235,31 @@ function signalButton(tech, pendingSignals) {
   return `<button class="tp-signal" data-signal-tech="${esc(tech.id)}" data-signal-req="${esc(tech.research || tech.title)}" type="button">${ICONS.iceBulb(40)}<div><div class="tp-signal__t">REQUEST THIS RESEARCH</div><div class="tp-signal__s">sends a signal the agent reads at its next orient</div></div></button>`;
 }
 
+/**
+ * Compact request control for every OTHER available tech (cycle 147, shipped by the
+ * first owner-signalled app review): the review nodes keep the big bulb; any
+ * research can now be requested through the same queue -> probe -> prompt path.
+ */
+function compactSignal(tech, pendingSignals) {
+  const already = (pendingSignals || []).find((s) => s.tech === tech.id && s.status === 'pending');
+  if (already) return `<div class="tp-signal-mini tp-signal-mini--sent">⚡ requested — pending pickup</div>`;
+  return `<button class="tp-signal-mini" data-signal-tech="${esc(tech.id)}" data-signal-req="${esc(tech.research || tech.title)}" type="button">${ICONS.iceBulb(13)} request this research</button>`;
+}
+
 const SIGNAL_SCRIPT = `<script>
 document.addEventListener('click', function (e) {
-  var btn = e.target.closest('button.tp-signal');
+  var btn = e.target.closest('button.tp-signal') || e.target.closest('button.tp-signal-mini');
   if (!btn) return;
   btn.disabled = true;
   fetch('/api/research-signal', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ tech: btn.getAttribute('data-signal-tech'), requested: btn.getAttribute('data-signal-req') })
   }).then(function (r) { return r.json(); }).then(function (j) {
+    if (btn.classList.contains('tp-signal-mini')) {
+      btn.classList.add('tp-signal-mini--sent');
+      btn.textContent = j.ok ? '⚡ requested — pending pickup' : ('signal failed: ' + (j.error || 'unknown'));
+      return;
+    }
     btn.classList.add('tp-signal--sent');
     btn.querySelector('.tp-signal__t').textContent = j.ok ? 'RESEARCH REQUESTED' : 'SIGNAL FAILED';
     btn.querySelector('.tp-signal__s').textContent = j.ok
@@ -251,6 +267,7 @@ document.addEventListener('click', function (e) {
       : (j.error || 'unknown error');
   }).catch(function () {
     btn.disabled = false;
+    if (btn.classList.contains('tp-signal-mini')) { btn.textContent = 'send failed — is the server up?'; return; }
     btn.querySelector('.tp-signal__s').textContent = 'send failed — is the server up?';
   });
 });
@@ -399,7 +416,7 @@ function renderTechPage(branchKey, techTree, opts = {}) {
   const availHtml = b.available.map((a) => node('tp-node--avail',
     `<div class="tp-node__t">${branchKey === 'agi' ? ICONS.iceBulb(15) : '💡'} ${esc(a.id)} · ${esc(a.title)}</div>` +
     `<div class="tp-node__s">research: ${esc(a.research)}</div>${prereqChips(a.prereqs, branches)}` +
-    `${a.signal ? signalButton(a, pendingSignals) : ''}${prelimBlock(a.prelim)}`, a.id)).join('')
+    `${a.signal ? signalButton(a, pendingSignals) : compactSignal(a, pendingSignals)}${prelimBlock(a.prelim)}`, a.id)).join('')
     || node('tp-node--seed', 'no research currently available on this branch');
 
   const gatedHtml = b.gated.map((g) => node('tp-node--gated',
@@ -407,6 +424,17 @@ function renderTechPage(branchKey, techTree, opts = {}) {
     || node('tp-node--seed', 'nothing gated');
 
   const fogHtml = b.future.map((f) => node('tp-node--fog', `<div class="tp-node__t">❓ ${esc(f.title)}</div>`, f.id)).join('');
+
+  // Signal history (factory page only — the coordination point): the append-only
+  // queue rendered as a log, newest first. Clicks and their answers, on the record.
+  let historyHtml = '';
+  if (branchKey === 'factory' && Array.isArray(opts.signalHistory) && opts.signalHistory.length) {
+    const rows = opts.signalHistory.slice(-8).reverse().map((r) => {
+      const state = r.status === 'pending' ? '⚡ pending' : ('✓ done ' + String(r.ackAt || '').slice(0, 16).replace('T', ' '));
+      return `<div class="tp-sig-log__row"><span class="tp-sig-log__state">${esc(state)}</span><span class="tp-sig-log__tech">${esc(r.tech)}</span><span class="tp-sig-log__note">${esc(r.status === 'pending' ? (r.requested || '') : (r.ackNote || ''))}</span></div>`;
+    }).join('');
+    historyHtml = `<section class="tp-sig-log"><h2 class="tp-tier__head">SIGNAL LOG</h2><div class="tp-tier__hint">the lightbulb queue — every request and its answer, append-only</div>${rows}</section>`;
+  }
 
   const others = branches.filter((x) => x.key !== branchKey)
     .map((o) => `<a class="tp-cross" href="/tech/${o.key}" style="border-color:${o.color}">${ICONS[o.icon](14)} ${esc(o.label)}: ${o.available.length} research available</a>`)
@@ -432,6 +460,7 @@ ${renderTreeSvg(b, branches)}
   ${tierColumn('GATED', gatedHtml, 'needs an owner decision')}
   ${tierColumn('BEYOND', fogHtml, 'blind research — not yet conceptualised')}
 </main>
+${historyHtml}
 <div class="tp-others">${others}</div>
 <footer class="tp-foot">${branchKey === 'factory' && opts.toolInventory ? `live inventory: ${opts.toolInventory.total} scripts across ${opts.toolInventory.dirs} tool directories (counted this request) · ` : ''}rendered per request from tech-tree.json (structure) · RESEARCH_BACKLOG states · roadmap.json cutoff · reload to refresh — this page cannot go stale${techTree.absorbed ? ` · ${techTree.absorbed} pre-tree research items absorbed into the foundations` : ''}</footer>
 ${nodeDataIsland(techTree)}
@@ -508,6 +537,14 @@ const CSS = `
 .tp-settings__step:hover, .tp-settings__reset:hover { border-color: __ACCENT__; color: __ACCENT__; }
 .tp-settings__pct { font-size: 0.6875rem; color: #8a8778; min-width: 2.6em; text-align: right; font-variant-numeric: tabular-nums; }
 .tp-settings__note { color: #6b675a; }
+.tp-signal-mini { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; background: none; border: 1px dashed #2e3440; border-radius: 4px; color: #8a8778; cursor: pointer; font-family: inherit; font-size: 0.5938rem; letter-spacing: 0.08em; padding: 3px 8px; }
+.tp-signal-mini:hover:not(:disabled) { border-color: __ACCENT__; color: __ACCENT__; }
+.tp-signal-mini--sent { border-style: solid; border-color: #4d9ec8; color: #9fd4ec; cursor: default; }
+.tp-sig-log { padding: 6px 22px 4px; }
+.tp-sig-log__row { display: flex; gap: 10px; align-items: baseline; font-size: 0.625rem; color: #8a8778; padding: 3px 0; border-bottom: 1px dashed #1b1f26; }
+.tp-sig-log__state { min-width: 9.5em; color: #cfcabd; }
+.tp-sig-log__tech { min-width: 10em; color: __ACCENT__; }
+.tp-sig-log__note { flex: 1; color: #6b675a; }
 .tp-others { display: flex; gap: 10px; padding: 4px 22px 10px; flex-wrap: wrap; }
 .tp-cross { display: inline-flex; align-items: center; gap: 6px; font-size: 0.625rem; color: #8a8778; text-decoration: none; border: 1px dashed; border-radius: 4px; padding: 5px 9px; }
 .tp-cross:hover { color: #e8e4d8; }
