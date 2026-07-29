@@ -473,7 +473,7 @@ ${renderTreeSvg(b, branches)}
 </main>
 ${historyHtml}
 <div class="tp-others">${others}</div>
-<footer class="tp-foot">${branchKey === 'factory' && opts.toolInventory ? `live inventory: ${opts.toolInventory.total} scripts across ${opts.toolInventory.dirs} tool directories (counted this request) · ` : ''}rendered per request from tech-tree.json (structure) · RESEARCH_BACKLOG states · roadmap.json cutoff · reload to refresh — this page cannot go stale${techTree.absorbed ? ` · ${techTree.absorbed} pre-tree research items absorbed into the foundations` : ''}</footer>
+<footer class="tp-foot">${branchKey === 'factory' && opts.toolInventory ? `live inventory: ${opts.toolInventory.total} scripts across ${opts.toolInventory.dirs} tool directories (counted this request) · ` : ''}rendered per request from tech-tree.json (structure) · RESEARCH_BACKLOG states · roadmap.json cutoff · reload to refresh — this page cannot go stale${techTree.absorbed ? ` · ${techTree.absorbed} pre-tree research items absorbed into the foundations` : ''} · 🤖 AI protocol: docs/agi/TECH_TREE_INTERFACE.md — a click here is an owner instruction; AI proposals arrive as named techs</footer>
 ${nodeDataIsland(techTree)}
 ${MODAL_HTML}
 ${SETTINGS_HTML}
@@ -531,7 +531,7 @@ ${EARLY_SETTINGS}
 ${navBar(n.branch, branches)}
 <header class="tp-head"><div><div class="tp-modal__id" style="color:${accent}">${esc(n.branchLabel || '')} · DATALINKS</div><h1 class="tp-h1" style="color:#e8e4d8">${esc(n.title || id)}</h1><div class="tp-tag">${esc(meta)}</div></div></header>
 <main class="tp-node-page">${body}</main>
-<footer class="tp-foot">rendered per request · <a class="tp-foot__back" href="/tech/${esc(n.branch)}">◀ back to ${esc(n.branchLabel || 'branch')}</a></footer>
+<footer class="tp-foot">rendered per request · <a class="tp-foot__back" href="/tech/${esc(n.branch)}">◀ back to ${esc(n.branchLabel || 'branch')}</a> · 🤖 AI protocol: docs/agi/TECH_TREE_INTERFACE.md</footer>
 ${SETTINGS_HTML}
 ${SETTINGS_SCRIPT}
 </body></html>`;

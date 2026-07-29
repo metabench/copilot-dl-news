@@ -71,6 +71,12 @@ from that mode). Probe: `ls ../news-crawler-itself` (README + AGENTS.md exist si
   (news-crawler-itself + compression pool + deploy + 5×10 crawl), exact deploy/crawl/
   restart procedures, troubleshooting table, STOP conditions. Written to be followed
   literally — verify after every step.
+- **[TECH_TREE_INTERFACE.md](TECH_TREE_INTERFACE.md) — the owner⇄AI contract for the
+  project-status app** (owner directive 2026-07-29): the tech-tree app (:3184) is a FIRST-CLASS
+  interface — the owner views progress and choices there, a node click is an owner instruction
+  (agi-signal probe red = the owner talking), and AI proposes next steps there as named techs
+  with honest prelim. Read it before touching the app, answering a signal, or proposing work;
+  code-level map in `src/ui/server/projectStatus/AGENTS.md`.
 - [LESSONS.md](LESSONS.md) · [PATTERNS.md](PATTERNS.md) · [ANTI_PATTERNS.md](ANTI_PATTERNS.md) —
   distilled experience. Trust the mechanisms; re-resolve any pre-2026 path (table below).
 - [SKILLS.md](SKILLS.md) + [skills/](skills/) — 17 skill packs on disk (jsgui3-activation-debug,
