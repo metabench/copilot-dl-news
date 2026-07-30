@@ -36,6 +36,11 @@ const DEFAULT_LEDGER = path.join(ROOT, 'docs', 'agi', 'IMPROVEMENT_LEDGER.md');
 const DEFAULT_OUT = path.join(ROOT, 'docs', 'agi', 'progress', 'progress.svg');
 const DEFAULT_ANNOTATIONS = path.join(ROOT, 'docs', 'agi', 'progress', 'annotations.json');
 const DEFAULT_ACTIVITY = path.join(ROOT, 'docs', 'agi', 'progress', 'repo-activity.json');
+// frontier band inputs (TECH-SVGTIE, cycle 156) — the same three files the
+// pages read, so one spec drives both the tree and its picture
+const DEFAULT_TECH_SPEC = path.join(ROOT, 'config', 'tech-tree.json');
+const DEFAULT_BACKLOG = path.join(ROOT, 'docs', 'agi', 'RESEARCH_BACKLOG.md');
+const DEFAULT_ROADMAP = path.join(ROOT, 'config', 'roadmap.json');
 
 // ---- data ------------------------------------------------------------------
 
@@ -109,13 +114,22 @@ function enumDays(from, to) {
   return out;
 }
 
-function renderSvg({ rows, totals }, annotations = [], activity = null) {
+function renderSvg({ rows, totals }, annotations = [], activity = null, frontier = null) {
   const W = 980, PAD = 28;
   // repo lanes (Workflow v3, cycle 127) render only when a committed snapshot exists —
   // without one the output is byte-identical to the pre-lanes layout (backward compat).
   const lanes = activity && activity.window && Array.isArray(activity.repos) && activity.repos.length ? activity : null;
-  const laneStride = 16, laneY0 = 668;
-  const H = lanes ? laneY0 + lanes.repos.length * laneStride + 46 : 664;
+  // research frontier (TECH-SVGTIE, cycle 156, owner-signalled): the same
+  // backward-compatible rule — absent or unreadable spec renders the previous
+  // layout byte-for-byte, so the staleness compare never breaks on a bad spec.
+  const front = frontier && Array.isArray(frontier.branches) && frontier.branches.length ? frontier : null;
+  const frontY0 = 668, frontStride = 18;
+  // trailing space is 34, not 14: the band's legend line sits at the bottom and
+  // the repo-lanes heading sits 12px above laneY0 — at 14 they collided, caught
+  // by svg-collisions --strict (2 HIGH text-overlaps) before this shipped.
+  const frontH = front ? 26 + front.branches.length * frontStride + 34 : 0;
+  const laneStride = 16, laneY0 = frontY0 + frontH;
+  const H = lanes ? laneY0 + lanes.repos.length * laneStride + 46 : (front ? laneY0 + 10 : 664);
   const s = [];
   s.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="AGI loop progress dashboard">`);
   s.push(`<rect width="${W}" height="${H}" fill="${C.bg}"/>`);
@@ -274,6 +288,39 @@ function renderSvg({ rows, totals }, annotations = [], activity = null) {
     });
   }
 
+  // ---- research frontier band (TECH-SVGTIE, cycle 156, owner-signalled) ----
+  // The lanes say what LANDED; this says what is OPEN. Both are rendered from
+  // COMMITTED inputs only (config/tech-tree.json + RESEARCH_BACKLOG.md states via
+  // the SAME buildTechTree the pages and the schema probe call), so the picture
+  // and the tech tree can never disagree about the counts — and the staleness
+  // byte-compare stays sound because nothing here reads live state.
+  if (front) {
+    T(PAD, frontY0 - 12, 'Research frontier — what is open, per branch', 13, C.ink, 'font-weight="600"');
+    T(PAD + 290, frontY0 - 12, `${front.totals.grown} grown · ${front.totals.available} available · ${front.totals.gated} gated${front.absorbed ? ` · ${front.absorbed} absorbed into the foundations` : ''}`, 10, C.muted);
+    const barX0 = PAD + 132, barW = 300;
+    const maxTotal = Math.max(1, ...front.branches.map((b) => b.grown + b.available + b.gated));
+    front.branches.forEach((b, i) => {
+      const y = frontY0 + 8 + i * frontStride;
+      T(PAD, y + 10, b.label, 10, b.color);
+      // one stacked bar per branch: grown (solid) → available (mid) → gated (faint),
+      // scaled against the busiest branch so the shapes are comparable at a glance
+      let x = barX0;
+      const seg = (n, opacity) => {
+        if (!n) return;
+        const w = r1((n / maxTotal) * barW);
+        s.push(`<rect x="${r1(x)}" y="${y}" width="${w}" height="11" rx="2" fill="${b.color}" opacity="${opacity}"><title>${esc(b.label)}: ${n}</title></rect>`);
+        x += w + 1.5;
+      };
+      seg(b.grown, 1);
+      seg(b.available, 0.55);
+      seg(b.gated, 0.22);
+      T(barX0 + barW + 14, y + 10, `${b.grown} grown · ${b.available} available${b.gated ? ` · ${b.gated} gated` : ''}`, 10, C.muted);
+    });
+    T(PAD, frontY0 + 8 + front.branches.length * frontStride + 12,
+      'solid = researched · mid = researchable now · faint = needs an owner decision',
+      9, C.muted);
+  }
+
   // footer — no silent caps: say what was truncated
   const dropped = annotations.length - shown.length;
   const hiddenLanes = lanes && Array.isArray(lanes.hiddenZeroConsumeOnly) ? lanes.hiddenZeroConsumeOnly.length : 0;
@@ -287,6 +334,48 @@ function renderSvg({ rows, totals }, annotations = [], activity = null) {
 
 function loadAnnotations(p) {
   try { const a = JSON.parse(fs.readFileSync(p, 'utf8')); return Array.isArray(a) ? a : []; } catch (_) { return []; }
+}
+
+/**
+ * loadTechFrontier — per-branch open-research counts for the frontier band
+ * (TECH-SVGTIE, cycle 156, owner-signalled).
+ *
+ * Calls the SAME buildTechTree the pages and the tech-tree-schema probe use, so
+ * one definition produces the counts everywhere — the picture cannot drift from
+ * the tree it depicts (the c153 lesson: reuse the conventions verbatim so two
+ * subsystems can never disagree). Inputs are repo files, which is exactly what
+ * the purity contract means by COMMITTED: no git, no subprocess, no server.
+ *
+ * Returns null on ANY problem — a missing spec, a broken spec (buildTechTree
+ * throws by design on a bad record), a missing backlog. The band then simply
+ * does not render, which keeps a bad spec from breaking the picture or the
+ * staleness byte-compare. The tech-tree-schema probe is what makes a broken
+ * spec loud; this renderer's job is to stay honest and quiet about it.
+ */
+function loadTechFrontier(specPath, backlogPath, roadmapPath) {
+  try {
+    const { buildTechTree } = require(path.join(ROOT, 'src', 'ui', 'server', 'projectStatus', 'statusData.js'));
+    const { parseBacklog } = require(path.join(ROOT, 'tools', 'agi', 'next-prompt.js'));
+    const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
+    const rows = parseBacklog(fs.readFileSync(backlogPath, 'utf8'));
+    let roadmap = null;
+    try { roadmap = JSON.parse(fs.readFileSync(roadmapPath, 'utf8')); } catch (_) { /* optional */ }
+    const tree = buildTechTree(rows, roadmap, spec);
+    const branches = (tree.branches || []).map((b) => ({
+      key: b.key,
+      label: b.label || b.key,
+      color: b.color || '#8a8778',
+      grown: b.grown.length,
+      available: b.available.length,
+      gated: b.gated.length
+    }));
+    const totals = branches.reduce((acc, b) => ({
+      grown: acc.grown + b.grown, available: acc.available + b.available, gated: acc.gated + b.gated
+    }), { grown: 0, available: 0, gated: 0 });
+    return { branches, totals, absorbed: tree.absorbed || 0 };
+  } catch (_) {
+    return null;
+  }
 }
 
 /** Committed repo-activity snapshot (tools/agi/repo-activity.js writes it); null = no lanes. */
@@ -321,14 +410,25 @@ function main() {
   console.log(`cycles: ${series.totals.cycles} · improvements: ${series.totals.improvements} · defects pre/post: ${series.totals.defectsPre}/${series.totals.defectsPost} · corrections: ${series.totals.corrections} · pages: ${series.totals.pages}`);
 
   if (process.argv.includes('--print-metrics')) return;
-  const svg = renderSvg(series, loadAnnotations(annPath), loadRepoActivity(arg('activity') || DEFAULT_ACTIVITY));
+  const frontier = loadTechFrontier(
+    arg('tech-spec') || DEFAULT_TECH_SPEC,
+    arg('backlog') || DEFAULT_BACKLOG,
+    arg('roadmap') || DEFAULT_ROADMAP
+  );
+  if (frontier) {
+    console.log(`frontier: ${frontier.totals.grown} grown · ${frontier.totals.available} available · ${frontier.totals.gated} gated across ${frontier.branches.length} branches`);
+  } else {
+    console.log('frontier: band omitted (tech-tree spec unreadable or invalid — see the tech-tree-schema probe)');
+  }
+  const svg = renderSvg(series, loadAnnotations(annPath), loadRepoActivity(arg('activity') || DEFAULT_ACTIVITY), frontier);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, svg);
   console.log(`wrote ${path.relative(ROOT, outPath)} (${svg.length} bytes)`);
 }
 
 module.exports = {
-  parseCycleStanzas, computeSeries, renderSvg, loadAnnotations, loadRepoActivity,
-  DEFAULT_LEDGER, DEFAULT_OUT, DEFAULT_ANNOTATIONS, DEFAULT_ACTIVITY
+  parseCycleStanzas, computeSeries, renderSvg, loadAnnotations, loadRepoActivity, loadTechFrontier,
+  DEFAULT_LEDGER, DEFAULT_OUT, DEFAULT_ANNOTATIONS, DEFAULT_ACTIVITY,
+  DEFAULT_TECH_SPEC, DEFAULT_BACKLOG, DEFAULT_ROADMAP
 };
 if (require.main === module) main();

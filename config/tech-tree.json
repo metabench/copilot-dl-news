@@ -667,7 +667,14 @@
       "prereqs": [
         "TR-PICTURE"
       ],
-      "state": "available",
+      "state": "done",
+      "researchedOn": "2026-07-30",
+      "detail": [
+        "Delivered cycle 156 (2026-07-30, owner-signalled sig-20260730132159): a 'Research frontier — what is open, per branch' band in progress.svg, one stacked bar per branch (solid = grown, mid = available, faint = gated) scaled against the busiest branch, plus the totals and the absorbed count. The lanes above say what LANDED; this says what is OPEN — the two halves of one story in one picture.",
+        "Counts come from the SAME buildTechTree the pages and the tech-tree-schema probe call, so the picture can never disagree with the tree it depicts (verified: the band's 3 grown / 17 available / 2 gated matched /api/tech-state exactly). Inputs are repo files only — the purity contract bans subprocesses, not file reads, so the staleness byte-compare stays sound; two consecutive renders were byte-identical.",
+        "Backward-compatible like the c127 lanes: an absent or INVALID spec renders the band not at all (loadTechFrontier returns null on any throw), so a broken tech-tree spec can never break the picture or the byte-compare — making a bad spec loud is the schema probe's job, not the renderer's.",
+        "svg-collisions --strict caught 2 HIGH text-overlaps pre-ship: the band's legend line sat 14px above the repo-lanes heading. Trailing space went 14 → 34 and the legend was shortened; geometry is clean at 0 HIGH. A pre-existing footer overflow (the regenerate hint, 70px beyond the 980px canvas) is NOT from this band and was left alone."
+      ],
       "prelim": [
         "The hard constraint is progress-svg.js's purity contract (probe-guarded, RB-011/P1): the render reads only COMMITTED inputs, so the tree counts must come from the committed config/tech-tree.json + RESEARCH_BACKLOG.md, never from a live server — the same buildTechTree call the tech-tree-schema probe already runs.",
         "Smallest honest slice: one line per branch in the existing side panel (available/grown), colored with the branch palette. Anything fancier (drawing the tree itself into the SVG) is a different, bigger tech."
