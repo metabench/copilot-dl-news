@@ -1945,38 +1945,17 @@ load(); setInterval(load, 60000);
   // + Retry-After instead of spinning up another crawl job.
   const placeHubRedownloadCooldown = new RedownloadCooldownGuard({ cooldownMs: 5 * 60 * 1000 });
 
-  unifiedApp.post('/api/v1/crawl/place-hubs/redownload', async (req, res) => {
-    const placeId = Number(req.body && req.body.placeId);
-    if (!Number.isInteger(placeId) || placeId <= 0) {
-      return res.status(400).json({ error: 'placeId is required (numeric places.id)' });
-    }
-
-    const cooldownKey = `place:${placeId}`;
-    const cooldown = placeHubRedownloadCooldown.check(cooldownKey);
-    if (cooldown.locked) {
-      res.set('Retry-After', String(Math.ceil(cooldown.retryAfterMs / 1000)));
-      return res.status(429).json({
-        error: 'redownload already triggered for this place recently',
-        retryAfterMs: cooldown.retryAfterMs,
-        retryAt: new Date(cooldown.retryAt).toISOString()
-      });
-    }
-
-    const adapter = await getFrontierQueueAdapter().catch((err) => {
-      res.status(500).json({ error: err.message });
-      return null;
-    });
-    if (!adapter) return;
-
+  // The per-place redownload CORE, extracted (TECH-P5AUTO, cycle 153) so the
+  // manual route and the staleness-driven refresh share one implementation —
+  // enqueue semantics, priorities, and the P4 per-host machinery can never
+  // drift between the two entry points. Cooldown/HTTP concerns stay with the
+  // callers (the manual route 429s; the scheduler silently skips).
+  async function redownloadPlaceHubsCore({ placeId, adapter, handle }) {
     const { selectPlaceHubUrlsForPlace } = require('news-crawler-db');
-    const facade = getDbRW();
-    const handle = facade && facade.db ? facade.db : facade;
     const frontier = selectPlaceHubUrlsForPlace(handle, placeId);
-    if (!frontier.found) {
-      return res.status(404).json({ error: `no place found for placeId ${placeId}` });
-    }
+    if (!frontier.found) return { found: false, placeId };
     if (!frontier.items.length) {
-      return res.json({ placeId, placeKind: frontier.placeKind, hostsRun: [], message: 'no known hub/mapping URLs for this place — nothing to redownload' });
+      return { found: true, placeId, placeKind: frontier.placeKind, knownUrls: 0, requeued: 0, hosts: [], hostsRun: [], message: 'no known hub/mapping URLs for this place — nothing to redownload' };
     }
 
     // Recency is bypassed BY CONSTRUCTION: force any existing completed/failed
@@ -2000,8 +1979,6 @@ load(); setInterval(load, 60000);
       meta: { kind: 'place-hub-redownload', source: item.source, urlId: item.urlId, placeId }
     })));
 
-    placeHubRedownloadCooldown.note(cooldownKey);
-
     // Run per-host, sequentially — reuses P4's exact machinery, one job per
     // host represented in this place's hub set.
     const hosts = Array.from(new Set(frontier.items.map((i) => i.host).filter(Boolean)));
@@ -2015,14 +1992,179 @@ load(); setInterval(load, 60000);
       }
     }
 
-    res.json({
-      placeId,
-      placeKind: frontier.placeKind,
-      knownUrls: frontier.items.length,
-      requeued,
-      hosts,
-      hostsRun
+    return { found: true, placeId, placeKind: frontier.placeKind, knownUrls: frontier.items.length, requeued, hosts, hostsRun };
+  }
+
+  unifiedApp.post('/api/v1/crawl/place-hubs/redownload', async (req, res) => {
+    const placeId = Number(req.body && req.body.placeId);
+    if (!Number.isInteger(placeId) || placeId <= 0) {
+      return res.status(400).json({ error: 'placeId is required (numeric places.id)' });
+    }
+
+    const cooldownKey = `place:${placeId}`;
+    const cooldown = placeHubRedownloadCooldown.check(cooldownKey);
+    if (cooldown.locked) {
+      res.set('Retry-After', String(Math.ceil(cooldown.retryAfterMs / 1000)));
+      return res.status(429).json({
+        error: 'redownload already triggered for this place recently',
+        retryAfterMs: cooldown.retryAfterMs,
+        retryAt: new Date(cooldown.retryAt).toISOString()
+      });
+    }
+
+    const adapter = await getFrontierQueueAdapter().catch((err) => {
+      res.status(500).json({ error: err.message });
+      return null;
     });
+    if (!adapter) return;
+
+    const facade = getDbRW();
+    const handle = facade && facade.db ? facade.db : facade;
+    const result = await redownloadPlaceHubsCore({ placeId, adapter, handle });
+    if (!result.found) {
+      return res.status(404).json({ error: `no place found for placeId ${placeId}` });
+    }
+    if (result.knownUrls > 0) placeHubRedownloadCooldown.note(cooldownKey);
+
+    const { found, ...payload } = result;
+    res.json(payload);
+  });
+
+  // ── TECH-P5AUTO (cycle 153, owner-signalled): staleness-driven refresh ────
+  // One call finds the most-starved places (ncdb selectStalePlaceHubCandidates:
+  // place_page_mappings-driven selection, frontier hub-recency conventions —
+  // success = 200/304, datetime() both sides, dead-hub latest-N rule) and runs
+  // the SAME per-place core the manual route uses. Cooldown-locked places are
+  // SKIPPED, not 429'd — a batch keeps going past a recently-clicked place.
+  // dryRun previews candidates with zero side effects.
+  async function refreshStalePlaceHubs({ staleHours, maxPlaces }) {
+    const { selectStalePlaceHubCandidates } = require('news-crawler-db');
+    const facade = getDbRW();
+    const handle = facade && facade.db ? facade.db : facade;
+    // Headroom over maxPlaces so cooldown-locked candidates don't starve the batch.
+    const selection = selectStalePlaceHubCandidates(handle, { staleHours, limit: maxPlaces * 2 });
+
+    const adapter = await getFrontierQueueAdapter();
+    const run = [];
+    const skippedCooldown = [];
+    for (const candidate of selection.candidates) {
+      if (run.length >= maxPlaces) break;
+      const cooldownKey = `place:${candidate.placeId}`;
+      if (placeHubRedownloadCooldown.check(cooldownKey).locked) {
+        skippedCooldown.push(candidate.placeId);
+        continue;
+      }
+      const result = await redownloadPlaceHubsCore({ placeId: candidate.placeId, adapter, handle });
+      if (result.found && result.knownUrls > 0) placeHubRedownloadCooldown.note(cooldownKey);
+      run.push({ ...result, name: candidate.name, freshestFetch: candidate.freshestFetch, neverFetched: candidate.neverFetched });
+    }
+
+    return {
+      staleHours: selection.staleHours,
+      cutoff: selection.cutoff,
+      scannedPlaces: selection.scannedPlaces,
+      considered: selection.candidates.length,
+      run,
+      skippedCooldown
+    };
+  }
+
+  unifiedApp.post('/api/v1/crawl/place-hubs/refresh-stale', async (req, res) => {
+    try {
+      const body = req.body || {};
+      const staleHours = Number.isFinite(Number(body.staleHours)) && Number(body.staleHours) > 0
+        ? Number(body.staleHours) : 24;
+      const maxPlaces = Math.max(1, Math.min(10, Number(body.maxPlaces) || 2));
+
+      if (body.dryRun) {
+        const { selectStalePlaceHubCandidates } = require('news-crawler-db');
+        const facade = getDbRW();
+        const handle = facade && facade.db ? facade.db : facade;
+        return res.json({ dryRun: true, ...selectStalePlaceHubCandidates(handle, { staleHours, limit: maxPlaces * 2 }) });
+      }
+
+      res.json(await refreshStalePlaceHubs({ staleHours, maxPlaces }));
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // The SCHEDULER half of TECH-P5AUTO, mirroring auto-hydrate's shape exactly:
+  // persisted settings, default DISABLED (behavior unchanged until the owner
+  // enables it), a 60s meta-timer gated by intervalMinutes, a tick guard, and
+  // GET/POST settings routes + a deterministic on-demand tick for live
+  // verification. Bounds are deliberately modest — a tick refreshes at most
+  // maxPlaces places (≈5 hub URLs each), and every fetch still rides the full
+  // politeness machinery, so an enabled scheduler is a trickle, not a crawl.
+  const PLACE_HUB_REFRESH_DEFAULTS = { enabled: false, intervalMinutes: 360, staleHours: 24, maxPlaces: 2 };
+  function currentPlaceHubRefresh() {
+    const saved = readCrawlSettings().placeHubRefresh || {};
+    return {
+      enabled: saved.enabled === true,
+      intervalMinutes: Number.isFinite(Number(saved.intervalMinutes)) && Number(saved.intervalMinutes) >= 30
+        ? Number(saved.intervalMinutes) : PLACE_HUB_REFRESH_DEFAULTS.intervalMinutes,
+      staleHours: Number.isFinite(Number(saved.staleHours)) && Number(saved.staleHours) > 0
+        ? Number(saved.staleHours) : PLACE_HUB_REFRESH_DEFAULTS.staleHours,
+      maxPlaces: Math.max(1, Math.min(10, Number(saved.maxPlaces) || PLACE_HUB_REFRESH_DEFAULTS.maxPlaces))
+    };
+  }
+
+  let _placeHubRefreshLastTick = 0;
+  let _placeHubRefreshTicking = false;
+  let _placeHubRefreshLastResult = null;
+  async function placeHubRefreshTick(settings) {
+    if (_placeHubRefreshTicking) return { skipped: 'tick-in-progress' };
+    _placeHubRefreshTicking = true;
+    try {
+      const outcome = await refreshStalePlaceHubs({ staleHours: settings.staleHours, maxPlaces: settings.maxPlaces });
+      _placeHubRefreshLastTick = Date.now();
+      _placeHubRefreshLastResult = { tickedAt: new Date(_placeHubRefreshLastTick).toISOString(), ...outcome };
+      return _placeHubRefreshLastResult;
+    } finally {
+      _placeHubRefreshTicking = false;
+    }
+  }
+
+  const _placeHubRefreshTimer = setInterval(async () => {
+    try {
+      const settings = currentPlaceHubRefresh();
+      if (!settings.enabled) return;
+      if (Date.now() - _placeHubRefreshLastTick < settings.intervalMinutes * 60 * 1000) return;
+      await placeHubRefreshTick(settings);
+    } catch (_) { /* best-effort; retried next minute */ }
+  }, 60 * 1000);
+  if (typeof _placeHubRefreshTimer.unref === 'function') _placeHubRefreshTimer.unref();
+
+  unifiedApp.get('/api/v1/crawl/place-hub-refresh', (req, res) => {
+    res.json({
+      ...currentPlaceHubRefresh(),
+      lastTickAt: _placeHubRefreshLastTick ? new Date(_placeHubRefreshLastTick).toISOString() : null,
+      lastResult: _placeHubRefreshLastResult
+    });
+  });
+
+  unifiedApp.post('/api/v1/crawl/place-hub-refresh', (req, res) => {
+    try {
+      const body = req.body || {};
+      const patch = {};
+      if (body.enabled !== undefined) patch.enabled = body.enabled === true;
+      if (body.intervalMinutes !== undefined) patch.intervalMinutes = Number(body.intervalMinutes);
+      if (body.staleHours !== undefined) patch.staleHours = Number(body.staleHours);
+      if (body.maxPlaces !== undefined) patch.maxPlaces = Number(body.maxPlaces);
+      writeCrawlSettings({ placeHubRefresh: Object.assign({}, readCrawlSettings().placeHubRefresh || {}, patch) });
+      res.json(currentPlaceHubRefresh());
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Deterministic on-demand tick — the live-verification hook.
+  unifiedApp.post('/api/v1/crawl/place-hub-refresh/tick', async (req, res) => {
+    try {
+      res.json(await placeHubRefreshTick(currentPlaceHubRefresh()));
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // ── P6 (slice 1): bounded concurrent multi-host frontier runs ────────────
