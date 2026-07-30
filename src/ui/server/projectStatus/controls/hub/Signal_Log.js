@@ -20,6 +20,10 @@ const GRID = '[data-ps-siglog]';
  * the browser and every refresh updated nothing — the log showed whatever the
  * SSR snapshot held at server boot and never moved. The grid is now found
  * through the page's control registry, which is populated by reattachment.
+ *
+ * The grid rendering EMPTY was a second, separate thing, and the framework
+ * already had the answer: `persist_activation_state`. Any Data_Grid that is
+ * SSR'd rather than composed at runtime needs it.
  */
 class Signal_Log extends Panel {
   constructor(spec = {}) {
@@ -32,7 +36,15 @@ class Signal_Log extends Panel {
         context: this.context,
         columns: SIGNAL_COLUMNS,
         rows: signalLogRows(spec.history || []),
-        empty_text: 'no requests yet — click a node and BEGIN RESEARCH'
+        empty_text: 'no requests yet — click a node and BEGIN RESEARCH',
+        // Data_Grid's answer to SSR → reattachment: it serializes columns, rows,
+        // sort state and selection into a DOM attribute at compose time and reads
+        // them back when the control is reconstructed in the browser. Without it
+        // the reattached grid has neither columns nor rows, and rows-without-
+        // columns render the right NUMBER of blank rows — which reads as a
+        // styling bug rather than a data one. Off by default; this grid is SSR'd,
+        // so it needs it.
+        persist_activation_state: true
       });
       grid.dom.attributes['data-ps-siglog'] = 'true';
       this._grid = grid;
@@ -48,12 +60,6 @@ class Signal_Log extends Panel {
   set_history(history) {
     const grid = this.grid();
     if (!grid || !grid.set_data_source) return;
-    // Reattachment restores neither columns nor rows — both come from the spec,
-    // and the spec.el path skips them. Rows alone are not enough: with zero
-    // columns the grid renders the right NUMBER of rows and no cells at all
-    // (measured live: aria-colcount went 4 in the SSR markup to 0 in the
-    // reattached grid, and every cell was empty). So restore the columns first.
-    if (!(grid.columns || []).length) grid.set_columns(SIGNAL_COLUMNS);
     grid.set_data_source(signalLogRows(history));
   }
 }
