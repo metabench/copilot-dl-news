@@ -115,7 +115,12 @@
       "id": "TR-PROBES",
       "branch": "tree",
       "title": "Probe Manifest",
-      "note": "the runnable re-verifications at orient (tools/dev/probes.json is the live register — counts baked into prose rot); false greens hunted on sight"
+      "note": "the runnable re-verifications at orient (tools/dev/probes.json is the live register — counts baked into prose rot); false greens hunted on sight",
+      "detail": [
+        "NOT a duplicate of the factory's TF-PROBES, though the 2026-07-30 review flagged the pair as near-identical — this differentiation is the answer: TR-PROBES is the CONVENTION (a durable claim ships with a runnable re-verification, and orient cannot pass while one is red), TF-PROBES is the TOOL FAMILY that implements it (run-probes.js plus the check scripts, counted in the factory inventory). One is the rule, the other the machinery; the tree branch owns rules, the factory owns machinery.",
+        "The convention has teeth because red means STOP, not 'note it': agi-signal red is the OWNER talking, ritual-compliance checks the AGENT rather than the code, and progress-svg-staleness is an exact byte-compare that stays sound only because the renderer reads committed inputs.",
+        "Its sharpest lesson is that a probe can itself lie: the stanza-schema probe's founding premise ('2 of 78 stanzas unparseable') was a parser false-positive on documentation placeholders — right to exist, wrong in its first claim, which is why probe findings are corroborated before they are believed (cycles 126, 151)."
+      ]
     },
     {
       "id": "TR-PICTURE",
@@ -468,10 +473,11 @@
         "5 · Progress-picture tie-in: per-branch research counts (or the frontier itself) rendered into the committed progress.svg so the lanes and the tree tell one story — via committed inputs only, preserving the byte-compare staleness guarantee; grown nodes linking to the ledger cycle that researched them.",
         "6 · App self-testing: extend the live browser harness to the three tech pages — nothing currently clicks a signal button or opens a Preliminary Data block in a real browser; the check must ack its own test click as a test click (the c139 rule) so the queue stays honest.",
         "Constraint carried from the tree's own rules: every improvement item the review proposes must name its ≤2 foundations before it leaves the fog — the review is subject to the discipline it audits.",
-        "REVIEW LOG 2026-07-28 (first owner-signalled run, sig-20260728002811): audited all six categories against cycles 141-146, which had already delivered the drawn tree, detail modals with UNLOCKS, and settings. SHIPPED top slice: a tech-tree-schema orient probe (automation), a compact request button on EVERY available tech generalising the signal path (interactivity), and the SIGNAL LOG on the factory page (interactivity/transparency). PROMOTED to named techs: TECH-DATALINKS, TECH-FLAVOR, TECH-PAGESLIVE, TECH-SVGTIE, TECH-PROMOTE. DECLINED below the bar: tier-change motion and hover previews (the modal covers them), the fog idea box (compact buttons + chat cover the need for now). Ranking rule applied: value-per-effort, with the anti-inflation constraint holding."
+        "REVIEW LOG 2026-07-28 (first owner-signalled run, sig-20260728002811): audited all six categories against cycles 141-146, which had already delivered the drawn tree, detail modals with UNLOCKS, and settings. SHIPPED top slice: a tech-tree-schema orient probe (automation), a compact request button on EVERY available tech generalising the signal path (interactivity), and the SIGNAL LOG on the factory page (interactivity/transparency). PROMOTED to named techs: TECH-DATALINKS, TECH-FLAVOR, TECH-PAGESLIVE, TECH-SVGTIE, TECH-PROMOTE. DECLINED below the bar: tier-change motion and hover previews (the modal covers them), the fog idea box (compact buttons + chat cover the need for now). Ranking rule applied: value-per-effort, with the anti-inflation constraint holding.",
+        "REVIEW LOG 2026-07-30 (second owner-signalled run, sig-20260730121617): audited what cycles 148-153 had already delivered before proposing anything — most of the first run's follow-ups had landed (datalinks pages, the interface protocol, three grown nodes), so this run's real job was the HONESTY class the protocol names. SHIPPED: (1) gate honesty — gatedness is now derived from a row's DECLARED gate rather than from which state word its author typed, so the tree can no longer offer the owner work only the owner can authorize (RB-007 had a request button for hook-gated automation while RB-015, same real gate, showed a lock; RB-007's backlog row also gained the gate fact it was missing, and a gated node now NAMES its gate); (2) 'answer where the question was asked' completed — a node showed its pending state but reverted to a plain button the moment a signal was acked, so answers lived only in the factory log's last 8 rows; nodes now carry YOUR PAST REQUESTS with the answer, and the datalinks page lists every request for that node, uncapped. FIXED IN PASSING: this node's own stale line-46 self-reference, TECH-PROMOTE's research text (it asked for a path cycle 148 had already built), and TR-PROBES — the only root with no detail and, per the c150 audit, a near-duplicate of TF-PROBES: differentiated as rule-vs-machinery rather than merged. PROMOTED: TECH-GATEGUARD, TECH-OWNERGUIDE. DECLINED: merging TR-PROBES/TF-PROBES (the two lenses are real; the duplication was missing detail, not a duplicate node); treating CR-POLITE's edge-deadness as a defect (an inventory root with no dependents is legitimate — TECH-TYPEDEDGES is where edge grammar gets revisited); deepening the fan structurally (that IS TECH-TYPEDEDGES, an owner choice, not a review side-effect)."
       ],
       "detail": [
-        "config/tech-tree.json line 46: tree-branch tech 'Tech Tree App Review', combines TR-PAGE + AG-METHOD (the ≤2-prereq SMAC cap), state available, wired to signal 'app-review' — a second lightbulb button so the tree branch can request review of the tech-tree system itself.",
+        "Defined in config/tech-tree.json (line numbers deliberately NOT cited — the 2026-07-30 review found this very fact pointing at CR-POLITE's block after the roots grew detail arrays) as the tree-branch tech 'Tech Tree App Review', combining TR-PAGE + AG-METHOD (the ≤2-prereq SMAC cap), state available, wired to signal 'app-review' — a second lightbulb button so the tree branch can request review of the tech-tree system itself.",
         "Shipped in cycle 140 (2026-07-28, ~0.6 turn) after the owner said to present ideas BEFORE implementation: six improvement categories were offered in chat (GUI/UX, data model & rules, interactivity & signals, automation & write-back, progress-picture tie-in, app self-testing) and the owner chose ALL SIX — a GUI-only guess would have silently dropped automation and self-testing.",
         "The approved scope lives as 8 Preliminary Data notes on the node, including the typed-edges idea (the owner's verbs combine/extend/improve are three relationships currently flattened into one 'combines' chip) and a fog-node idea box that writes straight into the signal queue without a chat turn.",
         "The final prelim note makes the review subject to the discipline it audits: every improvement item it proposes must name its ≤2 foundations before it leaves the fog, and unshipped items become named techs or fog seeds 'so nothing evaporates'.",
@@ -668,10 +674,42 @@
       ]
     },
     {
+      "id": "TECH-GATEGUARD",
+      "branch": "factory",
+      "title": "Gate Declaration Guard",
+      "research": "an orient probe asserting every backlog row that touches an owner-gated surface DECLARES its gate — so the tree can never again offer work the owner must authorize",
+      "prereqs": [
+        "TF-PROBES",
+        "TR-LEDGER"
+      ],
+      "state": "available",
+      "prelim": [
+        "Born from the cycle-154 fix: routing is now mechanical (a declared gate renders a lock), so the remaining hole is a row that IS gated but does not SAY so — exactly RB-007's failure mode, which no unit test can catch because the fixture would have to know the gate too.",
+        "The checkable version: config/gated-surfaces.json already enumerates the standing gates (hooks/skills, the backups, Defender, politeness, concurrency). A probe can flag any backlog row whose text names a gated surface while its own remainder omits the gate declaration — cross-referencing two existing records, inventing no new state.",
+        "Deliberately a WARN-then-fail ladder: the first run over 15+ rows will surface historical omissions, and turning those into a hard red before they are fixed would make orient unpassable for reasons unrelated to the current cycle."
+      ]
+    },
+    {
+      "id": "TECH-OWNERGUIDE",
+      "branch": "tree",
+      "title": "On-Page Guide for the Owner",
+      "research": "the owner-facing counterpart to the AI protocol: a short in-page explanation of what a click does, what grown/available/gated/fog mean, and what the agent will do next",
+      "prereqs": [
+        "TR-PAGE",
+        "AG-METHOD"
+      ],
+      "state": "available",
+      "prelim": [
+        "The gap this names: cycle 152 wrote the AI-facing contract (docs/agi/TECH_TREE_INTERFACE.md) and printed a pointer to it in the footer — so the page now explains itself to AGENTS while the owner, the actual reader, gets no on-page account of how the interface works.",
+        "Smallest honest slice: a collapsible 'how this page works' panel per branch page, stating the four states in one line each, what happens after a request click (queue -> red probe -> next-prompt line -> the answer appears on this node), and that gated items are the owner's to authorize.",
+        "Anti-goal: not a manual. If it cannot be read in under a minute it has failed, and the detail belongs on the datalinks pages that already exist."
+      ]
+    },
+    {
       "id": "TECH-PROMOTE",
       "branch": "factory",
       "title": "Curated-Tech Promotion",
-      "research": "when a curated tech's work completes, promote it to grown mechanically (RB refs already self-promote via backlog state; curated nodes need the path)",
+      "research": "mechanise the curated-tech promotion that cycles 148/150/153 each performed BY HAND — the path itself exists (state done + mandatory researchedOn); what is missing is the tool that makes the edit and mines the delivering cycle",
       "prereqs": [
         "TF-LOOP",
         "TR-LEDGER"

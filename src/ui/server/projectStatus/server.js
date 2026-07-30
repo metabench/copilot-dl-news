@@ -88,7 +88,10 @@ async function main() {
     router.set_route('/tech/node', null, (req, res) => {
       try {
         const id = new URL(req.url, 'http://localhost').searchParams.get('id') || '';
-        const html = renderNodePage(id, buildStatus().techTree, { ledgerTrail: ledgerMentions(id) });
+        const html = renderNodePage(id, buildStatus().techTree, {
+          ledgerTrail: ledgerMentions(id),
+          signalHistory: signals.effective()
+        });
         if (!html) { res.writeHead(404, { 'Content-Type': 'text/plain' }); res.end('unknown node: ' + id); return; }
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
         res.end(html);

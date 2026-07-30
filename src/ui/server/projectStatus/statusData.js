@@ -71,6 +71,23 @@ function shortTitle(question, cap = 72) {
  * Violations THROW (the c129 rule): an unknown state, a phantom edge, a third prereq
  * or a curated tech claiming completion is a broken record to fix, not render around.
  */
+
+/**
+ * declaredOwnerGate — does this row's remainder DECLARE that it needs the owner's
+ * authorization? Cycle 154 (second TECH-APPREVIEW run) found the tree offering
+ * hook-gated work as clickable research because gatedness was inferred from the
+ * author's state word ('blocked') rather than the row's own text. The marker is
+ * deliberately explicit and narrow — a backlog row must SAY "owner-gated" (or
+ * "owner-installed"/"owner approval") to be treated as gated, so this can never
+ * become prose-sniffing that silently locks a researchable item. Returns the
+ * matched phrase (shown on the lock) or null.
+ */
+const OWNER_GATE_MARKERS = ['owner-gated', 'owner gated', 'owner-installed', 'owner approval', 'owner-approved only'];
+function declaredOwnerGate(text) {
+  const lower = String(text || '').toLowerCase();
+  return OWNER_GATE_MARKERS.find((marker) => lower.includes(marker)) || null;
+}
+
 function buildTechTree(backlogRows, roadmap, spec) {
   if (!spec || !spec.branches || !Array.isArray(spec.roots) || !Array.isArray(spec.techs)) {
     throw new Error('tech-tree.json missing or malformed — branches/roots/techs are required');
@@ -127,8 +144,19 @@ function buildTechTree(backlogRows, roadmap, spec) {
         dest.gated.push({ ...node, note: shortTitle(remainderOf(row.status) || row.status, 90) });
       } else {
         const remainder = row.state === 'partial' ? remainderOf(row.status) : null;
-        // a partial row is offered by its REMAINDER — researching it means the remainder
-        dest.available.push({ ...node, research: remainder ? shortTitle(remainder, 90) : shortTitle(row.question, 90) });
+        // GATE HONESTY (cycle 154, second TECH-APPREVIEW run): gatedness is derived
+        // from the row's own declared gate, NOT from which state word the author
+        // happened to type. RB-007 ('partial', remainder = nightly automation = a
+        // hook) rendered as clickable research while RB-015 ('blocked', same real
+        // gate) rendered as a lock — two rows, one gate, opposite treatments, and
+        // the tree was inviting the owner to request work only they can authorize.
+        const declaredGate = declaredOwnerGate(remainder || row.status);
+        if (declaredGate) {
+          dest.gated.push({ ...node, note: shortTitle(remainder || row.status, 90), gate: declaredGate });
+        } else {
+          // a partial row is offered by its REMAINDER — researching it means the remainder
+          dest.available.push({ ...node, research: remainder ? shortTitle(remainder, 90) : shortTitle(row.question, 90) });
+        }
       }
     } else if (t.state === 'done') {
       // Curated-tech promotion (cycle 148, first used by TECH-DATALINKS): a curated

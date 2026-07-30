@@ -108,3 +108,44 @@ describe('shortTitle', () => {
     expect(shortTitle('No question mark here')).toBe('No question mark here');
   });
 });
+
+// ── Cycle 154 (second TECH-APPREVIEW run): gate honesty ────────────────────
+// Gatedness must come from the row's DECLARED gate, not from which state word
+// the author typed. The live defect: RB-007 ('partial', remainder = nightly
+// automation, i.e. a hook) rendered as clickable research with a request
+// button, while RB-015 ('blocked', the same real gate) rendered as a lock —
+// so the tree invited the owner to request work only they can authorize.
+describe('gate honesty: a declared owner-gate outranks the state word', () => {
+  const GATE_ROWS = [
+    { id: 'RB-100', state: 'partial', question: 'Nightly automation?', status: 'Partly done. Remaining: nightly automation — a scheduled hook, therefore owner-gated (no hooks without approval).', lastUpdate: '2026-07-30' },
+    { id: 'RB-101', state: 'partial', question: 'Plain remainder?', status: 'Partly done. Remaining: a persisted consumer.', lastUpdate: '2026-07-30' },
+    { id: 'RB-102', state: 'partial', question: 'Owner-installed variant?', status: 'Remaining: an owner-installed hook.', lastUpdate: '2026-07-30' }
+  ];
+  const GATE_SPEC = {
+    branches: { agi: { label: 'AGI', color: '#4d9ec8', icon: 'iceBulb', tagline: 't' } },
+    roots: [{ id: 'AG-HARNESS', branch: 'agi', title: 'H', note: 'n' }],
+    techs: [
+      { ref: 'RB-100', branch: 'agi', prereqs: [] },
+      { ref: 'RB-101', branch: 'agi', prereqs: [] },
+      { ref: 'RB-102', branch: 'agi', prereqs: [] }
+    ],
+    fogPerBranch: 1
+  };
+  const gateTree = buildTechTree(GATE_ROWS, ROADMAP, GATE_SPEC);
+  const agiGate = gateTree.branches.find((b) => b.key === 'agi');
+
+  it('a partial row whose remainder declares owner-gating renders GATED, never as available research', () => {
+    expect(agiGate.gated.map((g) => g.id)).toContain('RB-100');
+    expect(agiGate.available.map((a) => a.id)).not.toContain('RB-100');
+  });
+
+  it('the gate is NAMED on the node so the lock is legible', () => {
+    expect(agiGate.gated.find((g) => g.id === 'RB-100').gate).toBe('owner-gated');
+    expect(agiGate.gated.find((g) => g.id === 'RB-102').gate).toBe('owner-installed');
+  });
+
+  it('a plain partial remainder is still offered — the marker must not become prose-sniffing', () => {
+    expect(agiGate.available.map((a) => a.id)).toContain('RB-101');
+    expect(agiGate.gated.map((g) => g.id)).not.toContain('RB-101');
+  });
+});

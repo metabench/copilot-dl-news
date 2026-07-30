@@ -58,3 +58,97 @@ describe('drawn tree view (owner 2026-07-28: display as an actual tree)', () => 
     expect(svg).toContain('stroke="#4d9ec8"');
   });
 });
+
+// ── Cycle 154 (second TECH-APPREVIEW run): answer where the question was asked ──
+// The protocol duty from c152 was only half-implemented: a node showed its
+// PENDING state but reverted to a plain button the moment a signal was acked,
+// so the answer lived only in the factory page's last-8 log. That hurts most on
+// the re-runnable review nodes, which never grow and so never show progress any
+// other way.
+const { renderTechPage, renderNodePage } = require('../techPages');
+
+const HISTORY_TREE = {
+  branches: [{
+    key: 'agi', label: 'AGI', color: '#4d9ec8', icon: 'iceBulb', tagline: 'cold light',
+    roots: [{ id: 'AG-R', title: 'Root', note: 'n' }],
+    grown: [],
+    available: [
+      { id: 'TECH-REVIEW', title: 'Review Op', research: 're-run the review', prereqs: [], signal: 'app-review' },
+      { id: 'TECH-PLAIN', title: 'Plain Tech', research: 'do a thing', prereqs: [] }
+    ],
+    gated: [],
+    future: [{ id: 'agi-future-1', title: 'Future Technology' }]
+  }],
+  absorbed: 0
+};
+const HISTORY = [
+  { id: 'sig-1', tech: 'TECH-REVIEW', at: '2026-07-28T00:28:11.000Z', status: 'done', ackAt: '2026-07-28T00:37:02.000Z', ackNote: 'shipped the probe and the compact buttons' },
+  { id: 'sig-2', tech: 'TECH-REVIEW', at: '2026-07-30T12:16:17.000Z', status: 'pending', requested: 'review the app again' },
+  { id: 'sig-3', tech: 'OTHER-TECH', at: '2026-07-29T00:00:00.000Z', status: 'done', ackAt: '2026-07-29T01:00:00.000Z', ackNote: 'not this node' }
+];
+
+describe('per-node request history', () => {
+  it('an ANSWERED request shows on the node that was clicked, with its answer', () => {
+    const html = renderTechPage('agi', HISTORY_TREE, { pendingSignals: [], signalHistory: HISTORY });
+    expect(html).toContain('YOUR PAST REQUESTS');
+    expect(html).toContain('shipped the probe and the compact buttons');
+    expect(html).toContain('answered 2026-07-28 00:37');
+  });
+
+  it('another node&apos;s history never leaks onto this node', () => {
+    const html = renderTechPage('agi', HISTORY_TREE, { pendingSignals: [], signalHistory: HISTORY });
+    expect(html).not.toContain('not this node');
+  });
+
+  it('a node with no history renders no history block (no empty furniture)', () => {
+    const html = renderTechPage('agi', HISTORY_TREE, { pendingSignals: [], signalHistory: [] });
+    expect(html).not.toContain('YOUR PAST REQUESTS');
+  });
+
+  it('the datalinks page lists EVERY request for the node, pending and answered', () => {
+    const html = renderNodePage('TECH-REVIEW', HISTORY_TREE, { ledgerTrail: [], signalHistory: HISTORY });
+    expect(html).toContain('YOUR REQUESTS — 2 on this node');
+    expect(html).toContain('pending — the agent picks it up');
+    expect(html).toContain('shipped the probe and the compact buttons');
+  });
+
+  it('ack notes are ESCAPED — the cycle-72 contract holds on owner-facing text too', () => {
+    const hostile = [{ id: 's', tech: 'TECH-PLAIN', at: '2026-07-30T00:00:00.000Z', status: 'done', ackAt: '2026-07-30T01:00:00.000Z', ackNote: '<script>alert(1)</script>' }];
+    const html = renderTechPage('agi', HISTORY_TREE, { pendingSignals: [], signalHistory: hostile });
+    expect(html).not.toContain('<script>alert(1)</script>');
+    expect(html).toContain('&lt;script&gt;');
+  });
+});
+
+// The review caught its own first cut being incomplete: history vanished on
+// GROWN nodes (the owner's click is often why they grew) and on nodes with a
+// NEW request pending (the re-runnable review nodes, precisely where the last
+// run's answer matters most).
+describe('per-node request history: the two blind spots', () => {
+  const GROWN_TREE = {
+    branches: [{
+      key: 'crawler', label: 'CRAWLER', color: '#b8862e', icon: 'spiderWeb', tagline: 'the product',
+      roots: [{ id: 'CR-R', title: 'Root', note: 'n' }],
+      grown: [{ id: 'TECH-GREW', title: 'Grew From A Click', researchedOn: '2026-07-30', prereqs: [] }],
+      available: [{ id: 'TECH-REVIEW', title: 'Review Op', research: 're-run', prereqs: [], signal: 'app-review' }],
+      gated: [], future: []
+    }],
+    absorbed: 0
+  };
+  const H = [
+    { id: 'g1', tech: 'TECH-GREW', at: '2026-07-30T09:03:00.000Z', status: 'done', ackAt: '2026-07-30T09:46:00.000Z', ackNote: 'delivered and promoted' },
+    { id: 'r1', tech: 'TECH-REVIEW', at: '2026-07-28T00:28:00.000Z', status: 'done', ackAt: '2026-07-28T00:37:00.000Z', ackNote: 'first run shipped the probe' },
+    { id: 'r2', tech: 'TECH-REVIEW', at: '2026-07-30T12:16:00.000Z', status: 'pending', requested: 'run it again' }
+  ];
+
+  it('a GROWN node still shows the request that caused it', () => {
+    const html = renderTechPage('crawler', GROWN_TREE, { pendingSignals: [], signalHistory: H });
+    expect(html).toContain('delivered and promoted');
+  });
+
+  it('a node with a NEW request pending still shows the PREVIOUS run&apos;s answer', () => {
+    const html = renderTechPage('crawler', GROWN_TREE, { pendingSignals: [H[2]], signalHistory: H });
+    expect(html).toContain('RESEARCH REQUESTED');           // the new click
+    expect(html).toContain('first run shipped the probe');   // and the old answer
+  });
+});

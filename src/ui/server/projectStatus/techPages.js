@@ -238,12 +238,14 @@ function prelimBlock(prelim) {
  * agi-signal probe goes red + the next-prompt carries a ⚡ line). If a matching
  * signal is already pending, the button renders in its "requested" state.
  */
-function signalButton(tech, pendingSignals) {
+function signalButton(tech, pendingSignals, signalHistory) {
   const already = (pendingSignals || []).find((s) => s.tech === tech.id && s.status === 'pending');
   if (already) {
-    return `<div class="tp-signal tp-signal--sent">${ICONS.iceBulb(40)}<div><div class="tp-signal__t">RESEARCH REQUESTED</div><div class="tp-signal__s">signal ${esc(already.id)} pending — the agent picks it up at its next orient</div></div></div>`;
+    // Past answers stay visible while a NEW request is pending — a re-runnable
+    // review node is exactly where the owner wants to see what the last run did.
+    return `<div class="tp-signal tp-signal--sent">${ICONS.iceBulb(40)}<div><div class="tp-signal__t">RESEARCH REQUESTED</div><div class="tp-signal__s">signal ${esc(already.id)} pending — the agent picks it up at its next orient</div></div></div>${answeredBlock(tech, signalHistory)}`;
   }
-  return `<button class="tp-signal" data-signal-tech="${esc(tech.id)}" data-signal-req="${esc(tech.research || tech.title)}" type="button">${ICONS.iceBulb(40)}<div><div class="tp-signal__t">REQUEST THIS RESEARCH</div><div class="tp-signal__s">sends a signal the agent reads at its next orient</div></div></button>`;
+  return `<button class="tp-signal" data-signal-tech="${esc(tech.id)}" data-signal-req="${esc(tech.research || tech.title)}" type="button">${ICONS.iceBulb(40)}<div><div class="tp-signal__t">REQUEST THIS RESEARCH</div><div class="tp-signal__s">sends a signal the agent reads at its next orient</div></div></button>${answeredBlock(tech, signalHistory)}`;
 }
 
 /**
@@ -251,10 +253,43 @@ function signalButton(tech, pendingSignals) {
  * first owner-signalled app review): the review nodes keep the big bulb; any
  * research can now be requested through the same queue -> probe -> prompt path.
  */
-function compactSignal(tech, pendingSignals) {
+function compactSignal(tech, pendingSignals, signalHistory) {
   const already = (pendingSignals || []).find((s) => s.tech === tech.id && s.status === 'pending');
-  if (already) return `<div class="tp-signal-mini tp-signal-mini--sent">⚡ requested — pending pickup</div>`;
-  return `<button class="tp-signal-mini" data-signal-tech="${esc(tech.id)}" data-signal-req="${esc(tech.research || tech.title)}" type="button">${ICONS.iceBulb(13)} request this research</button>`;
+  if (already) return `<div class="tp-signal-mini tp-signal-mini--sent">⚡ requested — pending pickup</div>${answeredBlock(tech, signalHistory)}`;
+  return `<button class="tp-signal-mini" data-signal-tech="${esc(tech.id)}" data-signal-req="${esc(tech.research || tech.title)}" type="button">${ICONS.iceBulb(13)} request this research</button>${answeredBlock(tech, signalHistory)}`;
+}
+
+/**
+ * ANSWERED history for THIS node (cycle 154, second TECH-APPREVIEW run).
+ *
+ * The protocol's own duty is "answer where the question was asked" — but until
+ * now a node showed only its PENDING state, and the moment a signal was acked
+ * the node reverted to a plain button with no trace. The answer lived only in
+ * the factory page's last-8 SIGNAL LOG, so an owner returning to the node they
+ * clicked could not see that they had asked, or what came back. That matters
+ * most for the re-runnable review nodes, which never grow and so never show
+ * progress any other way.
+ *
+ * Newest first, capped — the datalinks page is where a long history belongs.
+ */
+function answeredBlock(tech, signalHistory, limit = 2) {
+  const answered = (signalHistory || [])
+    .filter((s) => s.tech === tech.id && s.status === 'done')
+    .sort((a, b) => String(b.ackAt || '').localeCompare(String(a.ackAt || '')));
+  if (!answered.length) return '';
+  const rows = answered.slice(0, limit).map((s) => {
+    const when = String(s.ackAt || '').slice(0, 16).replace('T', ' ');
+    return `<div class="tp-answered__row"><span class="tp-answered__when">✓ requested ${esc(String(s.at || '').slice(0, 10))} · answered ${esc(when)}</span><span class="tp-answered__note">${esc(shortenNote(s.ackNote))}</span></div>`;
+  }).join('');
+  const more = answered.length > limit
+    ? `<div class="tp-answered__more">${answered.length - limit} earlier request${answered.length - limit === 1 ? '' : 's'} — see the datalinks page</div>`
+    : '';
+  return `<div class="tp-answered"><div class="tp-answered__h">YOUR PAST REQUESTS</div>${rows}${more}</div>`;
+}
+
+function shortenNote(note, max = 220) {
+  const text = String(note || '').replace(/\s+/g, ' ').trim();
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
 const SIGNAL_SCRIPT = `<script>
@@ -421,17 +456,28 @@ function renderTechPage(branchKey, techTree, opts = {}) {
     `<div class="tp-node__t">${esc(r.id)} · ${esc(r.title)}</div><div class="tp-node__s">${esc(r.note)}</div>`, r.id)).join('')
     || node('tp-node--seed', 'no foundations recorded for this branch');
 
+  const signalHistory = Array.isArray(opts.signalHistory) ? opts.signalHistory : [];
+
+  // A grown node keeps its request history: the owner's click is often WHY it
+  // grew (TECH-DATALINKS, TECH-DASH2B and TECH-P5AUTO were all owner-chosen),
+  // and hiding the answer once the work lands loses the very connection the
+  // signal loop exists to show.
   const grownHtml = b.grown.map((g) => node('tp-node--grown',
-    `<div class="tp-node__t">✓ ${esc(g.id)} · ${esc(g.title)}</div><div class="tp-node__s">researched ${esc(g.researchedOn)}</div>${prereqChips(g.prereqs, branches)}${prelimBlock(g.prelim)}`, g.id)).join('');
+    `<div class="tp-node__t">✓ ${esc(g.id)} · ${esc(g.title)}</div><div class="tp-node__s">researched ${esc(g.researchedOn)}</div>${prereqChips(g.prereqs, branches)}${answeredBlock(g, signalHistory)}${prelimBlock(g.prelim)}`, g.id)).join('');
 
   const availHtml = b.available.map((a) => node('tp-node--avail',
     `<div class="tp-node__t">${branchKey === 'agi' ? ICONS.iceBulb(15) : '💡'} ${esc(a.id)} · ${esc(a.title)}</div>` +
     `<div class="tp-node__s">research: ${esc(a.research)}</div>${prereqChips(a.prereqs, branches)}` +
-    `${a.signal ? signalButton(a, pendingSignals) : compactSignal(a, pendingSignals)}${prelimBlock(a.prelim)}`, a.id)).join('')
+    `${a.signal ? signalButton(a, pendingSignals, signalHistory) : compactSignal(a, pendingSignals, signalHistory)}${prelimBlock(a.prelim)}`, a.id)).join('')
     || node('tp-node--seed', 'no research currently available on this branch');
 
+  // A gated node names its GATE, not just its remainder — the lock is only
+  // honest if the reason is legible (cycle 154: RB-007 used to render as
+  // clickable research despite needing the owner's own authorization).
   const gatedHtml = b.gated.map((g) => node('tp-node--gated',
-    `<div class="tp-node__t">🔒 ${esc(g.id)} · ${esc(g.title)}</div><div class="tp-node__s">${esc(g.note)}</div>${prereqChips(g.prereqs, branches)}`, g.id)).join('')
+    `<div class="tp-node__t">🔒 ${esc(g.id)} · ${esc(g.title)}</div><div class="tp-node__s">${esc(g.note)}</div>` +
+    `${g.gate ? `<div class="tp-node__gate">🔑 ${esc(g.gate)} — yours to authorize; the agent will not request it</div>` : ''}` +
+    `${prereqChips(g.prereqs, branches)}${answeredBlock(g, signalHistory)}`, g.id)).join('')
     || node('tp-node--seed', 'nothing gated');
 
   const fogHtml = b.future.map((f) => node('tp-node--fog', `<div class="tp-node__t">❓ ${esc(f.title)}</div>`, f.id)).join('');
@@ -513,6 +559,22 @@ function renderNodePage(id, techTree, opts = {}) {
   if (n.statusProse) body += sec('FULL RECORD (research backlog, live)') + para('tp-modal__p--prose', n.statusProse);
   if ((n.detail || []).length) body += sec('DETAIL — from the project record') + n.detail.map((d) => para('tp-modal__p--fact', '▪ ' + d)).join('');
   if ((n.prelim || []).length) body += sec('PRELIMINARY DATA — ' + n.prelim.length + ' notes') + n.prelim.map((x) => para('', x)).join('');
+  // REQUEST HISTORY (cycle 154): the owner's own clicks on THIS node and the
+  // answers they got — the full list, uncapped, which is exactly what a
+  // datalinks page is for (the node card shows the newest two).
+  const nodeSignals = (opts.signalHistory || [])
+    .filter((s) => s.tech === id)
+    .sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
+  if (nodeSignals.length) {
+    body += sec('YOUR REQUESTS — ' + nodeSignals.length + ' on this node');
+    body += nodeSignals.map((s) => {
+      const state = s.status === 'pending'
+        ? '⚡ pending — the agent picks it up at its next orient'
+        : '✓ answered ' + String(s.ackAt || '').slice(0, 16).replace('T', ' ');
+      return `<div class="tp-trail__row"><span class="tp-trail__c">${esc(String(s.at || '').slice(0, 10))}</span><span class="tp-trail__d">${esc(state)}</span><span class="tp-trail__l">${esc(s.status === 'pending' ? (s.requested || '') : (s.ackNote || ''))}</span></div>`;
+    }).join('');
+  }
+
   const trail = opts.ledgerTrail || [];
   if (trail.length) {
     body += sec('LEDGER TRAIL — ' + trail.length + ' cycle' + (trail.length === 1 ? '' : 's') + ' mention this') +
@@ -605,6 +667,13 @@ const CSS = `
 .tp-signal-mini { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; background: none; border: 1px dashed #2e3440; border-radius: 4px; color: #8a8778; cursor: pointer; font-family: inherit; font-size: 0.5938rem; letter-spacing: 0.08em; padding: 3px 8px; }
 .tp-signal-mini:hover:not(:disabled) { border-color: __ACCENT__; color: __ACCENT__; }
 .tp-signal-mini--sent { border-style: solid; border-color: #4d9ec8; color: #9fd4ec; cursor: default; }
+.tp-answered { margin-top: 6px; padding: 5px 7px; border-left: 2px solid #55a377; background: #12161c; border-radius: 0 3px 3px 0; }
+.tp-answered__h { font-size: 0.5313rem; letter-spacing: 0.09em; color: #55a377; margin-bottom: 3px; }
+.tp-answered__row { display: flex; flex-direction: column; gap: 1px; padding: 2px 0; }
+.tp-answered__when { font-size: 0.5625rem; color: #8a8778; }
+.tp-answered__note { font-size: 0.5938rem; color: #b8b3a4; line-height: 1.4; }
+.tp-answered__more { font-size: 0.5313rem; color: #6b675a; font-style: italic; margin-top: 2px; }
+.tp-node__gate { font-size: 0.5938rem; color: #c8a45a; margin-top: 3px; }
 .tp-sig-log { padding: 6px 22px 4px; }
 .tp-sig-log__row { display: flex; gap: 10px; align-items: baseline; font-size: 0.625rem; color: #8a8778; padding: 3px 0; border-bottom: 1px dashed #1b1f26; }
 .tp-sig-log__state { min-width: 9.5em; color: #cfcabd; }
