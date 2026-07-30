@@ -114,6 +114,47 @@ A proposal is a named tech. To make one:
    `node tools/dev/checks/tech-tree-schema.check.js` — the builder's throws
    (phantom edge, third prereq, unknown branch, dateless done) are the schema.
 
+## Reporting progress (owner directive 2026-07-30) — DO THIS
+
+The owner watches these pages while you work. Two channels now run in opposite
+directions: the owner clicks research requests **to** you, and you report
+progress **to** the owner.
+
+```bash
+node tools/agi/report-progress.js <phase> "<one-line note>" [--cycle N]
+```
+
+**Call it at PHASE BOUNDARIES — four to six times in a cycle, never per tool
+call.** The house phases:
+
+| Phase | When | Example note |
+| --- | --- | --- |
+| `orient` | after probes, once you know what you're doing | "21 probes green; taking up TECH-PAGESLIVE" |
+| `building` | when implementation starts | "live strip + fingerprint poll" |
+| `verifying` | tests/browser/live checks | "42/42 page tests; browser next" |
+| `closing` | ledger + ritual | "ledger row + push" |
+
+**The flow-protection rule is enforced, not trusted:** records arriving within
+20s of the previous one are DROPPED by the store (`activity.js`), so
+over-reporting degrades to a no-op instead of a flood. Reporting is
+fire-and-forget — the CLI exits 0 whatever happens, writes straight to the log
+when the app is down, and must never be a reason a cycle stops or an agent
+pauses to think.
+
+**What the owner sees:** a LIVE strip at the top of every tech page (phase, note,
+age, grown/available counts) and an `⚙ AGENT WORKING` line on the hub. Both go
+plainly **idle** when the newest report is over 45 minutes old — a stale phase
+presented as current is the zombie-state failure again (cycle 150).
+
+**Why the pages notice at all:** `/api/tech-state` is a stat()-only fingerprint
+over the files a cycle touches (tree spec, backlog, roadmap, ledger,
+progress.svg, both queues). Pages poll it every 45s, pause while the tab is
+hidden, update the strip in place, and offer a reload pill — they deliberately
+**never force a reload**, because the owner reads these pages while agents work.
+A server restart counts as a change too (new code cannot arrive via live data).
+If you add a new record type a cycle writes, add it to `FINGERPRINT_INPUTS` or
+the page will silently stop noticing that class of progress.
+
 ## Honesty duties (what "first-class" means in practice)
 
 - **States match reality.** A tech whose substance already shipped but still

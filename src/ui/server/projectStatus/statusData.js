@@ -244,8 +244,26 @@ function ledgerMentions(nodeId) {
     .reverse();
 }
 
+/**
+ * The two CHEAP, time-sensitive channels, always re-read (cycle 155).
+ *
+ * buildStatus caches for 30s because parsing the ledger and walking tools/ is
+ * expensive. But a cached agent-activity line defeats the entire point of
+ * showing live progress — this is exactly the "app did not update" class the
+ * owner reported — and a cached signal queue would sit on the owner's click for
+ * up to 30s. Both are one small file read, so they are exempt from the cache
+ * rather than shortening it for everything.
+ */
+function liveChannels() {
+  let agentActivity = { idle: true, reason: 'activity log unavailable' };
+  try { agentActivity = require('./activity').current(); } catch (_) {}
+  let pendingSignals = [];
+  try { pendingSignals = require('./signals').pending(); } catch (_) {}
+  return { agentActivity, pendingSignals };
+}
+
 function buildStatus() {
-  if (cache.data && Date.now() - cache.at < 30000) return cache.data;
+  if (cache.data && Date.now() - cache.at < 30000) return { ...cache.data, ...liveChannels() };
 
   const ledger = fs.readFileSync(path.join(ROOT, 'docs', 'agi', 'IMPROVEMENT_LEDGER.md'), 'utf8');
   const { cycles } = parseCycleStanzas(ledger);
@@ -337,6 +355,12 @@ function buildStatus() {
   let pendingSignals = [];
   try { pendingSignals = require('./signals').pending(); } catch (_) {}
 
+  // what the agent is doing RIGHT NOW (cycle 155) — the reverse direction of the
+  // signal queue: agent→owner instead of owner→agent. The hub's existing 60s
+  // client refresh picks this up with no extra polling.
+  let agentActivity = { idle: true, reason: 'activity log unavailable' };
+  try { agentActivity = require('./activity').current(); } catch (_) {}
+
   // live tool inventory for the TOOL FACTORY coordination point — counted from
   // disk each rebuild so the listing cannot drift from reality (603 as of 2026-07-28)
   let toolInventory = { total: 0, dirs: 0 };
@@ -358,6 +382,7 @@ function buildStatus() {
   const data = {
     player,
     pendingSignals,
+    agentActivity,
     toolInventory,
     stats: {
       cycles: totals.cycles,
@@ -384,4 +409,43 @@ function buildStatus() {
   return data;
 }
 
-module.exports = { buildStatus, buildTechTree, shortTitle, ledgerMentions };
+/**
+ * techStateFingerprint — "has anything the pages show changed?", answered by
+ * stat() alone (owner directive 2026-07-30, cycle 155).
+ *
+ * The pages were already rendered per request from live files, so the data was
+ * never the stale part — the BROWSER was, because nothing ever asked again.
+ * This is what a page polls at low frequency: a few stat() calls, no parsing,
+ * no DB, cheap enough to answer every 45s forever.
+ *
+ * Inputs are exactly the files a cycle touches when it lands work: the tree
+ * spec, the backlog states, the roadmap, the ledger (the record), the committed
+ * progress picture, the owner's signal queue, and the agent activity log. Miss
+ * one and the page silently stops noticing that class of progress, so each is
+ * listed rather than globbed.
+ */
+const FINGERPRINT_INPUTS = [
+  ['config', 'tech-tree.json'],
+  ['config', 'roadmap.json'],
+  ['docs', 'agi', 'RESEARCH_BACKLOG.md'],
+  ['docs', 'agi', 'IMPROVEMENT_LEDGER.md'],
+  ['docs', 'agi', 'progress', 'progress.svg'],
+  ['data', 'agi-signals.jsonl'],
+  ['data', 'agent-activity.jsonl']
+];
+
+function techStateFingerprint() {
+  const parts = [];
+  for (const segs of FINGERPRINT_INPUTS) {
+    const p = path.join(ROOT, ...segs);
+    try {
+      const st = fs.statSync(p);
+      parts.push(`${segs[segs.length - 1]}:${Math.round(st.mtimeMs)}:${st.size}`);
+    } catch (_) {
+      parts.push(`${segs[segs.length - 1]}:absent`); // absence is a state too
+    }
+  }
+  return parts.join('|');
+}
+
+module.exports = { buildStatus, buildTechTree, shortTitle, ledgerMentions, techStateFingerprint, FINGERPRINT_INPUTS };

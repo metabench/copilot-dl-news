@@ -44,6 +44,7 @@ const STATIC = {
   workstream: 'AGI-WORKFLOW — copilot-dl-news ecosystem',
   reference: 'CAPABILITY_RESEARCH_2026-07-27.md · repo-scope.json · progress-svg.js · projectStatus page v2 (launch: project-status, :3184 — /api/status, /progress.svg)',
   orient: 'node tools/dev/run-probes.js — expect green except bridge-health (environmental) · frontier-api skips when :3170 down.',
+  reportProgress: 'node tools/agi/report-progress.js <orient|building|verifying|closing> "<note>" [--cycle N] — the owner watches :3184 while you work; call it at PHASE BOUNDARIES only (4-6 per cycle, records <20s apart are dropped). Fire-and-forget: it never fails a cycle.',
   gated: 'live news.db writes · backups · Defender · politeness · concurrency >3 · hooks.',
   onCompletion: 'ledger row + stanza (owed/owed_closed as applicable) · node tools/agi/repo-activity.js && node tools/agi/progress-svg.js · commit + push · regenerate this prompt (node tools/agi/next-prompt.js, then curate the ▶ selection).'
 };
@@ -171,6 +172,7 @@ function render(m) {
   L.push('');
   L.push(`REFERENCE  ${STATIC.reference}`);
   L.push(`ORIENT  ${STATIC.orient}`);
+  L.push(`REPORT  ${STATIC.reportProgress}`);
   L.push('PROGRESS');
   for (const d of m.done) L.push(`  ✅ c${d.id} ${d.label}`);
   if (m.owed.length) {

@@ -17,7 +17,12 @@ const fs = require('fs');
 const jsgui_server = require(path.resolve(__dirname, '..', '..', '..', '..', '..', 'jsgui3-server'));
 const { Server } = jsgui_server;
 const { Project_Status_Page } = require('./controls');
-const { buildStatus } = require('./statusData');
+const { buildStatus, techStateFingerprint } = require('./statusData');
+
+// Stamped once at boot: a page that polls can tell "the data changed" from
+// "the server was restarted under me" (a restart means new CODE — the one thing
+// a live data reload cannot deliver).
+const SERVER_STARTED_AT = new Date().toISOString();
 
 Project_Status_Page.get_status = () => {
   try { return buildStatus(); } catch (e) {
@@ -69,6 +74,63 @@ async function main() {
           const rec = signals.raise(String(tech).slice(0, 60), requested);
           res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
           res.end(JSON.stringify({ ok: true, id: rec.id, at: rec.at }));
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      });
+    });
+
+    // ── LIVE PROGRESS (owner directive 2026-07-30, cycle 155) ───────────────
+    // The pages were already rendered per request from live files; what was
+    // missing is that nothing ever ASKED again, so finished work sat unseen on
+    // an open page. /api/tech-state is the cheap poll target: stat()-only
+    // fingerprint + the handful of numbers a strip shows, so a page can check
+    // every 45s forever without costing anything.
+    const activity = require('./activity');
+    router.set_route('/api/tech-state', null, (req, res) => {
+      try {
+        const st = buildStatus();
+        const counts = (st.techTree.branches || []).reduce((acc, b) => ({
+          grown: acc.grown + b.grown.length,
+          available: acc.available + b.available.length,
+          gated: acc.gated + b.gated.length
+        }), { grown: 0, available: 0, gated: 0 });
+        const body = JSON.stringify({
+          fingerprint: techStateFingerprint(),
+          counts,
+          pendingSignals: (st.pendingSignals || []).length,
+          cycles: st.cycles || null,
+          activity: activity.current(),
+          serverStartedAt: SERVER_STARTED_AT
+        });
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(body);
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+
+    // The agent's write channel: one small POST at a phase boundary. Throttled
+    // in the store (not here) so every caller shares one flow-protection rule,
+    // and a throttled report is a 200 with throttled:true — reporting progress
+    // must never look like a failure the agent has to handle.
+    router.set_route('/api/agent-activity', null, (req, res) => {
+      if (req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ current: activity.current(), recent: activity.readAll().slice(-10).reverse() }));
+        return;
+      }
+      if (req.method !== 'POST') { res.writeHead(405); res.end('GET or POST'); return; }
+      let body = '';
+      req.on('data', (c) => { body += c; if (body.length > 4096) req.destroy(); });
+      req.on('end', () => {
+        try {
+          const { phase, note, cycle } = JSON.parse(body || '{}');
+          const out = activity.report({ phase, note, cycle });
+          res.writeHead(out.ok || out.throttled ? 200 : 400, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+          res.end(JSON.stringify(out));
         } catch (e) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: e.message }));

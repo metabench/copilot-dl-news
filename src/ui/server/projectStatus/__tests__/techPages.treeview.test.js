@@ -152,3 +152,38 @@ describe('per-node request history: the two blind spots', () => {
     expect(html).toContain('first run shipped the probe');   // and the old answer
   });
 });
+
+// ── Cycle 155 (owner: "the app did not update after you did the task") ──────
+describe('the LIVE strip and its low-frequency poll', () => {
+  const html = () => renderTechPage('crawler', {
+    branches: [{
+      key: 'crawler', label: 'CRAWLER', color: '#b8862e', icon: 'spiderWeb', tagline: 't',
+      roots: [{ id: 'CR-R', title: 'R', note: 'n' }], grown: [], available: [], gated: [], future: []
+    }],
+    absorbed: 0
+  }, { pendingSignals: [], signalHistory: [] });
+
+  it('ships the strip container and polls /api/tech-state', () => {
+    const h = html();
+    expect(h).toContain('id="tp-live"');
+    expect(h).toContain("fetch('/api/tech-state'");
+  });
+
+  it('polls at LOW frequency and stops while the tab is hidden (the flow-protection constraint)', () => {
+    const h = html();
+    expect(h).toMatch(/POLL_MS\s*=\s*45000/);
+    expect(h).toContain('if (document.hidden) return;');
+  });
+
+  it('never force-reloads: it offers a pill instead, so a half-read page is never yanked', () => {
+    const h = html();
+    expect(h).toContain('id="tp-live-pill"');
+    // location.reload appears ONLY inside the pill's click handler.
+    expect((h.match(/location\.reload\(\)/g) || []).length).toBe(1);
+    expect(h).toContain("el.pill.addEventListener('click'");
+  });
+
+  it('treats a server RESTART as a change too — new code cannot arrive via live data', () => {
+    expect(html()).toContain('s.serverStartedAt !== started');
+  });
+});

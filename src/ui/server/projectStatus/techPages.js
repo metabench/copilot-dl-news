@@ -292,6 +292,77 @@ function shortenNote(note, max = 220) {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
+/**
+ * The LIVE strip + its low-frequency poll (owner directive 2026-07-30).
+ *
+ * Two owner-visible jobs, one 45s request:
+ *   1. show what the agent is doing NOW (or say plainly that it is idle), and
+ *   2. notice when finished work lands, WITHOUT yanking the page.
+ *
+ * Deliberately does NOT auto-reload: the owner reads this page while agents
+ * work, and a page that reloads under a half-read modal is worse than one that
+ * is briefly behind. Instead the counts and the activity line update IN PLACE,
+ * and a reload pill appears for the full detail — progress is visible
+ * immediately, and losing your place is a choice rather than a surprise.
+ *
+ * Poll cost is a few stat() calls (see techStateFingerprint); the page stops
+ * polling while hidden so a forgotten tab costs nothing.
+ */
+const LIVE_HTML = `<div class="tp-live" id="tp-live" hidden>
+  <span class="tp-live__dot" id="tp-live-dot"></span>
+  <span class="tp-live__phase" id="tp-live-phase"></span>
+  <span class="tp-live__note" id="tp-live-note"></span>
+  <span class="tp-live__counts" id="tp-live-counts"></span>
+  <button class="tp-live__pill" id="tp-live-pill" type="button" hidden>● new progress — reload for detail</button>
+</div>`;
+
+const LIVE_SCRIPT = `<script>
+(function () {
+  var POLL_MS = 45000;
+  var first = null, started = null;
+  var el = {
+    wrap: document.getElementById('tp-live'), dot: document.getElementById('tp-live-dot'),
+    phase: document.getElementById('tp-live-phase'), note: document.getElementById('tp-live-note'),
+    counts: document.getElementById('tp-live-counts'), pill: document.getElementById('tp-live-pill')
+  };
+  if (!el.wrap) return;
+  el.pill.addEventListener('click', function () { location.reload(); });
+
+  function paint(s) {
+    el.wrap.hidden = false;
+    var a = s.activity || {};
+    if (a.idle) {
+      el.dot.className = 'tp-live__dot tp-live__dot--idle';
+      el.phase.textContent = 'agent idle';
+      el.note.textContent = a.reason || '';
+    } else {
+      el.dot.className = 'tp-live__dot tp-live__dot--busy';
+      el.phase.textContent = a.phase || 'working';
+      var age = a.ageMinutes === 0 ? 'just now' : (a.ageMinutes + 'm ago');
+      el.note.textContent = (a.note || '') + ' · ' + age;
+    }
+    var c = s.counts || {};
+    el.counts.textContent = c.grown + ' grown · ' + c.available + ' available'
+      + (s.pendingSignals ? ' · ' + s.pendingSignals + ' request pending' : '');
+  }
+
+  function tick() {
+    if (document.hidden) return;
+    fetch('/api/tech-state', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (s) {
+      if (s.error) return;
+      paint(s);
+      if (first === null) { first = s.fingerprint; started = s.serverStartedAt; return; }
+      // A restart means new CODE, which a live data update cannot deliver —
+      // treat it exactly like changed data: offer the reload.
+      if (s.fingerprint !== first || s.serverStartedAt !== started) el.pill.hidden = false;
+    }).catch(function () { /* server down mid-cycle is not the page's problem */ });
+  }
+  tick();
+  setInterval(tick, POLL_MS);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) tick(); });
+})();
+</script>`;
+
 const SIGNAL_SCRIPT = `<script>
 document.addEventListener('click', function (e) {
   var btn = e.target.closest('button.tp-signal') || e.target.closest('button.tp-signal-mini');
@@ -505,6 +576,7 @@ function renderTechPage(branchKey, techTree, opts = {}) {
 <body class="tp-body">
 ${EARLY_SETTINGS}
 ${navBar(branchKey, branches)}
+${LIVE_HTML}
 <div class="tp-scape">${headerScape(b.color)}</div>
 <header class="tp-head">
   <div class="tp-head__icon">${icon(44)}</div>
@@ -526,6 +598,7 @@ ${SETTINGS_HTML}
 ${SIGNAL_SCRIPT}
 ${MODAL_SCRIPT}
 ${SETTINGS_SCRIPT}
+${LIVE_SCRIPT}
 </body></html>`;
 }
 
@@ -667,6 +740,15 @@ const CSS = `
 .tp-signal-mini { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; background: none; border: 1px dashed #2e3440; border-radius: 4px; color: #8a8778; cursor: pointer; font-family: inherit; font-size: 0.5938rem; letter-spacing: 0.08em; padding: 3px 8px; }
 .tp-signal-mini:hover:not(:disabled) { border-color: __ACCENT__; color: __ACCENT__; }
 .tp-signal-mini--sent { border-style: solid; border-color: #4d9ec8; color: #9fd4ec; cursor: default; }
+.tp-live { display: flex; align-items: center; gap: 9px; padding: 5px 22px; background: #0d1014; border-bottom: 1px solid #1b1f26; font-size: 0.5938rem; flex-wrap: wrap; }
+.tp-live__dot { width: 7px; height: 7px; border-radius: 50%; background: #6b675a; flex: none; }
+.tp-live__dot--busy { background: #55a377; box-shadow: 0 0 6px #55a377; }
+.tp-live__dot--idle { background: #4a4a4a; }
+.tp-live__phase { color: #cfcabd; letter-spacing: 0.04em; text-transform: uppercase; }
+.tp-live__note { color: #8a8778; flex: 1; min-width: 12em; }
+.tp-live__counts { color: __ACCENT__; }
+.tp-live__pill { background: #1d2733; color: #cfe3ff; border: 1px solid #3a6ea5; border-radius: 10px; padding: 2px 9px; font-size: 0.5625rem; cursor: pointer; font-family: inherit; }
+.tp-live__pill:hover { background: #24354a; }
 .tp-answered { margin-top: 6px; padding: 5px 7px; border-left: 2px solid #55a377; background: #12161c; border-radius: 0 3px 3px 0; }
 .tp-answered__h { font-size: 0.5313rem; letter-spacing: 0.09em; color: #55a377; margin-bottom: 3px; }
 .tp-answered__row { display: flex; flex-direction: column; gap: 1px; padding: 2px 0; }

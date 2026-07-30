@@ -14,7 +14,8 @@ cost a real debugging pass.
 | `statusData.js` | data assembly | `buildStatus`, `buildTechTree` (THROWS on phantom edge / 3rd prereq / unknown branch / dateless done — the throws ARE the schema), `ledgerMentions(nodeId)` (30s-cached ledger slicing), `shortTitle` |
 | `techPages.js` | the four branch pages + node datalinks pages | per-request HTML strings; modal, tree SVG (`renderTreeSvg`), settings dialog (`SETTINGS_RANGE` is THE range constant — c146 was a one-constant change because of it), signal buttons, both footers |
 | `controls.js` | the HUB ONLY | isomorphic jsgui3 bundle (SSR + client activation) |
-| `signals.js` | the owner-click queue | append-only JSONL: `raise/ack/pending/effective/readAll`; ack appends a superseding record, never mutates |
+| `signals.js` | the owner-click queue (owner→agent) | append-only JSONL: `raise/ack/pending/effective/readAll`; ack appends a superseding record, never mutates |
+| `activity.js` | the agent-progress channel (agent→owner) | append-only JSONL; `report()` DROPS records <20s apart (flow protection is enforced here, so every caller shares one rule), `current()` returns idle rather than presenting a stale phase as live. Write via `tools/agi/report-progress.js` at phase boundaries |
 | `techArt.js` | inline SVG art + icons | `iceBulb`, `treeMonitor`, `spiderWeb`, `factorySpanner`, `headerScape`, `faviconSvg`, `gearIcon`; ICONS map |
 | `checks/` + `__tests__/` | verification | `npx jest src/ui/server/projectStatus` (fast); `tools/dev/checks/tech-tree-schema.check.js` after ANY config/tech-tree.json edit; `project-status-live` probe for real-browser truth |
 

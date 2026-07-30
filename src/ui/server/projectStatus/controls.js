@@ -38,6 +38,14 @@ const xpLabelText = (p) =>
   `${p.xpPerLevel - p.xpInLevel} to the next ${p.xpPerLevel}-improvement milestone · data through ${p.dataThrough}`;
 const owedText = (q) => `▸ ${q.label} (from cycle ${q.cycle})`;
 const recentText = (r) => `${r.correction ? '↺' : '·'} c${r.cycle} — ${r.label}`;
+// One definition for SSR compose AND the client refresh (the isomorphic rule):
+// what the agent is doing now, or nothing at all when idle — an empty box beats
+// a line that presents an hours-old phase as if it were live (cycle 150's lesson).
+const activityLines = (a) => {
+  if (!a || a.idle) return [];
+  const age = a.ageMinutes === 0 ? 'just now' : `${a.ageMinutes}m ago`;
+  return [`⚙ AGENT WORKING — ${a.phase}${a.cycle ? ` (cycle ${a.cycle})` : ''}: ${a.note || 'in progress'} · ${age}`];
+};
 
 // ---- tech tree + path ahead (SMAC-style; owner directive 2026-07-27) ----
 // Shared MODELS between server compose and client apply — same one-definition rule
@@ -135,6 +143,12 @@ class Status_Widget extends Control {
     if (s.sideQuests.length) for (const q of s.sideQuests) owedBox.add(this._el('div', 'ps-quest-item', owedText(q)));
     else owedBox.add(this._el('div', 'ps-quest-item ps-muted', 'none — all clear'));
     work.add(owedBox);
+    // What the agent is doing right now (cycle 155) — the agent→owner direction,
+    // rebuilt by the same client refresh that already runs every 60s.
+    const actBox = this._el('div', 'ps-list');
+    actBox.dom.attributes['data-ps-activity'] = 'true';
+    for (const line of activityLines(s.agentActivity)) actBox.add(this._el('div', 'ps-quest-item ps-activity-line', line));
+    work.add(actBox);
     const sigBox = this._el('div', 'ps-list');
     sigBox.dom.attributes['data-ps-signals'] = 'true';
     for (const sig of (s.pendingSignals || [])) {
@@ -272,6 +286,12 @@ class Status_Widget extends Control {
       }
       for (const it of items) box.appendChild(build(it));
     };
+    rebuild('[data-ps-activity]', activityLines(s.agentActivity), (line) => {
+      const d = document.createElement('div');
+      d.className = 'ps-quest-item ps-activity-line';
+      d.textContent = line;
+      return d;
+    }, null);
     rebuild('[data-ps-signals]', s.pendingSignals || [], (sig) => {
       const d = document.createElement('div');
       d.className = 'ps-quest-item ps-signal-line';
@@ -435,6 +455,7 @@ Status_Widget.css = `
 .ps-road__sub { font-size: 10px; color: #8a8778; margin-top: 4px; }
 .ps-road__arrow { align-self: center; color: #b8862e; font-size: 16px; flex: 0 0 auto; }
 .ps-signal-line { color: #9fd4ec; border-left: 2px solid #4d9ec8; padding-left: 8px; }
+.ps-activity-line { color: #8fd0a8; border-left: 2px solid #55a377; padding-left: 8px; }
 .ps-tree__roots { font-size: 10px; color: #6b675a; border-top: 1px dashed #2e3440; padding-top: 6px; margin-top: 8px; }
 .ps-branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
 @media (max-width: 760px) { .ps-branches { grid-template-columns: 1fr; } }
