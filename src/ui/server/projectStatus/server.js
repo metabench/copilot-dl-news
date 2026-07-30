@@ -178,45 +178,38 @@ async function main() {
       });
     });
 
-    // SMAC-style branch pages (owner 2026-07-27): /tech/agi, /tech/tree,
-    // /tech/crawler. RENDERED PER REQUEST inside the handler — unlike the main
-    // page's publish-once SSR, these can never serve a boot-time snapshot.
-    const { renderTechPage, renderNodePage } = require('./techPages');
+    // ── MIGRATION COMPLETE (owner directive, cycle 161) ─────────────────────
+    // The string-built /tech/* pages are RETIRED. Everything renders in the ONE
+    // jsgui3 app (Server({Ctrl}) SSR + activation, controls.js). Old URLs keep
+    // working as redirects into the app's hash routes — bookmarks, footers and
+    // ledger links all land on the equivalent view.
     const { ledgerMentions } = require('./statusData');
 
-    // Datalinks page per node (cycle 148, owner-signalled TECH-DATALINKS): a query
-    // param rather than a path segment because the router matches exact paths — and
-    // this way NEW nodes get pages with no route registration and no restart.
+    const redirectTo = (res, location) => {
+      res.writeHead(302, { Location: location, 'Cache-Control': 'no-store' });
+      res.end();
+    };
     router.set_route('/tech/node', null, (req, res) => {
+      const id = new URL(req.url, 'http://localhost').searchParams.get('id') || '';
+      redirectTo(res, `/#node=${encodeURIComponent(id)}`);
+    });
+    for (const branchKey of ['agi', 'tree', 'crawler', 'factory']) {
+      router.set_route(`/tech/${branchKey}`, null, (req, res) => redirectTo(res, `/#branch=${branchKey}`));
+    }
+
+    // Per-node deep data for the detail panel (trail mined from the ledger by
+    // ledgerMentions — too heavy to ride every /api/status payload).
+    router.set_route('/api/node', null, (req, res) => {
       try {
         const id = new URL(req.url, 'http://localhost').searchParams.get('id') || '';
-        const html = renderNodePage(id, buildStatus().techTree, {
-          ledgerTrail: ledgerMentions(id),
-          signalHistory: signals.effective()
-        });
-        if (!html) { res.writeHead(404, { 'Content-Type': 'text/plain' }); res.end('unknown node: ' + id); return; }
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-        res.end(html);
+        const body = JSON.stringify({ id, ledgerTrail: ledgerMentions(id) });
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(body);
       } catch (e) {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('datalinks page failed: ' + e.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
       }
     });
-
-    for (const branchKey of ['agi', 'tree', 'crawler', 'factory']) {
-      router.set_route(`/tech/${branchKey}`, null, (req, res) => {
-        try {
-          const st = buildStatus();
-          const html = renderTechPage(branchKey, st.techTree, { pendingSignals: st.pendingSignals, toolInventory: st.toolInventory, signalHistory: signals.effective() });
-          if (!html) { res.writeHead(404); res.end('unknown branch'); return; }
-          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-          res.end(html);
-        } catch (e) {
-          res.writeHead(500, { 'Content-Type': 'text/plain' });
-          res.end(`tech page failed: ${e.message}`);
-        }
-      });
-    }
 
     // Favicon (cycle 143 finishing touch): the app's tab identity, and the end of
     // the browser's /favicon.ico 404 that the live check had to filter around.

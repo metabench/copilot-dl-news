@@ -95,6 +95,10 @@ const selectable_mixin = require('../../../../../jsgui3-html/control_mixins/sele
 let TREE_SELECTED = null;
 let TREE_PANEL = null;
 let TECH_INDEX = {};
+let SIGNAL_HISTORY = [];          // full request/answer history (from /api/status)
+let PAGE_WIDGET = null;           // the activated Status_Widget (client only)
+const NODE_CTRLS = {};            // techId → activated Tech_Tree_Node (hash deep links)
+let HASH_GUARD = false;           // selecting sets the hash; the hash selects — guard the loop
 
 function buildNodeIndexFromTree(tree) {
   const index = {};
@@ -225,6 +229,7 @@ class Tech_Tree_Node extends Control {
       selectable_mixin(this); // DOM half now that dom.el exists
       const el = this.dom.el;
       this.techId = el ? el.getAttribute('data-node-id') : null;
+      if (this.techId) NODE_CTRLS[this.techId] = this; // hash deep links resolve here
       const kind = el && el.getAttribute('class') || '';
       const isFog = kind.indexOf('ps-tn--fog') >= 0;
       if (!isFog) {
@@ -238,10 +243,43 @@ class Tech_Tree_Node extends Control {
             if (TREE_SELECTED && TREE_SELECTED !== this) TREE_SELECTED.selected = false;
             TREE_SELECTED = this;
             if (TREE_PANEL) TREE_PANEL.show(this.techId);
+            // Selection is deep-linkable: #node=<id> (guard: the hash handler
+            // also selects, and must not re-trigger itself).
+            if (!HASH_GUARD && typeof location !== 'undefined') {
+              HASH_GUARD = true;
+              location.hash = 'node=' + encodeURIComponent(this.techId);
+              setTimeout(() => { HASH_GUARD = false; }, 0);
+            }
           }
         });
       }
     }
+  }
+}
+
+/**
+ * applyHash — the app's router (cycle 161). One activated jsgui3 app serves
+ * every view; old /tech/* URLs 302 into these hash routes:
+ *   #node=<id>    → select the node (mixin selection + panel + scroll to it)
+ *   #branch=<key> → scroll the board to that branch band
+ */
+function applyHash() {
+  if (typeof location === 'undefined') return;
+  const h = location.hash.replace(/^#/, '');
+  const mNode = /^node=(.+)$/.exec(h);
+  const mBranch = /^branch=(.+)$/.exec(h);
+  if (mNode) {
+    const id = decodeURIComponent(mNode[1]);
+    const ctrl = NODE_CTRLS[id];
+    if (ctrl) {
+      HASH_GUARD = true;
+      ctrl.selected = true;
+      setTimeout(() => { HASH_GUARD = false; }, 0);
+      if (ctrl.dom.el && ctrl.dom.el.scrollIntoView) ctrl.dom.el.scrollIntoView({ block: 'center' });
+    }
+  } else if (mBranch) {
+    const band = document.querySelector(`[data-band="${decodeURIComponent(mBranch[1])}"]`);
+    if (band && band.scrollIntoView) band.scrollIntoView({ block: 'start' });
   }
 }
 
@@ -265,10 +303,12 @@ class Tech_Tree_Board extends Control {
         line.dom.attributes.opacity = e.dashed ? 0.35 : 0.55;
         this.add(line);
       }
+      const BAND_KEYS = { AGI: 'agi', 'TECH TREE': 'tree', CRAWLER: 'crawler', 'TOOL FACTORY': 'factory' };
       for (const b of m.bands) {
         const t = new Control({ context: this.context, tag_name: 'text' });
         t.dom.attributes.x = TB.pad; t.dom.attributes.y = b.y + 15;
         t.dom.attributes.fill = b.color;
+        t.dom.attributes['data-band'] = BAND_KEYS[b.label] || b.label.toLowerCase();
         t.add_class('ps-board__band');
         t.add(String(b.label));
         this.add(t);
@@ -276,6 +316,184 @@ class Tech_Tree_Board extends Control {
       for (const n of m.nodes) this.add(new Tech_Tree_Node({ context: this.context, node: n }));
     }
   }
+}
+
+/**
+ * Live_Strip — the SSE-fed status line (migrated from the retired string pages,
+ * cycle 161; semantics from cycles 157/158): 'activity' patches this strip in
+ * place and never touches the page; 'cards' re-applies live data through the
+ * page's _apply and, when the tree STRUCTURE itself changed (node set differs
+ * from the SSR'd board), self-refreshes with scroll preserved.
+ */
+class Live_Strip extends Control {
+  constructor(spec = {}) {
+    spec.__type_name = spec.__type_name || 'live_strip';
+    super({ ...spec, tagName: 'div' });
+    this.add_class('ps-live');
+    if (!spec.el) {
+      const dot = new Control({ context: this.context, tagName: 'span' });
+      dot.add_class('ps-live__dot');
+      dot.dom.attributes['data-live-dot'] = 'true';
+      this.add(dot);
+      const text = new Control({ context: this.context, tagName: 'span' });
+      text.add_class('ps-live__text');
+      text.dom.attributes['data-live-text'] = 'true';
+      text.add('connecting to live events…');
+      this.add(text);
+    }
+  }
+
+  paint(s) {
+    const el = this.dom.el;
+    if (!el) return;
+    const dot = el.querySelector('[data-live-dot]');
+    const text = el.querySelector('[data-live-text]');
+    const a = s.activity || s.agentActivity || {};
+    if (dot) dot.className = 'ps-live__dot' + (a.idle ? ' ps-live__dot--idle' : ' ps-live__dot--busy');
+    if (text) {
+      text.textContent = a.idle
+        ? `agent idle — ${a.reason || ''}`
+        : `${(a.phase || 'working').toUpperCase()}${a.cycle ? ` (c${a.cycle})` : ''}: ${a.note || ''} · ${a.ageMinutes === 0 ? 'just now' : (a.ageMinutes + 'm ago')}`;
+    }
+  }
+
+  activate() {
+    if (!this.__active) {
+      super.activate();
+      const page = () => PAGE_WIDGET; // resolved lazily — activation order varies
+      const boardIds = () => new Set([...document.querySelectorAll('.ps-tn[data-node-id]')].map((n) => n.getAttribute('data-node-id')));
+      const ssrIds = boardIds();
+      const es = new EventSource('/api/events');
+      es.addEventListener('hello', (e) => { try { this.paint(JSON.parse(e.data)); } catch (_) {} });
+      es.addEventListener('activity', (e) => { try { this.paint(JSON.parse(e.data)); } catch (_) {} });
+      es.addEventListener('cards', (e) => {
+        try { this.paint(JSON.parse(e.data)); } catch (_) {}
+        fetch('/api/status', { cache: 'no-store' }).then((r) => r.json()).then((s) => {
+          const p = page();
+          if (p && p._apply) p._apply(s);
+          // Structure change (promotion, new tech): the SSR'd board can't know —
+          // self-refresh, preserving the reading position (cycle 157 rule).
+          const now = new Set(Object.keys(buildNodeIndexFromTree(s.techTree)));
+          const same = now.size === ssrIds.size && [...ssrIds].every((id) => now.has(id));
+          if (!same) {
+            try { sessionStorage.setItem('tp-scroll-restore', String(window.scrollY || 0)); } catch (_) {}
+            location.reload();
+          }
+        }).catch(() => {});
+      });
+    }
+  }
+}
+
+/**
+ * Settings_Control — the gear + page-scale dialog (migrated, cycle 161).
+ * The retired pages scaled rem-based CSS via root font-size; this app's CSS is
+ * px-based, so the scale applies as zoom on the app root instead — same owner
+ * control (80–250%, persisted), different mechanism (recorded in the
+ * migration report as a deviation to revisit if rem conversion happens).
+ */
+class Settings_Control extends Control {
+  constructor(spec = {}) {
+    spec.__type_name = spec.__type_name || 'settings_control';
+    super({ ...spec, tagName: 'div' });
+    this.add_class('ps-settings');
+    if (!spec.el) {
+      const btn = new Control({ context: this.context, tagName: 'button' });
+      btn.add_class('ps-settings__gear');
+      btn.dom.attributes['data-settings-gear'] = 'true';
+      btn.dom.attributes.type = 'button';
+      btn.dom.attributes['aria-label'] = 'settings';
+      btn.add('⚙');
+      this.add(btn);
+      const dlg = new Control({ context: this.context, tagName: 'dialog' });
+      dlg.add_class('ps-settings__dlg');
+      dlg.dom.attributes['data-settings-dlg'] = 'true';
+      const label = new Control({ context: this.context, tagName: 'div' });
+      label.add_class('ps-settings__label');
+      label.dom.attributes['data-settings-label'] = 'true';
+      label.add('page scale: 100%');
+      dlg.add(label);
+      const range = new Control({ context: this.context, tagName: 'input' });
+      range.dom.attributes.type = 'range';
+      range.dom.attributes.min = '80';
+      range.dom.attributes.max = '250';
+      range.dom.attributes.step = '5';
+      range.dom.attributes.value = '100';
+      range.dom.attributes['data-settings-range'] = 'true';
+      dlg.add(range);
+      const reset = new Control({ context: this.context, tagName: 'button' });
+      reset.dom.attributes.type = 'button';
+      reset.dom.attributes['data-settings-reset'] = 'true';
+      reset.add_class('ps-settings__reset');
+      reset.add('reset');
+      dlg.add(reset);
+      this.add(dlg);
+    }
+  }
+
+  activate() {
+    if (!this.__active) {
+      super.activate();
+      const el = this.dom.el;
+      if (!el) return;
+      const dlg = el.querySelector('[data-settings-dlg]');
+      const range = el.querySelector('[data-settings-range]');
+      const label = el.querySelector('[data-settings-label]');
+      const apply = (pct) => {
+        const root = document.querySelector('.ps-root');
+        if (root) root.style.zoom = String(pct / 100);
+        if (label) label.textContent = `page scale: ${pct}%`;
+        if (range) range.value = String(pct);
+        try { localStorage.setItem('tp-settings', JSON.stringify({ scalePct: pct })); } catch (_) {}
+      };
+      try {
+        const saved = JSON.parse(localStorage.getItem('tp-settings') || '{}');
+        if (saved.scalePct) apply(Number(saved.scalePct));
+      } catch (_) {}
+      el.querySelector('[data-settings-gear]').addEventListener('click', () => { if (dlg && dlg.showModal) dlg.showModal(); });
+      if (range) range.addEventListener('input', () => apply(Number(range.value)));
+      el.querySelector('[data-settings-reset]').addEventListener('click', () => apply(100));
+      if (dlg) dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+    }
+  }
+}
+
+/**
+ * Signal_Log — the lightbulb queue on the page (migrated from the factory
+ * page, cycle 161): every request and its answer, newest first, repainted by
+ * every _apply so it is as live as the rest.
+ */
+class Signal_Log extends Control {
+  constructor(spec = {}) {
+    spec.__type_name = spec.__type_name || 'signal_log';
+    super({ ...spec, tagName: 'section' });
+    this.add_class('ps-panel');
+    if (!spec.el) {
+      const h = new Control({ context: this.context, tagName: 'h2' });
+      h.add_class('ps-h');
+      h.add('SIGNAL LOG — every request and its answer');
+      this.add(h);
+      const box = new Control({ context: this.context, tagName: 'div' });
+      box.add_class('ps-list');
+      box.dom.attributes['data-ps-siglog'] = 'true';
+      for (const line of signalLogLines(spec.history || [])) {
+        const d = new Control({ context: this.context, tagName: 'div' });
+        d.add_class('ps-quest-item ps-siglog__row');
+        d.add(line);
+        this.add_to(box, d);
+      }
+      this.add(box);
+    }
+  }
+
+  add_to(parent, child) { parent.add(child); }
+}
+function signalLogLines(history) {
+  return (history || []).slice(-10).reverse().map((r) => {
+    const state = r.status === 'pending' ? '⚡ pending' : `✓ ${String(r.ackAt || '').slice(0, 16).replace('T', ' ')}`;
+    const note = r.status === 'pending' ? (r.requested || '') : (r.ackNote || '');
+    return `${state} · ${r.tech} — ${note.slice(0, 160)}`;
+  });
 }
 
 class Tech_Detail_Panel extends Control {
@@ -334,11 +552,42 @@ class Tech_Detail_Panel extends Control {
         if (list.length > 4) div('ps-detail__more', `${list.length - 4} more on the datalinks page`);
       }
     }
-    const links = div('ps-detail__links');
-    const a = document.createElement('a');
-    a.href = `/tech/node?id=${encodeURIComponent(n.id)}`;
-    a.textContent = 'open datalinks page ↗';
-    links.appendChild(a);
+    // YOUR REQUESTS on this node (the c154 duty, now from the shared history).
+    const mine = SIGNAL_HISTORY.filter((s2) => s2.tech === n.id)
+      .sort((a2, b2) => String(b2.at || '').localeCompare(String(a2.at || '')));
+    if (mine.length) {
+      div('ps-detail__h', `YOUR REQUESTS — ${mine.length}`);
+      for (const s2 of mine.slice(0, 3)) {
+        const state = s2.status === 'pending' ? '⚡ pending' : `✓ answered ${String(s2.ackAt || '').slice(0, 16).replace('T', ' ')}`;
+        div('ps-detail__p ps-detail__p--fact', `${state} — ${(s2.status === 'pending' ? (s2.requested || '') : (s2.ackNote || '')).slice(0, 180)}`);
+      }
+    }
+    // LEDGER TRAIL, fetched per node (too heavy for the status payload).
+    const trailBox = div('ps-detail__trail');
+    trailBox.textContent = 'loading ledger trail…';
+    fetch(`/api/node?id=${encodeURIComponent(n.id)}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => {
+        const trail = j.ledgerTrail || [];
+        trailBox.textContent = '';
+        const h2 = document.createElement('div');
+        h2.className = 'ps-detail__h';
+        h2.textContent = trail.length ? `LEDGER TRAIL — ${trail.length} cycle${trail.length === 1 ? '' : 's'}` : 'LEDGER TRAIL';
+        trailBox.appendChild(h2);
+        if (!trail.length) {
+          const p = document.createElement('div');
+          p.className = 'ps-detail__more';
+          p.textContent = 'no ledger cycle mentions this id yet — the trail writes itself as work lands';
+          trailBox.appendChild(p);
+        }
+        for (const t of trail.slice(-6).reverse()) {
+          const p = document.createElement('div');
+          p.className = 'ps-detail__p ps-detail__p--fact';
+          p.textContent = `c${t.cycle} · ${t.date} — ${t.label}`;
+          trailBox.appendChild(p);
+        }
+      })
+      .catch(() => { trailBox.textContent = 'trail unavailable'; });
     // BEGIN RESEARCH — armed only for researchable selections (the owner's
     // directive: highlighted when selected).
     const btn = document.createElement('button');
@@ -377,6 +626,10 @@ class Status_Widget extends Control {
 
   compose(s) {
     if (!s) { this.add(this._el('p', 'ps-empty', 'No status data — is the ledger readable?')); return; }
+
+    // ---- live strip + settings (migrated into the app, cycle 161) ----
+    this.add(new Live_Strip({ context: this.context }));
+    this.add(new Settings_Control({ context: this.context }));
 
     // ---- header ----
     const bar = this._el('header', 'ps-player');
@@ -521,6 +774,9 @@ class Status_Widget extends Control {
     research.add(absorbedLine);
     this.add(research);
 
+    // ---- signal log (migrated from the factory page, cycle 161) ----
+    this.add(new Signal_Log({ context: this.context, history: s.signalHistory || [] }));
+
     // ---- history: the committed progress SVG, same data substrate ----
     const hist = this._el('section', 'ps-panel');
     hist.add(this._el('h2', 'ps-h', 'HISTORY'));
@@ -563,6 +819,20 @@ class Status_Widget extends Control {
     // The detail panel reads from this index; every fetch refreshes it so the
     // panel's data is as fresh as the rest of the page.
     TECH_INDEX = buildNodeIndexFromTree(s.techTree);
+    SIGNAL_HISTORY = s.signalHistory || [];
+    // signal log repaint (same idiom as the other list rebuilds below)
+    {
+      const box = root.querySelector('[data-ps-siglog]');
+      if (box) {
+        box.innerHTML = '';
+        for (const line of signalLogLines(SIGNAL_HISTORY)) {
+          const d = document.createElement('div');
+          d.className = 'ps-quest-item ps-siglog__row';
+          d.textContent = line;
+          box.appendChild(d);
+        }
+      }
+    }
     const q = (sel) => root.querySelector(sel);
     const setText = (sel, text) => { const el = q(sel); if (el) el.textContent = text; };
 
@@ -674,8 +944,16 @@ class Status_Widget extends Control {
   activate() {
     if (!this.__active) {
       super.activate();
+      PAGE_WIDGET = this;
       // Visible proof activation ran (checked by the verification pass).
       this.add_class('ps-client-active');
+      // Hash routing (cycle 161): the old tech-page URLs 302 here as
+      // #branch= / #node= . Applied after the first paint so NODE_CTRLS is
+      // populated. (Deliberately not written with slash-star in this comment:
+      // that character pair opens a block comment for naive strippers — the
+      // progress-surface probe's analyzer lost 6KB of code to it.)
+      setTimeout(applyHash, 60);
+      window.addEventListener('hashchange', applyHash);
       const refresh = () => {
         fetch('/api/status', { cache: 'no-store' })
           .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
@@ -757,6 +1035,22 @@ Status_Widget.css = `
 .ps-signal-line { color: #9fd4ec; border-left: 2px solid #4d9ec8; padding-left: 8px; }
 .ps-activity-line { color: #8fd0a8; border-left: 2px solid #55a377; padding-left: 8px; }
 .ps-tree__roots { font-size: 10px; color: #6b675a; border-top: 1px dashed #2e3440; padding-top: 6px; margin-top: 8px; }
+/* ---- migrated app pieces (cycle 161) ---- */
+.ps-live { display: flex; align-items: center; gap: 8px; padding: 5px 10px; margin-bottom: 10px; background: #0d1014; border: 1px solid #1b1f26; border-radius: 5px; font-size: 11px; }
+.ps-live__dot { width: 8px; height: 8px; border-radius: 50%; background: #6b675a; flex: none; }
+.ps-live__dot--busy { background: #55a377; box-shadow: 0 0 6px #55a377; }
+.ps-live__dot--idle { background: #4a4a4a; }
+.ps-live__text { color: #8a8778; }
+.ps-settings { position: fixed; top: 10px; right: 12px; z-index: 40; }
+.ps-settings__gear { background: #171a20; border: 2px solid #2e3440; color: #b8862e; border-radius: 6px; font-size: 15px; padding: 3px 8px; cursor: pointer; }
+.ps-settings__gear:hover { border-color: #b8862e; }
+.ps-settings__dlg { background: #14171c; color: #e8e4d8; border: 2px solid #b8862e; border-radius: 8px; padding: 16px 18px; min-width: 260px; }
+.ps-settings__dlg::backdrop { background: rgba(6,8,11,0.7); }
+.ps-settings__label { font-size: 12px; margin-bottom: 8px; color: #cfcabd; }
+.ps-settings__dlg input[type=range] { width: 100%; }
+.ps-settings__reset { margin-top: 10px; background: #171a20; color: #8a8778; border: 1px solid #2e3440; border-radius: 4px; padding: 3px 10px; font-size: 10px; cursor: pointer; }
+.ps-siglog__row { color: #9fd4ec; border-left: 2px solid #2e3440; padding-left: 8px; font-variant-numeric: tabular-nums; }
+.ps-detail__trail { margin-top: 4px; }
 /* ---- research tree board (cycle 160: jsgui3 SVG controls + selectable) ---- */
 .ps-treeview { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; align-items: start; margin-bottom: 14px; }
 @media (max-width: 1000px) { .ps-treeview { grid-template-columns: 1fr; } }
@@ -856,5 +1150,11 @@ jsgui.controls.tech_tree_board = Tech_Tree_Board;
 jsgui.controls.Tech_Tree_Board = Tech_Tree_Board;
 jsgui.controls.tech_detail_panel = Tech_Detail_Panel;
 jsgui.controls.Tech_Detail_Panel = Tech_Detail_Panel;
+jsgui.controls.live_strip = Live_Strip;
+jsgui.controls.Live_Strip = Live_Strip;
+jsgui.controls.settings_control = Settings_Control;
+jsgui.controls.Settings_Control = Settings_Control;
+jsgui.controls.signal_log = Signal_Log;
+jsgui.controls.Signal_Log = Signal_Log;
 
 module.exports = { Status_Widget, Project_Status_Page };

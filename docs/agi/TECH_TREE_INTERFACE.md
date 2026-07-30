@@ -38,20 +38,28 @@ owner clicks a node's request button
 pass); always ack your own test clicks *as test clicks*; the ack note is
 owner-facing prose — say what was done and what was deliberately not done.
 
-## Surface map
+## Surface map (one jsgui3 app since cycle 161)
 
-| Route | What it is | Render model |
-| --- | --- | --- |
-| `/` | status hub: branch cards, progress picture, pending-signal ⚡ lines | publish-once SSR + client refresh-on-activate (the c128.5 fix — see AGENTS.md) |
-| `/tech/agi` `/tech/tree` `/tech/crawler` `/tech/factory` | the four branch pages: drawn tree SVG, node cards, request buttons; factory adds TOOL FACTORY + SIGNAL LOG | **per request** — cannot go stale |
-| `/tech/node?id=<ID>` | per-tech datalinks page: everything the modal shows + LEDGER TRAIL + walkable BUILT FROM / UNLOCKS links (no-JS friendly) | per request; new nodes need **no route registration** |
-| `/api/status` | live JSON the hub client reads | live |
-| `/api/research-signal` (POST) | the owner's click lands here | append-only queue |
-| `/progress.svg` | the committed progress picture | read from disk per request |
+Everything renders in ONE activated jsgui3 application — `Server({Ctrl})` SSR
++ bundled client + activation (`controls.js`). The old per-page URLs 302 into
+hash routes, so bookmarks and recorded links keep working.
 
-Run it: workspace launch entry `project-status` (port 3184). Wait for readiness
-(curl-loop the URL to 200) before navigating a browser at it — the server takes
-~15s to boot (c147 lesson).
+| Route | What it is |
+| --- | --- |
+| `/` | THE APP: hub, live strip (SSE), research-tree board (SVG-as-controls, selectable-mixin nodes), side detail panel + BEGIN RESEARCH, signal log, settings |
+| `/#node=<ID>` | deep link: selects that node (panel + trail + requests follow); selection also WRITES this hash |
+| `/#branch=<key>` | deep link: scrolls the board to that branch band |
+| `/tech/{agi,tree,crawler,factory}` | 302 → `/#branch=<key>` (retired string pages) |
+| `/tech/node?id=<ID>` | 302 → `/#node=<ID>` (retired string pages) |
+| `/api/status` | full app payload (incl. techTree, signalHistory, agentActivity) |
+| `/api/node?id=<ID>` | per-node ledger trail (mined per request) |
+| `/api/events` | SSE: 'activity' patches the strip; 'cards' re-applies data (self-refresh only when the node SET changed) |
+| `/api/research-signal` (POST) | the owner's click lands here |
+| `/progress.svg` | the committed progress picture (read from disk per request) |
+
+Design consequences and deliberate deviations are recorded in
+[JSGUI3_MIGRATION_REPORT.md](JSGUI3_MIGRATION_REPORT.md) — read it before
+re-introducing any second render model.
 
 ## Data: one fact, one place (derive, don't bake)
 

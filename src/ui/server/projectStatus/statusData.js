@@ -258,8 +258,16 @@ function liveChannels() {
   let agentActivity = { idle: true, reason: 'activity log unavailable' };
   try { agentActivity = require('./activity').current(); } catch (_) {}
   let pendingSignals = [];
-  try { pendingSignals = require('./signals').pending(); } catch (_) {}
-  return { agentActivity, pendingSignals };
+  let signalHistory = [];
+  try {
+    const signals = require('./signals');
+    pendingSignals = signals.pending();
+    // Full history rides the payload (cycle 161): the SIGNAL LOG is a view in
+    // the app now, and per-node YOUR REQUESTS render from this same list —
+    // one source, no per-view endpoint.
+    signalHistory = signals.effective();
+  } catch (_) {}
+  return { agentActivity, pendingSignals, signalHistory };
 }
 
 function buildStatus() {
@@ -350,16 +358,10 @@ function buildStatus() {
     techTree.error = e.message;
   }
 
-  // owner signals — the big-lightbulb queue; pending ones surface here, at orient
-  // (agi-signal probe) and in the generated next-prompt, so a click cannot be missed
-  let pendingSignals = [];
-  try { pendingSignals = require('./signals').pending(); } catch (_) {}
-
-  // what the agent is doing RIGHT NOW (cycle 155) — the reverse direction of the
-  // signal queue: agent→owner instead of owner→agent. The hub's existing 60s
-  // client refresh picks this up with no extra polling.
-  let agentActivity = { idle: true, reason: 'activity log unavailable' };
-  try { agentActivity = require('./activity').current(); } catch (_) {}
+  // The live channels (signals + activity + full history) come from ONE helper
+  // shared with the cache-hit path — cycle 161's compose-empty signal log was
+  // exactly this drifting into two definitions.
+  const { agentActivity, pendingSignals, signalHistory } = liveChannels();
 
   // live tool inventory for the TOOL FACTORY coordination point — counted from
   // disk each rebuild so the listing cannot drift from reality (603 as of 2026-07-28)
@@ -383,6 +385,7 @@ function buildStatus() {
     player,
     pendingSignals,
     agentActivity,
+    signalHistory,
     toolInventory,
     stats: {
       cycles: totals.cycles,
