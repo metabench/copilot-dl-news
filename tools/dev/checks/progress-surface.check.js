@@ -91,7 +91,10 @@ function checkDiskServedSvg(src) {
 
 const CONTRACTS = [
   { id: 'P1-renderer-purity', file: 'tools/agi/progress-svg.js', check: checkRendererPurity },
-  { id: 'P2-immediate-refresh', file: 'src/ui/server/projectStatus/controls.js', check: checkImmediateRefresh },
+  // Cycle 163 split the app's one controls.js into one class per file; the
+  // page's activate() — and therefore this contract — now lives on the
+  // application control. Repointed, not relaxed: the assertion is unchanged.
+  { id: 'P2-immediate-refresh', file: 'src/ui/server/projectStatus/controls/app/Status_Widget.js', check: checkImmediateRefresh },
   { id: 'P3-svg-served-from-disk', file: 'src/ui/server/projectStatus/server.js', check: checkDiskServedSvg }
 ];
 

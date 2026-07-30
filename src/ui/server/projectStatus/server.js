@@ -16,7 +16,7 @@ const fs = require('fs');
 // Sibling-path require; jsgui3-server is consume-only per owner ruling 2026-07-27.
 const jsgui_server = require(path.resolve(__dirname, '..', '..', '..', '..', '..', 'jsgui3-server'));
 const { Server } = jsgui_server;
-const { Project_Status_Page } = require('./controls');
+const { Project_Status_Page } = require('./controls/index.js');
 const { buildStatus, techStateFingerprint } = require('./statusData');
 
 // Stamped once at boot: a page that polls can tell "the data changed" from
@@ -37,7 +37,7 @@ async function main() {
 
   const server = new Server({
     Ctrl: Project_Status_Page,
-    src_path_client_js: require.resolve('./controls.js'),
+    src_path_client_js: require.resolve('./controls/index.js'),
     name: 'project-status'
   });
 
