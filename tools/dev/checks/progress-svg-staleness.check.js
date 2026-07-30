@@ -20,8 +20,9 @@ const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const {
-  parseCycleStanzas, computeSeries, renderSvg, loadAnnotations, loadRepoActivity,
-  DEFAULT_LEDGER, DEFAULT_OUT, DEFAULT_ANNOTATIONS, DEFAULT_ACTIVITY
+  parseCycleStanzas, computeSeries, renderSvg, loadAnnotations, loadRepoActivity, loadTechFrontier,
+  DEFAULT_LEDGER, DEFAULT_OUT, DEFAULT_ANNOTATIONS, DEFAULT_ACTIVITY,
+  DEFAULT_TECH_SPEC, DEFAULT_BACKLOG, DEFAULT_ROADMAP
 } = require(path.join(ROOT, 'tools', 'agi', 'progress-svg.js'));
 
 function main() {
@@ -33,9 +34,17 @@ function main() {
   // CRLF-normalize both sides: git autocrlf may rewrite the working-copy SVG's
   // line endings on checkout, which is not staleness. Any content change still differs.
   const norm = (s) => s.replace(/\r\n/g, '\n');
-  // all three inputs are COMMITTED files — the repo-activity snapshot keeps live git
-  // state out of the render (see tools/agi/repo-activity.js), preserving determinism
-  const expected = norm(renderSvg(computeSeries(cycles), loadAnnotations(DEFAULT_ANNOTATIONS), loadRepoActivity(DEFAULT_ACTIVITY)));
+  // every input is a COMMITTED file — the repo-activity snapshot keeps live git
+  // state out of the render (see tools/agi/repo-activity.js), preserving determinism.
+  // This call must pass EVERY render input the CLI passes: cycle 156 added the
+  // frontier band and omitting it here made the probe fail against a correct
+  // picture (the probe's own render, not the artifact, was stale).
+  const expected = norm(renderSvg(
+    computeSeries(cycles),
+    loadAnnotations(DEFAULT_ANNOTATIONS),
+    loadRepoActivity(DEFAULT_ACTIVITY),
+    loadTechFrontier(DEFAULT_TECH_SPEC, DEFAULT_BACKLOG, DEFAULT_ROADMAP)
+  ));
   const committed = norm(fs.readFileSync(DEFAULT_OUT, 'utf8'));
   if (committed === expected) {
     console.log(`✅ progress.svg is current (${cycles.length} cycles, byte-identical to a fresh render).`);
