@@ -187,3 +187,47 @@ describe('the LIVE strip and its low-frequency poll', () => {
     expect(html()).toContain('s.serverStartedAt !== started');
   });
 });
+
+// ── Cycle 157 (owner: "It still says 'pending pickup' in the UI") ───────────
+// The c155 version updated only the strip and offered a pill for everything
+// else, so a node card kept showing a stale signal state indefinitely — the
+// exact state the owner came to read. A page that hints while displaying
+// something false is worse than one that refreshes itself.
+describe('a lying page refreshes itself (cycle 157 correction)', () => {
+  const h = () => renderTechPage('crawler', {
+    branches: [{
+      key: 'crawler', label: 'CRAWLER', color: '#b8862e', icon: 'spiderWeb', tagline: 't',
+      roots: [{ id: 'CR-R', title: 'R', note: 'n' }], grown: [], available: [], gated: [], future: []
+    }],
+    absorbed: 0
+  }, { pendingSignals: [], signalHistory: [] });
+
+  it('re-renders when the CARDS fingerprint moves', () => {
+    expect(h()).toContain('s.fingerprints.cards !== firstCards');
+    expect(h()).toContain('if (!dialogOpen()) refreshNow();');
+  });
+
+  it('an activity report NEVER triggers a reload — only the strip is patched', () => {
+    const src = h();
+    // The reload decision reads fingerprints.cards only; activity feeds paint().
+    expect(src).not.toMatch(/fingerprints\.activity\s*!==/);
+    expect(src).toContain('paint(s); // the strip is always patched in place');
+  });
+
+  it('holds the refresh while a dialog is open, then applies it on close', () => {
+    const src = h();
+    expect(src).toContain("document.querySelector('dialog[open]')");
+    expect(src).toContain("document.addEventListener('close'");
+    expect(src).toContain('if (staleCards && !dialogOpen()) refreshNow();');
+  });
+
+  it('preserves the reading position across its own refresh', () => {
+    const src = h();
+    expect(src).toContain('sessionStorage.setItem(SCROLL_KEY');
+    expect(src).toContain('window.scrollTo(0, Number(saved) || 0)');
+  });
+
+  it('the pill says the page is WRONG, not merely that news exists', () => {
+    expect(h()).toContain('this page is out of date — refresh now');
+  });
+});

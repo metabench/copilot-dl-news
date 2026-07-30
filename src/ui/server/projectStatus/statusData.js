@@ -424,6 +424,21 @@ function buildStatus() {
  * one and the page silently stops noticing that class of progress, so each is
  * listed rather than globbed.
  */
+/**
+ * Split in two on purpose (cycle 157, after the owner found a node still saying
+ * "pending pickup" long after the request was answered):
+ *
+ *   CARDS    — inputs that change what a node CARD says (its tier, its signal
+ *              state, its trail). A change here means the rendered page is now
+ *              LYING, so the page must re-render, not merely hint.
+ *   ACTIVITY — the agent's progress log, which changes every few minutes during
+ *              a cycle. This must NEVER trigger a re-render, or an agent
+ *              reporting progress would reload the owner's page under them.
+ *
+ * Conflating the two is what made the first version wrong in both directions at
+ * once: it offered only a pill for a lying card, and it would have reloaded the
+ * page for a mere progress note.
+ */
 const FINGERPRINT_INPUTS = [
   ['config', 'tech-tree.json'],
   ['config', 'roadmap.json'],
@@ -433,19 +448,26 @@ const FINGERPRINT_INPUTS = [
   ['data', 'agi-signals.jsonl'],
   ['data', 'agent-activity.jsonl']
 ];
+const ACTIVITY_INPUT = 'agent-activity.jsonl';
+
+function stampOf(segs) {
+  const p = path.join(ROOT, ...segs);
+  const name = segs[segs.length - 1];
+  try {
+    const st = fs.statSync(p);
+    return `${name}:${Math.round(st.mtimeMs)}:${st.size}`;
+  } catch (_) {
+    return `${name}:absent`; // absence is a state too
+  }
+}
 
 function techStateFingerprint() {
-  const parts = [];
+  const cards = [];
+  const activity = [];
   for (const segs of FINGERPRINT_INPUTS) {
-    const p = path.join(ROOT, ...segs);
-    try {
-      const st = fs.statSync(p);
-      parts.push(`${segs[segs.length - 1]}:${Math.round(st.mtimeMs)}:${st.size}`);
-    } catch (_) {
-      parts.push(`${segs[segs.length - 1]}:absent`); // absence is a state too
-    }
+    (segs[segs.length - 1] === ACTIVITY_INPUT ? activity : cards).push(stampOf(segs));
   }
-  return parts.join('|');
+  return { cards: cards.join('|'), activity: activity.join('|') };
 }
 
 module.exports = { buildStatus, buildTechTree, shortTitle, ledgerMentions, techStateFingerprint, FINGERPRINT_INPUTS };

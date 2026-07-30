@@ -97,7 +97,7 @@ async function main() {
           gated: acc.gated + b.gated.length
         }), { grown: 0, available: 0, gated: 0 });
         const body = JSON.stringify({
-          fingerprint: techStateFingerprint(),
+          fingerprints: techStateFingerprint(), // { cards, activity } — see statusData
           counts,
           pendingSignals: (st.pendingSignals || []).length,
           cycles: st.cycles || null,

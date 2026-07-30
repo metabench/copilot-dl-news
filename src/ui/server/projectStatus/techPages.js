@@ -299,11 +299,19 @@ function shortenNote(note, max = 220) {
  *   1. show what the agent is doing NOW (or say plainly that it is idle), and
  *   2. notice when finished work lands, WITHOUT yanking the page.
  *
- * Deliberately does NOT auto-reload: the owner reads this page while agents
- * work, and a page that reloads under a half-read modal is worse than one that
- * is briefly behind. Instead the counts and the activity line update IN PLACE,
- * and a reload pill appears for the full detail — progress is visible
- * immediately, and losing your place is a choice rather than a surprise.
+ * REVISED cycle 157, after the owner found a node still reading "pending
+ * pickup" long after that request had been answered. The first version updated
+ * only the strip and offered a pill for everything else — so the CARDS, which
+ * carry the state the owner actually came to read, stayed wrong indefinitely.
+ * A page that merely hints while showing a false state is worse than one that
+ * refreshes itself. The rule now:
+ *
+ *   activity changed  → patch the strip in place, NEVER reload (an agent
+ *                       reporting progress must not reload the owner's page)
+ *   cards changed     → the page is LYING; re-render it, preserving scroll so
+ *                       the reload is nearly invisible
+ *   dialog open       → the owner is actively reading: hold the reload and show
+ *                       the pill instead, then reload once they close it
  *
  * Poll cost is a few stat() calls (see techStateFingerprint); the page stops
  * polling while hidden so a forgotten tab costs nothing.
@@ -313,20 +321,38 @@ const LIVE_HTML = `<div class="tp-live" id="tp-live" hidden>
   <span class="tp-live__phase" id="tp-live-phase"></span>
   <span class="tp-live__note" id="tp-live-note"></span>
   <span class="tp-live__counts" id="tp-live-counts"></span>
-  <button class="tp-live__pill" id="tp-live-pill" type="button" hidden>● new progress — reload for detail</button>
+  <button class="tp-live__pill" id="tp-live-pill" type="button" hidden>● this page is out of date — refresh now</button>
 </div>`;
 
 const LIVE_SCRIPT = `<script>
 (function () {
   var POLL_MS = 45000;
-  var first = null, started = null;
+  var SCROLL_KEY = 'tp-scroll-restore';
+  var firstCards = null, started = null, staleCards = false;
   var el = {
     wrap: document.getElementById('tp-live'), dot: document.getElementById('tp-live-dot'),
     phase: document.getElementById('tp-live-phase'), note: document.getElementById('tp-live-note'),
     counts: document.getElementById('tp-live-counts'), pill: document.getElementById('tp-live-pill')
   };
   if (!el.wrap) return;
-  el.pill.addEventListener('click', function () { location.reload(); });
+
+  // Restore the reading position across a self-refresh, so re-rendering a lying
+  // page costs the owner nothing.
+  try {
+    var saved = sessionStorage.getItem(SCROLL_KEY);
+    if (saved !== null) { sessionStorage.removeItem(SCROLL_KEY); window.scrollTo(0, Number(saved) || 0); }
+  } catch (e) {}
+
+  function refreshNow() {
+    try { sessionStorage.setItem(SCROLL_KEY, String(window.scrollY || 0)); } catch (e) {}
+    location.reload();
+  }
+  el.pill.addEventListener('click', refreshNow);
+
+  // A dialog open means the owner is reading something specific — hold the
+  // refresh until they close it, then apply it immediately.
+  function dialogOpen() { return !!document.querySelector('dialog[open]'); }
+  document.addEventListener('close', function () { if (staleCards && !dialogOpen()) refreshNow(); }, true);
 
   function paint(s) {
     el.wrap.hidden = false;
@@ -349,12 +375,17 @@ const LIVE_SCRIPT = `<script>
   function tick() {
     if (document.hidden) return;
     fetch('/api/tech-state', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (s) {
-      if (s.error) return;
-      paint(s);
-      if (first === null) { first = s.fingerprint; started = s.serverStartedAt; return; }
-      // A restart means new CODE, which a live data update cannot deliver —
-      // treat it exactly like changed data: offer the reload.
-      if (s.fingerprint !== first || s.serverStartedAt !== started) el.pill.hidden = false;
+      if (s.error || !s.fingerprints) return;
+      paint(s); // the strip is always patched in place — activity never reloads
+      if (firstCards === null) { firstCards = s.fingerprints.cards; started = s.serverStartedAt; return; }
+      // Cards changed (a signal answered, a tech promoted, states edited) or the
+      // server restarted with new code: what is on screen is now WRONG, and a
+      // hint is not good enough — re-render, unless a dialog is open.
+      if (s.fingerprints.cards !== firstCards || s.serverStartedAt !== started) {
+        staleCards = true;
+        el.pill.hidden = false;
+        if (!dialogOpen()) refreshNow();
+      }
     }).catch(function () { /* server down mid-cycle is not the page's problem */ });
   }
   tick();

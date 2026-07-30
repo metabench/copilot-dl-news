@@ -76,9 +76,50 @@ describe('agent activity channel (owner directive 2026-07-30: low frequency by d
 });
 
 describe('techStateFingerprint (the cheap poll target)', () => {
-  it('is a stable string over unchanged inputs', () => {
-    expect(techStateFingerprint()).toBe(techStateFingerprint());
-    expect(typeof techStateFingerprint()).toBe('string');
+  it('is stable over unchanged inputs and splits cards from activity', () => {
+    expect(techStateFingerprint()).toEqual(techStateFingerprint());
+    const fp = techStateFingerprint();
+    expect(typeof fp.cards).toBe('string');
+    expect(typeof fp.activity).toBe('string');
+  });
+
+  // The split IS the cycle-157 fix: a progress note must not reload the owner's
+  // page, and a changed card must not be left showing a false state.
+  it('the activity log is NOT part of the cards fingerprint', () => {
+    expect(techStateFingerprint().cards).not.toMatch(/agent-activity/);
+    expect(techStateFingerprint().activity).toMatch(/agent-activity/);
+  });
+
+  it('a progress report moves ONLY the activity fingerprint, never cards', () => {
+    const target = path.resolve(__dirname, '..', '..', '..', '..', '..', 'data', 'agent-activity.jsonl');
+    const existed = fs.existsSync(target);
+    const original = existed ? fs.readFileSync(target) : null;
+    try {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      const before = techStateFingerprint();
+      fs.appendFileSync(target, JSON.stringify({ phase: 'split-test', atMs: Date.now() }) + '\n');
+      const after = techStateFingerprint();
+      expect(after.activity).not.toBe(before.activity);
+      expect(after.cards).toBe(before.cards);
+    } finally {
+      if (existed) fs.writeFileSync(target, original);
+      else if (fs.existsSync(target)) fs.unlinkSync(target);
+    }
+  });
+
+  it('an answered signal MOVES the cards fingerprint — the page must know it is lying', () => {
+    const target = path.resolve(__dirname, '..', '..', '..', '..', '..', 'data', 'agi-signals.jsonl');
+    const existed = fs.existsSync(target);
+    const original = existed ? fs.readFileSync(target) : null;
+    try {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      const before = techStateFingerprint();
+      fs.appendFileSync(target, JSON.stringify({ id: 'sig-cards-test', status: 'done', ackAt: new Date().toISOString() }) + '\n');
+      expect(techStateFingerprint().cards).not.toBe(before.cards);
+    } finally {
+      if (existed) fs.writeFileSync(target, original);
+      else if (fs.existsSync(target)) fs.unlinkSync(target);
+    }
   });
 
   it('names every input it watches, so a missed file is visible in review not runtime', () => {
@@ -100,7 +141,7 @@ describe('techStateFingerprint (the cheap poll target)', () => {
     try {
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.appendFileSync(target, JSON.stringify({ phase: 'fingerprint-test', atMs: Date.now() }) + '\n');
-      expect(techStateFingerprint()).not.toBe(before);
+      expect(techStateFingerprint()).not.toEqual(before);
     } finally {
       if (existed) fs.writeFileSync(target, original);
       else fs.unlinkSync(target);
