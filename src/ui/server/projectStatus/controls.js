@@ -26,6 +26,13 @@ const jsgui = IS_BROWSER
 const { Control } = jsgui;
 const Active_HTML_Document = require('../../../../../jsgui3-server/controls/Active_HTML_Document');
 
+// STOCK jsgui3 CONTROLS (cycle 162). The library ships 155 controls and 48
+// mixins; this app had been hand-rolling panels, chips, tables and buttons out
+// of anonymous divs. Verified present on BOTH the server and client builds
+// before adoption, so reattachment cannot break. Adopt, never reinvent — the
+// survey comes before the build list.
+const { Panel, Stat_Card, Data_Grid, Key_Value_Table, Progress_Bar, Chip, Button } = jsgui.controls;
+
 // Shared by server compose AND client apply — one definition, no drift.
 const CHIP_DEFS = [
   { key: 'cycles', label: 'cycles recorded', fmt: (st) => String(st.cycles) },
@@ -97,6 +104,30 @@ let TREE_PANEL = null;
 let TECH_INDEX = {};
 let SIGNAL_HISTORY = [];          // full request/answer history (from /api/status)
 let PAGE_WIDGET = null;           // the activated Status_Widget (client only)
+let SIGNAL_GRID = null;           // the activated signal-log Data_Grid
+const TRAIL_CACHE = {};           // techId → ledger-trail rows (fetched once)
+
+/**
+ * activateChildren — activate controls composed INTO an already-activated
+ * parent (cycle 162, browser only).
+ *
+ * jsgui3 activates the control tree once, on page activation. Anything added
+ * afterwards has its markup inserted but never receives activate(), so any
+ * control that does work there — Data_Grid renders its rows from activate()
+ * after browser reconstruction — renders empty. Walking the new subtree once
+ * is the small, explicit price of composing controls at runtime.
+ */
+function activateChildren(ctrl) {
+  if (typeof document === 'undefined') return;
+  const walk = (c) => {
+    if (!c || typeof c !== 'object') return;
+    for (const child of (c.content && c.content._arr) || []) {
+      try { if (child && !child.__active && typeof child.activate === 'function') child.activate(); } catch (_) {}
+      walk(child);
+    }
+  };
+  walk(ctrl);
+}
 const NODE_CTRLS = {};            // techId → activated Tech_Tree_Node (hash deep links)
 let HASH_GUARD = false;           // selecting sets the hash; the hash selects — guard the loop
 
@@ -463,37 +494,48 @@ class Settings_Control extends Control {
  * page, cycle 161): every request and its answer, newest first, repainted by
  * every _apply so it is as live as the rest.
  */
-class Signal_Log extends Control {
+/**
+ * Signal_Log — the lightbulb queue as a jsgui3 Data_Grid (cycle 162).
+ *
+ * Was a hand-built list of concatenated strings, repainted by innerHTML. The
+ * grid is a connected control: columns, rows, sorting and empty_text are its
+ * concern, and the cells carry values rather than pre-formatted sentences —
+ * so the owner can sort by state or tech, and escaping is structural.
+ */
+class Signal_Log extends Panel {
   constructor(spec = {}) {
     spec.__type_name = spec.__type_name || 'signal_log';
-    super({ ...spec, tagName: 'section' });
+    super({ ...spec, title: 'SIGNAL LOG — every request and its answer' });
     this.add_class('ps-panel');
     if (!spec.el) {
-      const h = new Control({ context: this.context, tagName: 'h2' });
-      h.add_class('ps-h');
-      h.add('SIGNAL LOG — every request and its answer');
-      this.add(h);
-      const box = new Control({ context: this.context, tagName: 'div' });
-      box.add_class('ps-list');
-      box.dom.attributes['data-ps-siglog'] = 'true';
-      for (const line of signalLogLines(spec.history || [])) {
-        const d = new Control({ context: this.context, tagName: 'div' });
-        d.add_class('ps-quest-item ps-siglog__row');
-        d.add(line);
-        this.add_to(box, d);
-      }
-      this.add(box);
+      const grid = new Data_Grid({
+        context: this.context,
+        columns: SIGNAL_COLUMNS,
+        rows: signalLogRows(spec.history || []),
+        empty_text: 'no requests yet — click a node and BEGIN RESEARCH'
+      });
+      grid.dom.attributes['data-ps-siglog'] = 'true';
+      this.grid = grid;
+      this.add(grid);
     }
   }
 
-  add_to(parent, child) { parent.add(child); }
+  activate() {
+    if (!this.__active) {
+      super.activate();
+      // Hold the reattached grid so _apply can push it fresh rows.
+      SIGNAL_GRID = this.grid || null;
+    }
+  }
 }
-function signalLogLines(history) {
-  return (history || []).slice(-10).reverse().map((r) => {
-    const state = r.status === 'pending' ? '⚡ pending' : `✓ ${String(r.ackAt || '').slice(0, 16).replace('T', ' ')}`;
-    const note = r.status === 'pending' ? (r.requested || '') : (r.ackNote || '');
-    return `${state} · ${r.tech} — ${note.slice(0, 160)}`;
-  });
+const SIGNAL_COLUMNS = ['state', 'when', 'tech', 'note'];
+function signalLogRows(history) {
+  return (history || []).slice(-25).reverse().map((r) => ({
+    state: r.status === 'pending' ? '⚡ pending' : '✓ answered',
+    when: String(r.status === 'pending' ? r.at : (r.ackAt || r.at) || '').slice(0, 16).replace('T', ' '),
+    tech: r.tech || '',
+    note: (r.status === 'pending' ? (r.requested || '') : (r.ackNote || '')).slice(0, 200)
+  }));
 }
 
 class Tech_Detail_Panel extends Control {
@@ -513,99 +555,151 @@ class Tech_Detail_Panel extends Control {
     if (!this.__active) {
       super.activate();
       TREE_PANEL = this;
+      // Delegated click: the BEGIN RESEARCH button is re-composed on every
+      // selection, so the handler lives on the panel (which stays activated)
+      // and reads the current selection from begin_tech.
+      this.add_dom_event_listener('click', (e) => {
+        const t = e && (e.target || e.srcElement);
+        const btn = t && t.closest && t.closest('.ps-begin--armed');
+        if (!btn || !this.begin_tech || btn.disabled) return;
+        const n = this.begin_tech;
+        btn.disabled = true;
+        btn.textContent = 'signalling…';
+        fetch('/api/research-signal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tech: n.id, requested: n.research || n.title })
+        }).then((r) => r.json()).then((j) => {
+          btn.textContent = j.ok
+            ? '⚡ requested — the agent picks it up at its next orient'
+            : ('failed: ' + (j.error || 'unknown'));
+        }).catch(() => { btn.textContent = 'failed — server away?'; });
+      });
     }
   }
 
   // Client-side render from TECH_INDEX (refreshed by every /api/status fetch) —
   // the hub's plain-DOM repaint idiom, same as _apply's list rebuilds.
+  /**
+   * Render the selected node — COMPOSED FROM CONTROLS (cycle 162), not built
+   * with createElement. clear() + compose is the framework's own repaint idiom
+   * (Chart_Base.render_chart does exactly this), so escaping is structural and
+   * the panel's parts are real controls that can be styled and tested.
+   */
   show(id) {
-    const el = this.dom.el;
     const n = TECH_INDEX[id];
-    if (!el || !n) return;
-    el.innerHTML = '';
-    const div = (cls, text) => {
-      const d = document.createElement('div');
-      d.className = cls;
-      if (text !== undefined) d.textContent = text;
-      el.appendChild(d);
-      return d;
+    if (!n) return;
+    this.clear();
+    const ctx = this.context;
+    const kind_label = {
+      root: 'foundation',
+      grown: 'researched' + (n.researchedOn ? ' ' + n.researchedOn : ''),
+      avail: 'research available',
+      gated: 'gated — yours to authorize',
+      fog: 'future technology'
+    }[n.kind] || n.kind;
+
+    const line = (cls, text, style) => {
+      const c = new Control({ context: ctx, tagName: 'div' });
+      c.add_class(cls);
+      if (style) c.dom.attributes.style = style;
+      if (text !== undefined) c.add(String(text));
+      this.add(c);
+      return c;
     };
-    div('ps-detail__id', n.id).style.color = n.color;
-    div('ps-detail__title', n.title || n.id);
-    div('ps-detail__meta', `${n.branchLabel} · ${({ root: 'foundation', grown: 'researched' + (n.researchedOn ? ' ' + n.researchedOn : ''), avail: 'research available', gated: 'gated — yours to authorize', fog: 'future technology' })[n.kind] || n.kind}`);
-    if (n.research) { div('ps-detail__h', 'RESEARCH MEANS'); div('ps-detail__p', n.research); }
-    if (n.note && !n.research) { div('ps-detail__h', 'WHAT THIS IS'); div('ps-detail__p', n.note); }
+
+    line('ps-detail__id', n.id, `color:${n.color}`);
+    line('ps-detail__title', n.title || n.id);
+
+    // Facts as a Key_Value_Table rather than hand-laid divs.
+    const facts = { branch: n.branchLabel || '', state: kind_label };
+    if (n.priority) facts.priority = n.priority;
+    if (n.lastUpdate) facts.updated = n.lastUpdate;
+    this.add(new Key_Value_Table({ context: ctx, data: facts }));
+
+    if (n.research) { line('ps-detail__h', 'RESEARCH MEANS'); line('ps-detail__p', n.research); }
+    if (n.note && !n.research) { line('ps-detail__h', 'WHAT THIS IS'); line('ps-detail__p', n.note); }
+
     if ((n.prereqs || []).length) {
-      div('ps-detail__h', 'BUILT FROM');
-      const box = div('ps-detail__chips');
-      for (const p of n.prereqs) {
-        const c = document.createElement('span');
-        c.className = 'ps-detail__chip';
-        c.textContent = p.id;
-        box.appendChild(c);
-      }
+      line('ps-detail__h', 'BUILT FROM');
+      const box = new Control({ context: ctx, tagName: 'div' });
+      box.add_class('ps-detail__chips');
+      for (const pr of n.prereqs) box.add(new Chip({ context: ctx, text: pr.id }));
+      this.add(box);
     }
+
     for (const [head, list] of [['DETAIL — from the record', n.detail], ['PRELIMINARY DATA', n.prelim]]) {
       if ((list || []).length) {
-        div('ps-detail__h', head);
-        for (const item of list.slice(0, 4)) div('ps-detail__p ps-detail__p--fact', '▪ ' + item);
-        if (list.length > 4) div('ps-detail__more', `${list.length - 4} more on the datalinks page`);
+        line('ps-detail__h', head);
+        for (const item of list.slice(0, 4)) line('ps-detail__p ps-detail__p--fact', '▪ ' + item);
+        if (list.length > 4) line('ps-detail__more', `${list.length - 4} more in the record`);
       }
     }
-    // YOUR REQUESTS on this node (the c154 duty, now from the shared history).
+
     const mine = SIGNAL_HISTORY.filter((s2) => s2.tech === n.id)
       .sort((a2, b2) => String(b2.at || '').localeCompare(String(a2.at || '')));
     if (mine.length) {
-      div('ps-detail__h', `YOUR REQUESTS — ${mine.length}`);
-      for (const s2 of mine.slice(0, 3)) {
-        const state = s2.status === 'pending' ? '⚡ pending' : `✓ answered ${String(s2.ackAt || '').slice(0, 16).replace('T', ' ')}`;
-        div('ps-detail__p ps-detail__p--fact', `${state} — ${(s2.status === 'pending' ? (s2.requested || '') : (s2.ackNote || '')).slice(0, 180)}`);
-      }
+      line('ps-detail__h', `YOUR REQUESTS — ${mine.length}`);
+      this.add(new Data_Grid({
+        context: ctx,
+        columns: ['state', 'when', 'note'],
+        rows: mine.slice(0, 5).map((s2) => ({
+          state: s2.status === 'pending' ? '⚡ pending' : '✓ answered',
+          when: String(s2.status === 'pending' ? s2.at : (s2.ackAt || s2.at) || '').slice(0, 16).replace('T', ' '),
+          note: (s2.status === 'pending' ? (s2.requested || '') : (s2.ackNote || '')).slice(0, 200)
+        }))
+      }));
     }
-    // LEDGER TRAIL, fetched per node (too heavy for the status payload).
-    const trailBox = div('ps-detail__trail');
-    trailBox.textContent = 'loading ledger trail…';
-    fetch(`/api/node?id=${encodeURIComponent(n.id)}`, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((j) => {
-        const trail = j.ledgerTrail || [];
-        trailBox.textContent = '';
-        const h2 = document.createElement('div');
-        h2.className = 'ps-detail__h';
-        h2.textContent = trail.length ? `LEDGER TRAIL — ${trail.length} cycle${trail.length === 1 ? '' : 's'}` : 'LEDGER TRAIL';
-        trailBox.appendChild(h2);
-        if (!trail.length) {
-          const p = document.createElement('div');
-          p.className = 'ps-detail__more';
-          p.textContent = 'no ledger cycle mentions this id yet — the trail writes itself as work lands';
-          trailBox.appendChild(p);
-        }
-        for (const t of trail.slice(-6).reverse()) {
-          const p = document.createElement('div');
-          p.className = 'ps-detail__p ps-detail__p--fact';
-          p.textContent = `c${t.cycle} · ${t.date} — ${t.label}`;
-          trailBox.appendChild(p);
-        }
-      })
-      .catch(() => { trailBox.textContent = 'trail unavailable'; });
-    // BEGIN RESEARCH — armed only for researchable selections (the owner's
-    // directive: highlighted when selected).
-    const btn = document.createElement('button');
-    btn.className = n.kind === 'avail' ? 'ps-begin ps-begin--armed' : 'ps-begin';
-    btn.disabled = n.kind !== 'avail';
-    btn.textContent = n.kind === 'avail' ? '⚡ BEGIN RESEARCH' : 'not researchable';
-    btn.addEventListener('click', () => {
-      if (btn.disabled) return;
-      btn.disabled = true;
-      btn.textContent = 'signalling…';
-      fetch('/api/research-signal', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tech: n.id, requested: n.research || n.title })
-      }).then((r) => r.json()).then((j) => {
-        btn.textContent = j.ok ? '⚡ requested — the agent picks it up at its next orient' : ('failed: ' + (j.error || 'unknown'));
-      }).catch(() => { btn.textContent = 'failed — server away?'; });
-    });
-    el.appendChild(btn);
+
+    // LEDGER TRAIL — STATIC rows, resolved before composing.
+    //
+    // Data_Grid supports an async data_source, but a control added to an
+    // ALREADY-ACTIVATED parent has its composed markup inserted without being
+    // activated itself, so a re-render that happens after the promise resolves
+    // never reaches the DOM (measured: the grid sat in .loading / aria-busy
+    // forever while the endpoint returned fine). So the data is fetched first
+    // and handed in as an array; the per-node cache makes re-selection instant
+    // and the second show() call is what paints the rows.
+    line('ps-detail__h', 'LEDGER TRAIL');
+    const cached = TRAIL_CACHE[n.id];
+    if (cached === undefined) {
+      line('ps-detail__more', 'loading ledger trail…');
+      fetch(`/api/node?id=${encodeURIComponent(n.id)}`, { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((j) => {
+          TRAIL_CACHE[n.id] = (j.ledgerTrail || []).slice(-8).reverse()
+            .map((tr) => ({ cycle: 'c' + tr.cycle, date: tr.date, what: tr.label }));
+          if (TREE_SELECTED && TREE_SELECTED.techId === n.id) this.show(n.id);
+        })
+        .catch(() => { TRAIL_CACHE[n.id] = []; });
+    } else if (cached.length) {
+      this.add(new Data_Grid({ context: ctx, columns: ['cycle', 'date', 'what'], rows: cached }));
+    } else {
+      line('ps-detail__more', 'no ledger cycle mentions this id yet — the trail writes itself as work lands');
+    }
+
+    const links = new Control({ context: ctx, tagName: 'div' });
+    links.add_class('ps-detail__links');
+    const a = new Control({ context: ctx, tagName: 'a' });
+    a.dom.attributes.href = `/#node=${encodeURIComponent(n.id)}`;
+    a.add('permalink to this node ↗');
+    links.add(a);
+    this.add(links);
+
+    // BEGIN RESEARCH — a jsgui3 Button, armed only when researchable.
+    const armed = n.kind === 'avail';
+    const btn = new Button({ context: ctx, text: armed ? '⚡ BEGIN RESEARCH' : 'not researchable' });
+    btn.add_class(armed ? 'ps-begin ps-begin--armed' : 'ps-begin');
+    if (!armed) btn.dom.attributes.disabled = 'disabled';
+    this.add(btn);
+    this.begin_button = btn;
+    this.begin_tech = armed ? n : null;
+
+    // Controls added to an ALREADY-ACTIVATED parent do not activate themselves.
+    // Data_Grid in particular defers its row rendering to activate() after
+    // browser reconstruction, so without this the grids render headers only and
+    // sit in .loading forever (measured before this line existed).
+    activateChildren(this);
   }
 }
 
@@ -640,34 +734,35 @@ class Status_Widget extends Control {
     lvl.add(big);
     lvl.add(this._el('span', 'ps-level__title', 'verified improvements'));
     bar.add(lvl);
-    const xp = this._el('div', 'ps-xp');
-    const fill = this._el('div', 'ps-xp__fill');
-    fill.dom.attributes['data-ps-xp-fill'] = 'true';
-    fill.dom.attributes.style = `width:${Math.round((s.player.xpInLevel / s.player.xpPerLevel) * 100)}%;`;
-    xp.add(fill);
+    // XP bar: jsgui3 Progress_Bar rather than a hand-built div + inline width.
+    const xp = new Progress_Bar({
+      context: this.context,
+      value: s.player.xpInLevel,
+      max: s.player.xpPerLevel
+    });
+    xp.dom.attributes['data-ps-xp'] = 'true';
     bar.add(xp);
     const xpl = this._el('div', 'ps-xp__label', xpLabelText(s.player));
     xpl.dom.attributes['data-ps-xp-label'] = 'true';
     bar.add(xpl);
     this.add(bar);
 
-    // ---- stat chips ----
+    // ---- stat chips: jsgui3 Stat_Card, the dashboard-metric control ----
     const chips = this._el('div', 'ps-chips');
     for (const def of CHIP_DEFS) {
-      const chip = this._el('div', 'ps-chip');
-      const v = this._el('span', 'ps-chip__v', def.fmt(s.stats));
-      v.dom.attributes['data-ps-chip'] = def.key;
-      chip.add(v);
-      chip.add(this._el('span', 'ps-chip__l', def.label));
-      chips.add(chip);
+      const card = new Stat_Card({ context: this.context, value: def.fmt(s.stats), label: def.label });
+      // data-ps-chip marks the value node for the in-place refresh; Stat_Card
+      // owns the markup, so the hook goes on the card itself.
+      card.dom.attributes['data-ps-chip'] = def.key;
+      chips.add(card);
     }
     this.add(chips);
 
     // ---- two columns: work | modules ----
     const cols = this._el('div', 'ps-cols');
 
-    const work = this._el('section', 'ps-panel');
-    work.add(this._el('h2', 'ps-h', 'WORK'));
+    const work = new Panel({ context: this.context, title: 'WORK' });
+    work.add_class('ps-panel');
     work.add(this._el('div', 'ps-quest-tag', 'CURRENT FOCUS'));
     const focus = this._el('div', 'ps-quest-main', `cycle ${s.mainQuest.cycle}: ${s.mainQuest.label}`);
     focus.dom.attributes['data-ps-focus'] = 'true';
@@ -700,8 +795,8 @@ class Status_Widget extends Control {
     work.add(recentBox);
     cols.add(work);
 
-    const modules = this._el('section', 'ps-panel');
-    modules.add(this._el('h2', 'ps-h', `MODULES — ${s.party.length}`));
+    const modules = new Panel({ context: this.context, title: `MODULES — ${s.party.length}` });
+    modules.add_class('ps-panel');
     const grid = this._el('div', 'ps-party');
     for (const m of s.party) {
       const card = this._el('div', `ps-card${m.danger ? ' ps-card--danger' : ''}`);
@@ -723,8 +818,8 @@ class Status_Widget extends Control {
     this.add(cols);
 
     // ---- path ahead + tech tree ----
-    const research = this._el('section', 'ps-panel');
-    research.add(this._el('h2', 'ps-h', 'PATH AHEAD'));
+    const research = new Panel({ context: this.context, title: 'PATH AHEAD' });
+    research.add_class('ps-panel');
     const strip = this._el('div', 'ps-road');
     strip.dom.attributes['data-ps-road'] = 'true';
     const roadCards = roadCardModels(s);
@@ -778,8 +873,8 @@ class Status_Widget extends Control {
     this.add(new Signal_Log({ context: this.context, history: s.signalHistory || [] }));
 
     // ---- history: the committed progress SVG, same data substrate ----
-    const hist = this._el('section', 'ps-panel');
-    hist.add(this._el('h2', 'ps-h', 'HISTORY'));
+    const hist = new Panel({ context: this.context, title: 'HISTORY' });
+    hist.add_class('ps-panel');
     const img = this._el('img', 'ps-history__img');
     img.dom.attributes.src = '/progress.svg';
     img.dom.attributes.alt = 'Cycle history: cumulative verified improvements and defects caught, rendered from the ledger';
@@ -788,8 +883,8 @@ class Status_Widget extends Control {
     this.add(hist);
 
     // ---- milestones ----
-    const mile = this._el('section', 'ps-panel');
-    mile.add(this._el('h2', 'ps-h', 'MILESTONES'));
+    const mile = new Panel({ context: this.context, title: 'MILESTONES' });
+    mile.add_class('ps-panel');
     const row = this._el('div', 'ps-ach');
     for (const a of s.achievements) {
       const b = this._el('div', 'ps-ach__badge');
@@ -820,27 +915,23 @@ class Status_Widget extends Control {
     // panel's data is as fresh as the rest of the page.
     TECH_INDEX = buildNodeIndexFromTree(s.techTree);
     SIGNAL_HISTORY = s.signalHistory || [];
-    // signal log repaint (same idiom as the other list rebuilds below)
-    {
-      const box = root.querySelector('[data-ps-siglog]');
-      if (box) {
-        box.innerHTML = '';
-        for (const line of signalLogLines(SIGNAL_HISTORY)) {
-          const d = document.createElement('div');
-          d.className = 'ps-quest-item ps-siglog__row';
-          d.textContent = line;
-          box.appendChild(d);
-        }
-      }
+    // Signal log: hand the grid a new data source and let it re-render itself
+    // (set_data_source → refresh_rows). No DOM building here — that is the
+    // whole point of adopting Data_Grid.
+    if (SIGNAL_GRID && SIGNAL_GRID.set_data_source) {
+      SIGNAL_GRID.set_data_source(signalLogRows(SIGNAL_HISTORY));
     }
     const q = (sel) => root.querySelector(sel);
     const setText = (sel, text) => { const el = q(sel); if (el) el.textContent = text; };
 
     setText('[data-ps-total]', String(s.player.xpTotal));
-    const fill = q('[data-ps-xp-fill]');
+    const xpBar = q('[data-ps-xp]');
+    if (xpBar) xpBar.setAttribute('aria-valuenow', String(s.player.xpInLevel));
+    const fill = q('[data-ps-xp] .jsgui-progress-fill');
     if (fill) fill.style.width = `${Math.round((s.player.xpInLevel / s.player.xpPerLevel) * 100)}%`;
     setText('[data-ps-xp-label]', xpLabelText(s.player));
-    for (const def of CHIP_DEFS) setText(`[data-ps-chip="${def.key}"]`, def.fmt(s.stats));
+    // Stat_Card owns its markup; the value lives in .stat-card-value.
+    for (const def of CHIP_DEFS) setText(`[data-ps-chip="${def.key}"] .stat-card-value`, def.fmt(s.stats));
     setText('[data-ps-focus]', `cycle ${s.mainQuest.cycle}: ${s.mainQuest.label}`);
 
     const rebuild = (sel, items, build, emptyText) => {
