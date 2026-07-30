@@ -163,16 +163,16 @@ describe('the LIVE strip and its low-frequency poll', () => {
     absorbed: 0
   }, { pendingSignals: [], signalHistory: [] });
 
-  it('ships the strip container and polls /api/tech-state', () => {
+  it('ships the strip container and SUBSCRIBES to /api/events (cycle 158: event-driven)', () => {
     const h = html();
     expect(h).toContain('id="tp-live"');
-    expect(h).toContain("fetch('/api/tech-state'");
+    expect(h).toContain("new EventSource('/api/events')");
   });
 
-  it('polls at LOW frequency and stops while the tab is hidden (the flow-protection constraint)', () => {
+  it('has NO polling left — no interval constant, no tech-state fetch (owner: no 45s delays)', () => {
     const h = html();
-    expect(h).toMatch(/POLL_MS\s*=\s*45000/);
-    expect(h).toContain('if (document.hidden) return;');
+    expect(h).not.toMatch(/POLL_MS/);
+    expect(h).not.toContain("fetch('/api/tech-state'");
   });
 
   it('never force-reloads: it offers a pill instead, so a half-read page is never yanked', () => {
@@ -202,16 +202,21 @@ describe('a lying page refreshes itself (cycle 157 correction)', () => {
     absorbed: 0
   }, { pendingSignals: [], signalHistory: [] });
 
-  it('re-renders when the CARDS fingerprint moves', () => {
-    expect(h()).toContain('s.fingerprints.cards !== firstCards');
-    expect(h()).toContain('if (!dialogOpen()) refreshNow();');
+  it('re-renders on a CARDS event, and on a server restart detected via hello', () => {
+    const src = h();
+    expect(src).toContain("es.addEventListener('cards'");
+    expect(src).toContain('if (!dialogOpen()) refreshNow();');
+    expect(src).toContain('if (s.serverStartedAt !== started) onCards();');
   });
 
-  it('an activity report NEVER triggers a reload — only the strip is patched', () => {
+  it('an ACTIVITY event NEVER triggers a reload — only the strip is patched', () => {
     const src = h();
-    // The reload decision reads fingerprints.cards only; activity feeds paint().
-    expect(src).not.toMatch(/fingerprints\.activity\s*!==/);
-    expect(src).toContain('paint(s); // the strip is always patched in place');
+    // The activity handler paints and does nothing else; only the cards
+    // handler and the restart check reach onCards().
+    const activityHandler = src.split("es.addEventListener('activity'")[1].split('});')[0];
+    expect(activityHandler).toContain('paint(');
+    expect(activityHandler).not.toContain('onCards');
+    expect(activityHandler).not.toContain('refreshNow');
   });
 
   it('holds the refresh while a dialog is open, then applies it on close', () => {

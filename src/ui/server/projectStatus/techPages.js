@@ -326,9 +326,8 @@ const LIVE_HTML = `<div class="tp-live" id="tp-live" hidden>
 
 const LIVE_SCRIPT = `<script>
 (function () {
-  var POLL_MS = 45000;
   var SCROLL_KEY = 'tp-scroll-restore';
-  var firstCards = null, started = null, staleCards = false;
+  var started = null, staleCards = false;
   var el = {
     wrap: document.getElementById('tp-live'), dot: document.getElementById('tp-live-dot'),
     phase: document.getElementById('tp-live-phase'), note: document.getElementById('tp-live-note'),
@@ -372,25 +371,36 @@ const LIVE_SCRIPT = `<script>
       + (s.pendingSignals ? ' · ' + s.pendingSignals + ' request pending' : '');
   }
 
-  function tick() {
-    if (document.hidden) return;
-    fetch('/api/tech-state', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (s) {
-      if (s.error || !s.fingerprints) return;
-      paint(s); // the strip is always patched in place — activity never reloads
-      if (firstCards === null) { firstCards = s.fingerprints.cards; started = s.serverStartedAt; return; }
-      // Cards changed (a signal answered, a tech promoted, states edited) or the
-      // server restarted with new code: what is on screen is now WRONG, and a
-      // hint is not good enough — re-render, unless a dialog is open.
-      if (s.fingerprints.cards !== firstCards || s.serverStartedAt !== started) {
-        staleCards = true;
-        el.pill.hidden = false;
-        if (!dialogOpen()) refreshNow();
-      }
-    }).catch(function () { /* server down mid-cycle is not the page's problem */ });
+  // Event-driven (cycle 158): the server WATCHES its inputs and PUSHES over
+  // SSE the instant one changes — no polling, no 45s anywhere. Event names
+  // carry the c157 semantics: 'cards' = the page is now showing something
+  // false, so re-render (unless a dialog holds it); 'activity' = only the
+  // strip moved, patch it in place and never reload. EventSource reconnects
+  // by itself; a changed serverStartedAt on the post-reconnect hello means the
+  // server restarted with new code, which is a cards-grade change.
+  function onCards() {
+    staleCards = true;
+    el.pill.hidden = false;
+    if (!dialogOpen()) refreshNow();
   }
-  tick();
-  setInterval(tick, POLL_MS);
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) tick(); });
+  var es = new EventSource('/api/events');
+  es.addEventListener('hello', function (e) {
+    try {
+      var s = JSON.parse(e.data);
+      paint(s);
+      if (started === null) { started = s.serverStartedAt; return; }
+      if (s.serverStartedAt !== started) onCards();
+    } catch (err) {}
+  });
+  es.addEventListener('activity', function (e) {
+    try { paint(JSON.parse(e.data)); } catch (err) {}
+  });
+  es.addEventListener('cards', function (e) {
+    try { paint(JSON.parse(e.data)); } catch (err) {}
+    onCards();
+  });
+  // es.onerror deliberately unhandled: EventSource retries on its own, and a
+  // server that is down mid-cycle is not the page's problem.
 })();
 </script>`;
 

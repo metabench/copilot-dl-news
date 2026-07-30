@@ -146,14 +146,21 @@ age, grown/available counts) and an `⚙ AGENT WORKING` line on the hub. Both go
 plainly **idle** when the newest report is over 45 minutes old — a stale phase
 presented as current is the zombie-state failure again (cycle 150).
 
-**Why the pages notice at all:** `/api/tech-state` is a stat()-only fingerprint
-over the files a cycle touches (tree spec, backlog, roadmap, ledger,
-progress.svg, both queues). Pages poll it every 45s, pause while the tab is
-hidden, update the strip in place, and offer a reload pill — they deliberately
-**never force a reload**, because the owner reads these pages while agents work.
-A server restart counts as a change too (new code cannot arrive via live data).
-If you add a new record type a cycle writes, add it to `FINGERPRINT_INPUTS` or
-the page will silently stop noticing that class of progress.
+**Why the pages notice at all (event-driven since cycle 158 — owner: "I don't
+want 45s delays"):** the server `fs.watch`es the directories holding every
+input a cycle touches (tree spec, backlog, roadmap, ledger, progress.svg, both
+queues — enumerated in `FINGERPRINT_INPUTS`) and PUSHES over SSE (`/api/events`)
+the instant the fingerprint genuinely changes — measured ~100ms from a CLI
+write to the event on the wire. There is no polling anywhere; a slow backstop
+sweep exists only because fs.watch is best-effort, and it is not the delivery
+path. The event type carries the cycle-157 semantics: `activity` patches the
+strip in place and never reloads anything; `cards` means the page is now
+showing something false, so it re-renders itself (scroll preserved; held while
+a dialog is open and applied on close). A server restart is detected via the
+post-reconnect hello and is cards-grade (new code cannot arrive via live
+data). If you add a new record type a cycle writes, add it to
+`FINGERPRINT_INPUTS` or the pages will silently stop noticing that class of
+progress — the watch and the fingerprint share that one list.
 
 ## Honesty duties (what "first-class" means in practice)
 

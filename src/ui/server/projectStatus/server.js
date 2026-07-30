@@ -72,6 +72,11 @@ async function main() {
           const { tech, requested } = JSON.parse(body || '{}');
           if (!tech) { res.writeHead(400); res.end('tech required'); return; }
           const rec = signals.raise(String(tech).slice(0, 60), requested);
+          // Nudge the watcher in-process so this write broadcasts in the SAME
+          // tick rather than waiting on filesystem notification latency. The
+          // watcher's own event then finds nothing changed and stays quiet, so
+          // there is no double delivery.
+          live.check('signal-write');
           res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
           res.end(JSON.stringify({ ok: true, id: rec.id, at: rec.at }));
         } catch (e) {
@@ -79,6 +84,40 @@ async function main() {
           res.end(JSON.stringify({ error: e.message }));
         }
       });
+    });
+
+    // ── EVENT-DRIVEN UPDATES (owner directive 2026-07-30, cycle 158) ────────
+    // No polling for delivery: fs.watch on the input directories detects a
+    // change in milliseconds and pushes it down an SSE stream. The cards/
+    // activity split IS the event type — `cards` means the page is now showing
+    // something false, `activity` means only the strip moved.
+    const { LiveEvents, SseHub, HEARTBEAT_MS } = require('./liveEvents');
+    const liveHub = new SseHub();
+    const live = new LiveEvents().start();
+
+    const stripPayload = () => {
+      const st = buildStatus();
+      const counts = (st.techTree.branches || []).reduce((acc, b) => ({
+        grown: acc.grown + b.grown.length,
+        available: acc.available + b.available.length,
+        gated: acc.gated + b.gated.length
+      }), { grown: 0, available: 0, gated: 0 });
+      return {
+        counts,
+        pendingSignals: (st.pendingSignals || []).length,
+        activity: st.agentActivity,
+        serverStartedAt: SERVER_STARTED_AT
+      };
+    };
+
+    live.on('cards', () => liveHub.broadcast('cards', stripPayload()));
+    live.on('activity', () => liveHub.broadcast('activity', stripPayload()));
+    const liveBeat = setInterval(() => liveHub.heartbeat(), HEARTBEAT_MS);
+    if (liveBeat.unref) liveBeat.unref();
+
+    router.set_route('/api/events', null, (req, res) => {
+      liveHub.add(res, stripPayload());
+      req.on('close', () => liveHub.remove(res));
     });
 
     // ── LIVE PROGRESS (owner directive 2026-07-30, cycle 155) ───────────────
@@ -129,6 +168,7 @@ async function main() {
         try {
           const { phase, note, cycle } = JSON.parse(body || '{}');
           const out = activity.report({ phase, note, cycle });
+          if (out.ok) live.check('activity-write'); // same-tick delivery, see above
           res.writeHead(out.ok || out.throttled ? 200 : 400, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
           res.end(JSON.stringify(out));
         } catch (e) {
