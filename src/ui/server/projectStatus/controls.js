@@ -77,6 +77,289 @@ function roadCardModels(s) {
   return cards;
 }
 
+// ---- RESEARCH TREE as real jsgui3 SVG controls (owner directive, cycle 160) --
+// The owner's correction stands on the record: this page is jsgui3 — SSR +
+// client activation — so the tree is BUILT FROM CONTROLS, not markup strings.
+// The idiom is jsgui3-html's own charts family (Chart_Base.svg_element): an
+// svg-tagged Control containing g/rect/text/line child controls. Selection is
+// the jsgui3 `selectable` mixin (control_mixins/selectable.js): reactive
+// `selected` field, 'selected' CSS class, mousedown wiring — single click
+// selects; the detail renders in a SIDE PANEL control, never a modal; the
+// BEGIN RESEARCH button arms when the selection is researchable.
+const selectable_mixin = require('../../../../../jsgui3-html/control_mixins/selectable');
+
+// Module-level selection coordination (browser only). The mixin owns each
+// node's state; this owns "exactly one selected" and the panel hookup —
+// deliberately NOT selection-scope, whose sibling-walk assumptions predate
+// this reattachment stack.
+let TREE_SELECTED = null;
+let TREE_PANEL = null;
+let TECH_INDEX = {};
+
+function buildNodeIndexFromTree(tree) {
+  const index = {};
+  for (const b of ((tree && tree.branches) || [])) {
+    for (const r of b.roots) index[r.id] = { ...r, kind: 'root', branch: b.key, branchLabel: b.label, color: b.color };
+    for (const g of b.grown) index[g.id] = { ...g, kind: 'grown', branch: b.key, branchLabel: b.label, color: b.color };
+    for (const a of b.available) index[a.id] = { ...a, kind: 'avail', branch: b.key, branchLabel: b.label, color: b.color };
+    for (const g of b.gated) index[g.id] = { ...g, kind: 'gated', branch: b.key, branchLabel: b.label, color: b.color };
+    for (const f of b.future) index[f.id] = { ...f, kind: 'fog', branch: b.key, branchLabel: b.label, color: b.color };
+  }
+  return index;
+}
+
+// Pure layered layout, shared by compose (SSR) and nothing else — the board is
+// SSR'd; structural changes arrive as a fresh page (rare: promotions).
+const TB = { nodeW: 176, nodeH: 30, colGap: 30, rowGap: 8, bandHead: 24, bandGap: 20, pad: 12 };
+function treeBoardModel(tree) {
+  const bands = [];
+  const nodes = [];
+  const edges = [];
+  let y = TB.pad;
+  let maxCols = 0;
+  for (const b of ((tree && tree.branches) || [])) {
+    const techs = [...b.grown.map((n) => ({ ...n, kind: 'grown' })), ...b.available.map((n) => ({ ...n, kind: 'avail' })), ...b.gated.map((n) => ({ ...n, kind: 'gated' }))];
+    const techIds = new Set(techs.map((t) => t.id));
+    // depth: 1 + max depth of same-branch TECH prereqs (roots/foreign are col 0)
+    const depthOf = (t, seen = new Set()) => {
+      if (seen.has(t.id)) return 1;
+      seen.add(t.id);
+      let d = 1;
+      for (const p of (t.prereqs || [])) {
+        if (techIds.has(p.id)) {
+          const pt = techs.find((x) => x.id === p.id);
+          if (pt) d = Math.max(d, depthOf(pt, seen) + 1);
+        }
+      }
+      return d;
+    };
+    // column 0: every distinct prereq that is NOT a tech on this band (roots + foreign)
+    const baseIds = [];
+    for (const t of techs) for (const p of (t.prereqs || [])) {
+      if (!techIds.has(p.id) && !baseIds.includes(p.id)) baseIds.push(p.id);
+    }
+    const cols = [];
+    cols[0] = baseIds.map((id) => ({ id, kind: p_kind(tree, b, id), foreign: !belongsTo(b, id) }));
+    for (const t of techs) {
+      const d = depthOf(t);
+      (cols[d] = cols[d] || []).push(t);
+    }
+    const fogCol = Math.max(cols.length, 2);
+    cols[fogCol] = (b.future || []).map((f) => ({ ...f, kind: 'fog' }));
+    maxCols = Math.max(maxCols, cols.length);
+
+    const bandTop = y;
+    bands.push({ label: b.label, color: b.color, y: bandTop });
+    y += TB.bandHead;
+    const rows = Math.max(...cols.map((c) => (c ? c.length : 0)), 1);
+    const pos = {};
+    cols.forEach((col, ci) => {
+      (col || []).forEach((n, ri) => {
+        const nx = TB.pad + ci * (TB.nodeW + TB.colGap);
+        const ny = y + ri * (TB.nodeH + TB.rowGap);
+        pos[n.id] = { x: nx, y: ny };
+        nodes.push({
+          id: n.id, x: nx, y: ny, kind: n.kind || 'avail', color: b.color, foreign: !!n.foreign,
+          title: n.id, sub: shortLabel(n.title || '', 30)
+        });
+      });
+    });
+    for (const t of techs) {
+      for (const p of (t.prereqs || [])) {
+        const a = pos[p.id], c = pos[t.id];
+        if (a && c) edges.push({
+          x1: a.x + TB.nodeW, y1: a.y + TB.nodeH / 2, x2: c.x, y2: c.y + TB.nodeH / 2,
+          color: b.color, dashed: !techIds.has(p.id) && !belongsTo(b, p.id)
+        });
+      }
+    }
+    y += rows * (TB.nodeH + TB.rowGap) + TB.bandGap;
+  }
+  return { width: TB.pad * 2 + maxCols * (TB.nodeW + TB.colGap), height: y, bands, nodes, edges };
+}
+function belongsTo(b, id) {
+  return b.roots.some((r) => r.id === id) || b.grown.concat(b.available, b.gated).some((t) => t.id === id);
+}
+function p_kind(tree, band, id) {
+  for (const bb of tree.branches) if (bb.roots.some((r) => r.id === id)) return 'root';
+  return 'root';
+}
+function shortLabel(s, n) { s = String(s); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+
+class Tech_Tree_Node extends Control {
+  constructor(spec = {}) {
+    spec.__type_name = spec.__type_name || 'tech_tree_node';
+    super({ ...spec, tag_name: 'g' });
+    this.add_class('ps-tn');
+    // The jsgui3 selectable mixin — isomorphic half runs now; the DOM half
+    // re-applies on the client where dom.el exists (mx_state guards doubles).
+    selectable_mixin(this);
+    if (!spec.el && spec.node) {
+      const n = spec.node;
+      this.add_class(`ps-tn--${n.kind}`);
+      if (n.foreign) this.add_class('ps-tn--foreign');
+      this.dom.attributes.transform = `translate(${n.x},${n.y})`;
+      this.dom.attributes['data-node-id'] = n.id;
+      const rect = new Control({ context: this.context, tag_name: 'rect' });
+      rect.dom.attributes.width = TB.nodeW;
+      rect.dom.attributes.height = TB.nodeH;
+      rect.dom.attributes.rx = 4;
+      rect.add_class('ps-tn__box');
+      this.add(rect);
+      const t1 = new Control({ context: this.context, tag_name: 'text' });
+      t1.dom.attributes.x = 8; t1.dom.attributes.y = 13;
+      t1.add_class('ps-tn__id');
+      t1.add(String(n.title));
+      this.add(t1);
+      const t2 = new Control({ context: this.context, tag_name: 'text' });
+      t2.dom.attributes.x = 8; t2.dom.attributes.y = 25;
+      t2.add_class('ps-tn__sub');
+      t2.add(String(n.sub));
+      this.add(t2);
+    }
+  }
+
+  activate() {
+    if (!this.__active) {
+      super.activate();
+      selectable_mixin(this); // DOM half now that dom.el exists
+      const el = this.dom.el;
+      this.techId = el ? el.getAttribute('data-node-id') : null;
+      const kind = el && el.getAttribute('class') || '';
+      const isFog = kind.indexOf('ps-tn--fog') >= 0;
+      if (!isFog) {
+        this.selectable = true;
+        // Single-click select (the mixin's own wiring is mousedown-based; this
+        // explicit trigger is belt-and-braces for this reattachment stack —
+        // selected=true is idempotent through the reactive field).
+        this.add_dom_event_listener('mousedown', () => { this.selected = true; });
+        this.on('change', (e) => {
+          if (e.name === 'selected' && e.value === true) {
+            if (TREE_SELECTED && TREE_SELECTED !== this) TREE_SELECTED.selected = false;
+            TREE_SELECTED = this;
+            if (TREE_PANEL) TREE_PANEL.show(this.techId);
+          }
+        });
+      }
+    }
+  }
+}
+
+class Tech_Tree_Board extends Control {
+  constructor(spec = {}) {
+    spec.__type_name = spec.__type_name || 'tech_tree_board';
+    super({ ...spec, tag_name: 'svg' });
+    this.add_class('ps-board');
+    if (!spec.el && spec.tree) {
+      const m = treeBoardModel(spec.tree);
+      this.dom.attributes.width = m.width;
+      this.dom.attributes.height = m.height;
+      this.dom.attributes.viewBox = `0 0 ${m.width} ${m.height}`;
+      for (const e of m.edges) {
+        const line = new Control({ context: this.context, tag_name: 'line' });
+        line.dom.attributes.x1 = e.x1; line.dom.attributes.y1 = e.y1;
+        line.dom.attributes.x2 = e.x2; line.dom.attributes.y2 = e.y2;
+        line.dom.attributes.stroke = e.color;
+        line.dom.attributes['stroke-width'] = 1.4;
+        if (e.dashed) line.dom.attributes['stroke-dasharray'] = '4,3';
+        line.dom.attributes.opacity = e.dashed ? 0.35 : 0.55;
+        this.add(line);
+      }
+      for (const b of m.bands) {
+        const t = new Control({ context: this.context, tag_name: 'text' });
+        t.dom.attributes.x = TB.pad; t.dom.attributes.y = b.y + 15;
+        t.dom.attributes.fill = b.color;
+        t.add_class('ps-board__band');
+        t.add(String(b.label));
+        this.add(t);
+      }
+      for (const n of m.nodes) this.add(new Tech_Tree_Node({ context: this.context, node: n }));
+    }
+  }
+}
+
+class Tech_Detail_Panel extends Control {
+  constructor(spec = {}) {
+    spec.__type_name = spec.__type_name || 'tech_detail_panel';
+    super({ ...spec, tagName: 'aside' });
+    this.add_class('ps-detail');
+    if (!spec.el) {
+      const ph = new Control({ context: this.context, tagName: 'div' });
+      ph.add_class('ps-detail__empty');
+      ph.add('Select a node on the tree — its data appears here.');
+      this.add(ph);
+    }
+  }
+
+  activate() {
+    if (!this.__active) {
+      super.activate();
+      TREE_PANEL = this;
+    }
+  }
+
+  // Client-side render from TECH_INDEX (refreshed by every /api/status fetch) —
+  // the hub's plain-DOM repaint idiom, same as _apply's list rebuilds.
+  show(id) {
+    const el = this.dom.el;
+    const n = TECH_INDEX[id];
+    if (!el || !n) return;
+    el.innerHTML = '';
+    const div = (cls, text) => {
+      const d = document.createElement('div');
+      d.className = cls;
+      if (text !== undefined) d.textContent = text;
+      el.appendChild(d);
+      return d;
+    };
+    div('ps-detail__id', n.id).style.color = n.color;
+    div('ps-detail__title', n.title || n.id);
+    div('ps-detail__meta', `${n.branchLabel} · ${({ root: 'foundation', grown: 'researched' + (n.researchedOn ? ' ' + n.researchedOn : ''), avail: 'research available', gated: 'gated — yours to authorize', fog: 'future technology' })[n.kind] || n.kind}`);
+    if (n.research) { div('ps-detail__h', 'RESEARCH MEANS'); div('ps-detail__p', n.research); }
+    if (n.note && !n.research) { div('ps-detail__h', 'WHAT THIS IS'); div('ps-detail__p', n.note); }
+    if ((n.prereqs || []).length) {
+      div('ps-detail__h', 'BUILT FROM');
+      const box = div('ps-detail__chips');
+      for (const p of n.prereqs) {
+        const c = document.createElement('span');
+        c.className = 'ps-detail__chip';
+        c.textContent = p.id;
+        box.appendChild(c);
+      }
+    }
+    for (const [head, list] of [['DETAIL — from the record', n.detail], ['PRELIMINARY DATA', n.prelim]]) {
+      if ((list || []).length) {
+        div('ps-detail__h', head);
+        for (const item of list.slice(0, 4)) div('ps-detail__p ps-detail__p--fact', '▪ ' + item);
+        if (list.length > 4) div('ps-detail__more', `${list.length - 4} more on the datalinks page`);
+      }
+    }
+    const links = div('ps-detail__links');
+    const a = document.createElement('a');
+    a.href = `/tech/node?id=${encodeURIComponent(n.id)}`;
+    a.textContent = 'open datalinks page ↗';
+    links.appendChild(a);
+    // BEGIN RESEARCH — armed only for researchable selections (the owner's
+    // directive: highlighted when selected).
+    const btn = document.createElement('button');
+    btn.className = n.kind === 'avail' ? 'ps-begin ps-begin--armed' : 'ps-begin';
+    btn.disabled = n.kind !== 'avail';
+    btn.textContent = n.kind === 'avail' ? '⚡ BEGIN RESEARCH' : 'not researchable';
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.textContent = 'signalling…';
+      fetch('/api/research-signal', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tech: n.id, requested: n.research || n.title })
+      }).then((r) => r.json()).then((j) => {
+        btn.textContent = j.ok ? '⚡ requested — the agent picks it up at its next orient' : ('failed: ' + (j.error || 'unknown'));
+      }).catch(() => { btn.textContent = 'failed — server away?'; });
+    });
+    el.appendChild(btn);
+  }
+}
+
 class Status_Widget extends Control {
   constructor(spec = {}) {
     spec.__type_name = spec.__type_name || 'status_widget';
@@ -202,6 +485,20 @@ class Status_Widget extends Control {
     });
     research.add(strip);
 
+    // ---- THE RESEARCH TREE (cycle 160): jsgui3 SVG controls + selectable
+    // mixin + side detail panel. Deliberately the LARGEST section on the page.
+    research.add(this._el('h2', 'ps-h', 'RESEARCH TREE — click a node to select it'));
+    const treeWrap = this._el('div', 'ps-treeview');
+    const scroll = this._el('div', 'ps-board-scroll');
+    if (s.techTree && s.techTree.branches && s.techTree.branches.length) {
+      scroll.add(new Tech_Tree_Board({ context: this.context, tree: s.techTree }));
+    } else {
+      scroll.add(this._el('div', 'ps-quest-item ps-muted', 'tree unavailable'));
+    }
+    treeWrap.add(scroll);
+    treeWrap.add(new Tech_Detail_Panel({ context: this.context }));
+    research.add(treeWrap);
+
     research.add(this._el('h2', 'ps-h', 'RESEARCH — TECH TREE BRANCHES'));
     if (s.techTree && s.techTree.error) {
       research.add(this._el('div', 'ps-quest-item ps-input', `tech tree unavailable: ${s.techTree.error}`));
@@ -263,6 +560,9 @@ class Status_Widget extends Control {
   _apply(s) {
     const root = this.dom.el;
     if (!root || !s || !s.player) return;
+    // The detail panel reads from this index; every fetch refreshes it so the
+    // panel's data is as fresh as the rest of the page.
+    TECH_INDEX = buildNodeIndexFromTree(s.techTree);
     const q = (sel) => root.querySelector(sel);
     const setText = (sel, text) => { const el = q(sel); if (el) el.textContent = text; };
 
@@ -457,6 +757,43 @@ Status_Widget.css = `
 .ps-signal-line { color: #9fd4ec; border-left: 2px solid #4d9ec8; padding-left: 8px; }
 .ps-activity-line { color: #8fd0a8; border-left: 2px solid #55a377; padding-left: 8px; }
 .ps-tree__roots { font-size: 10px; color: #6b675a; border-top: 1px dashed #2e3440; padding-top: 6px; margin-top: 8px; }
+/* ---- research tree board (cycle 160: jsgui3 SVG controls + selectable) ---- */
+.ps-treeview { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; align-items: start; margin-bottom: 14px; }
+@media (max-width: 1000px) { .ps-treeview { grid-template-columns: 1fr; } }
+.ps-board-scroll { overflow: auto; border: 2px solid #2e3440; border-radius: 6px; background: #0c0e11; max-height: 74vh; }
+.ps-board { display: block; }
+.ps-board__band { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; font-family: 'Segoe UI', system-ui, sans-serif; }
+.ps-tn { cursor: pointer; }
+.ps-tn--fog { cursor: default; }
+.ps-tn__box { fill: #12151a; stroke: #2e3440; stroke-width: 1.2; }
+.ps-tn--root .ps-tn__box { fill: #101216; stroke: #3a4150; }
+.ps-tn--foreign .ps-tn__box { stroke-dasharray: 4,3; opacity: 0.7; }
+.ps-tn--grown .ps-tn__box { stroke: #55a377; }
+.ps-tn--avail .ps-tn__box { stroke: #b8862e; stroke-width: 1.6; }
+.ps-tn--gated .ps-tn__box { stroke: #b34d4d; opacity: 0.8; }
+.ps-tn--fog .ps-tn__box { stroke-dasharray: 3,4; opacity: 0.4; }
+.ps-tn__id { font-size: 10px; font-weight: 700; fill: #e8e4d8; font-family: 'Segoe UI', system-ui, sans-serif; }
+.ps-tn__sub { font-size: 8.5px; fill: #8a8778; font-family: 'Segoe UI', system-ui, sans-serif; }
+.ps-tn:hover .ps-tn__box { filter: brightness(1.35); }
+.ps-tn.selected .ps-tn__box { fill: #1d2733; stroke: #4d9ec8; stroke-width: 2.2; filter: drop-shadow(0 0 6px rgba(77,158,200,0.55)); }
+.ps-tn.selected .ps-tn__id { fill: #cfe3ff; }
+.ps-detail { border: 2px solid #2e3440; border-radius: 6px; background: #101216; padding: 12px 14px; position: sticky; top: 10px; max-height: 74vh; overflow: auto; }
+.ps-detail__empty { font-size: 11px; color: #6b675a; font-style: italic; }
+.ps-detail__id { font-size: 11px; letter-spacing: 0.1em; font-weight: 700; }
+.ps-detail__title { font-size: 14px; font-weight: 700; color: #e8e4d8; margin: 2px 0 2px; }
+.ps-detail__meta { font-size: 10px; color: #8a8778; margin-bottom: 8px; }
+.ps-detail__h { font-size: 9px; letter-spacing: 0.14em; color: #b8862e; margin: 10px 0 3px; }
+.ps-detail__p { font-size: 11px; color: #b9b4a4; line-height: 1.45; }
+.ps-detail__p--fact { border-left: 2px solid #2e3440; padding-left: 7px; margin: 4px 0; }
+.ps-detail__more { font-size: 9.5px; color: #6b675a; font-style: italic; }
+.ps-detail__chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.ps-detail__chip { font-size: 9.5px; border: 1px solid #3a4150; border-radius: 3px; padding: 1px 6px; color: #8a8778; }
+.ps-detail__links { margin: 10px 0 8px; }
+.ps-detail__links a { font-size: 10px; color: #4d9ec8; }
+.ps-begin { display: block; width: 100%; margin-top: 6px; padding: 9px 10px; font-size: 12px; letter-spacing: 0.1em; font-weight: 700; border-radius: 5px; border: 2px solid #2e3440; background: #14171c; color: #6b675a; cursor: default; font-family: inherit; }
+.ps-begin--armed { border-color: #b8862e; color: #ffd479; background: #241d10; cursor: pointer; box-shadow: 0 0 10px rgba(184,134,46,0.45); animation: ps-armed 1.6s ease-in-out infinite; }
+.ps-begin--armed:hover { background: #b8862e; color: #0c0e11; }
+@keyframes ps-armed { 50% { box-shadow: 0 0 18px rgba(184,134,46,0.75); } }
 .ps-branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
 @media (max-width: 760px) { .ps-branches { grid-template-columns: 1fr; } }
 .ps-branch { display: block; background: #101216; border: 2px solid #2e3440; border-radius: 6px; padding: 10px 12px; text-decoration: none; color: inherit; }
@@ -513,5 +850,11 @@ jsgui.controls.status_widget = Status_Widget;
 jsgui.controls.Status_Widget = Status_Widget;
 jsgui.controls.project_status_page = Project_Status_Page;
 jsgui.controls.Project_Status_Page = Project_Status_Page;
+jsgui.controls.tech_tree_node = Tech_Tree_Node;
+jsgui.controls.Tech_Tree_Node = Tech_Tree_Node;
+jsgui.controls.tech_tree_board = Tech_Tree_Board;
+jsgui.controls.Tech_Tree_Board = Tech_Tree_Board;
+jsgui.controls.tech_detail_panel = Tech_Detail_Panel;
+jsgui.controls.Tech_Detail_Panel = Tech_Detail_Panel;
 
 module.exports = { Status_Widget, Project_Status_Page };
