@@ -162,6 +162,34 @@ data). If you add a new record type a cycle writes, add it to
 `FINGERPRINT_INPUTS` or the pages will silently stop noticing that class of
 progress — the watch and the fingerprint share that one list.
 
+## The convergence contract — no busy work (owner directive 2026-07-30)
+
+The always-available architectural-review nodes (TECH-ARCHREVIEW-TREE,
+TECH-ARCHREVIEW-CRAWLER) — and ANY improvement work an agent proposes — bind to
+these rules. The system must in principle be able to reach a fully-improved
+state; a loop that oscillates is doing busy work, and busy work is a defect.
+
+1. **Monotonic axes only.** A suggestion names a MEASURED axis and a direction
+   the number can only move one way (the ncdb-debt ratchet is the model).
+   Preference-shaped changes ("rename", "restructure as") are inadmissible
+   without a measured axis — preferences are exactly what flips back.
+2. **Reversal check.** Before proposing, search the ledger for the same
+   surface. A prior move in the opposite direction means the suggestion is
+   REJECTED as oscillation — unless the prior direction is shown to have been
+   measured wrong, which is a CORRECTION and must be labelled as one.
+3. **The fixed point is a valid answer.** "No improvements above the bar" is
+   the fully-improved state for now. Record it in the REVIEW LOG as a
+   convergence datum. A review obliged to always produce suggestions will
+   produce busy work by construction.
+4. **Busy-work self-check.** Before executing an accepted suggestion: run
+   churn-scan on the targets (a file that keeps being "improved" is a red
+   flag); check the workflow scorecard's cost-to-catch; and if the last two
+   runs produced work whose measured axes did not move, SAY the loop is idling
+   and switch to a materially different lane — a gated decision to surface, a
+   measurement to build, or honestly nothing.
+5. **Declined is recorded.** Every rejected suggestion goes in the REVIEW LOG
+   with its reason, so no future run re-derives or re-proposes it.
+
 ## Honesty duties (what "first-class" means in practice)
 
 - **States match reality.** A tech whose substance already shipped but still

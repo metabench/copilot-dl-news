@@ -713,6 +713,48 @@
       ]
     },
     {
+      "id": "TECH-ARCHREVIEW-TREE",
+      "branch": "tree",
+      "title": "Architectural Improvements — Tech Tree App",
+      "research": "review the tech-tree/status app architecture and propose measured, monotonic improvements — or state honestly that none clear the bar",
+      "prereqs": [
+        "TR-PAGE",
+        "AG-METHOD"
+      ],
+      "state": "available",
+      "signal": "arch-review-tree",
+      "prelim": [
+        "ALWAYS AVAILABLE by design (like the review operations): it is always possible in principle to suggest architectural improvements, so this node never grows and never disappears — each run appends to the REVIEW LOG instead.",
+        "THE CONVERGENCE CONTRACT (owner directive 2026-07-30 — no busy work, ever): every suggestion this review produces must name a MEASURED AXIS and a MONOTONIC DIRECTION (like the ncdb-debt ratchet: a number that only moves one way). 'Rename X to Y', 'restructure A as B' style suggestions are inadmissible unless tied to a measured axis, because preference-shaped changes are exactly the ones that flip back.",
+        "REVERSAL CHECK before proposing: search the ledger for the same surface. If a prior cycle moved it in the OPPOSITE direction, the suggestion is REJECTED as oscillation — unless the evidence shows the prior direction was measured wrong, in which case it is a CORRECTION and must say so in those words. The ledger is the memory that makes back-and-forth detectable.",
+        "THE FIXED POINT IS A VALID ANSWER: this review may return 'no improvements above the bar' — that IS the fully-improved state for now, recorded in the REVIEW LOG as a convergence datum, and it costs one honest sentence instead of an invented task. A review that must always produce suggestions will eventually produce busy work by construction.",
+        "BUSY-WORK SELF-CHECK before executing any accepted suggestion: run churn-scan (RB-004) on the target files — a target that keeps being 'improved' is a red flag; check the workflow scorecard's cost-to-catch; and if the last two runs of this review produced work whose measured axes did not move, the review must SAY it is idling and pick a materially different lane (a gated decision to surface, a measurement to build, or nothing).",
+        "DECLINED IS RECORDED: every suggestion considered and rejected goes in the REVIEW LOG with its reason, so the next run does not re-derive or re-propose it. Nothing evaporates; nothing loops.",
+        "Candidate measured axes for THIS app (seed list, extend per run): route-handler purity violations (progress-surface probe count), template-literal traps (backtick count inside client-script literals), untested client-script branches (jest string-assertions vs real-browser checks ratio, RB-009 floor), cache-exemption coverage (time-sensitive channels outside the 30s memo), SSE client bookkeeping (dead-socket prune rate)."
+      ]
+    },
+    {
+      "id": "TECH-ARCHREVIEW-CRAWLER",
+      "branch": "crawler",
+      "title": "Architectural Improvements — Crawler",
+      "research": "review the crawler architecture (engine, frontier, politeness, intelligence delegation) and propose measured, monotonic improvements — or state honestly that none clear the bar",
+      "prereqs": [
+        "CR-ENGINE",
+        "AG-METHOD"
+      ],
+      "state": "available",
+      "signal": "arch-review-crawler",
+      "prelim": [
+        "ALWAYS AVAILABLE by design (like the review operations): it is always possible in principle to suggest architectural improvements, so this node never grows and never disappears — each run appends to the REVIEW LOG instead.",
+        "THE CONVERGENCE CONTRACT (owner directive 2026-07-30 — no busy work, ever): every suggestion this review produces must name a MEASURED AXIS and a MONOTONIC DIRECTION (like the ncdb-debt ratchet: a number that only moves one way). 'Rename X to Y', 'restructure A as B' style suggestions are inadmissible unless tied to a measured axis, because preference-shaped changes are exactly the ones that flip back.",
+        "REVERSAL CHECK before proposing: search the ledger for the same surface. If a prior cycle moved it in the OPPOSITE direction, the suggestion is REJECTED as oscillation — unless the evidence shows the prior direction was measured wrong, in which case it is a CORRECTION and must say so in those words. The ledger is the memory that makes back-and-forth detectable.",
+        "THE FIXED POINT IS A VALID ANSWER: this review may return 'no improvements above the bar' — that IS the fully-improved state for now, recorded in the REVIEW LOG as a convergence datum, and it costs one honest sentence instead of an invented task. A review that must always produce suggestions will eventually produce busy work by construction.",
+        "BUSY-WORK SELF-CHECK before executing any accepted suggestion: run churn-scan (RB-004) on the target files — a target that keeps being 'improved' is a red flag; check the workflow scorecard's cost-to-catch; and if the last two runs of this review produced work whose measured axes did not move, the review must SAY it is idling and pick a materially different lane (a gated decision to surface, a measurement to build, or nothing).",
+        "DECLINED IS RECORDED: every suggestion considered and rejected goes in the REVIEW LOG with its reason, so the next run does not re-derive or re-propose it. Nothing evaporates; nothing loops.",
+        "Candidate measured axes for the CRAWLER (seed list, extend per run): ncdb-debt (raw SQL outside ncdb — the founding ratchet, currently guarded at 241), event-loop starvation incidents (the c39/c40 class), zombie-state classes without a corroborated transition (the c150 class), per-host politeness overhead vs measured throughput (the c45 scheduling lever), reconciliation blind spots (the redirect_chain class), deploy-gate false-positive rate."
+      ]
+    },
+    {
       "id": "TECH-PROMOTE",
       "branch": "factory",
       "title": "Curated-Tech Promotion",
