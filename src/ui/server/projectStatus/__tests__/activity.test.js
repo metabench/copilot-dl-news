@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const activity = require('../activity');
-const { techStateFingerprint } = require('../statusData');
+const { techStateFingerprint, FINGERPRINT_INPUTS } = require('../statusData');
 
 const tmpLog = () => path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tp-activity-')), 'agent-activity.jsonl');
 
@@ -90,36 +90,50 @@ describe('techStateFingerprint (the cheap poll target)', () => {
     expect(techStateFingerprint().activity).toMatch(/agent-activity/);
   });
 
-  it('a progress report moves ONLY the activity fingerprint, never cards', () => {
-    const target = path.resolve(__dirname, '..', '..', '..', '..', '..', 'data', 'agent-activity.jsonl');
-    const existed = fs.existsSync(target);
-    const original = existed ? fs.readFileSync(target) : null;
-    try {
-      fs.mkdirSync(path.dirname(target), { recursive: true });
-      const before = techStateFingerprint();
-      fs.appendFileSync(target, JSON.stringify({ phase: 'split-test', atMs: Date.now() }) + '\n');
-      const after = techStateFingerprint();
-      expect(after.activity).not.toBe(before.activity);
-      expect(after.cards).toBe(before.cards);
-    } finally {
-      if (existed) fs.writeFileSync(target, original);
-      else if (fs.existsSync(target)) fs.unlinkSync(target);
+  /**
+   * These exercise the fingerprint against a THROWAWAY tree, never the repo.
+   *
+   * They used to append to the real data/agi-signals.jsonl and restore it from
+   * a snapshot taken before the append. An owner click landing inside that
+   * window is overwritten and gone — no error, no trace, green suite, and the
+   * agent never learns the owner asked for anything. The owner's request queue
+   * is not a fixture. (Measured: the live queue's mtime was two days newer than
+   * its newest record, so a test run had in fact rewritten it.)
+   */
+  const seedRoot = () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ps-fingerprint-'));
+    for (const segs of FINGERPRINT_INPUTS) {
+      const p = path.join(root, ...segs);
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.writeFileSync(p, 'seed\n');
     }
+    return root;
+  };
+
+  it('a progress report moves ONLY the activity fingerprint, never cards', () => {
+    const root = seedRoot();
+    const before = techStateFingerprint(root);
+    fs.appendFileSync(path.join(root, 'data', 'agent-activity.jsonl'),
+      JSON.stringify({ phase: 'split-test', atMs: Date.now() }) + '\n');
+    const after = techStateFingerprint(root);
+    expect(after.activity).not.toBe(before.activity);
+    expect(after.cards).toBe(before.cards);
   });
 
   it('an answered signal MOVES the cards fingerprint — the page must know it is lying', () => {
-    const target = path.resolve(__dirname, '..', '..', '..', '..', '..', 'data', 'agi-signals.jsonl');
-    const existed = fs.existsSync(target);
-    const original = existed ? fs.readFileSync(target) : null;
-    try {
-      fs.mkdirSync(path.dirname(target), { recursive: true });
-      const before = techStateFingerprint();
-      fs.appendFileSync(target, JSON.stringify({ id: 'sig-cards-test', status: 'done', ackAt: new Date().toISOString() }) + '\n');
-      expect(techStateFingerprint().cards).not.toBe(before.cards);
-    } finally {
-      if (existed) fs.writeFileSync(target, original);
-      else if (fs.existsSync(target)) fs.unlinkSync(target);
-    }
+    const root = seedRoot();
+    const before = techStateFingerprint(root);
+    fs.appendFileSync(path.join(root, 'data', 'agi-signals.jsonl'),
+      JSON.stringify({ id: 'sig-cards-test', status: 'done', ackAt: new Date().toISOString() }) + '\n');
+    expect(techStateFingerprint(root).cards).not.toBe(before.cards);
+  });
+
+  it('never stats the live repo when given a root — the owner queue is not a fixture', () => {
+    const root = seedRoot();
+    const fp = techStateFingerprint(root);
+    // Every input resolved inside the throwaway tree, so nothing reports absent.
+    expect(fp.cards).not.toMatch(/absent/);
+    expect(fp.activity).not.toMatch(/absent/);
   });
 
   it('names every input it watches, so a missed file is visible in review not runtime', () => {
@@ -134,18 +148,11 @@ describe('techStateFingerprint (the cheap poll target)', () => {
   });
 
   it('CHANGES when a watched file changes — the whole point', () => {
-    const before = techStateFingerprint();
-    const target = path.resolve(__dirname, '..', '..', '..', '..', '..', 'data', 'agent-activity.jsonl');
-    const existed = fs.existsSync(target);
-    const original = existed ? fs.readFileSync(target) : null;
-    try {
-      fs.mkdirSync(path.dirname(target), { recursive: true });
-      fs.appendFileSync(target, JSON.stringify({ phase: 'fingerprint-test', atMs: Date.now() }) + '\n');
-      expect(techStateFingerprint()).not.toEqual(before);
-    } finally {
-      if (existed) fs.writeFileSync(target, original);
-      else fs.unlinkSync(target);
-    }
+    const root = seedRoot();
+    const before = techStateFingerprint(root);
+    fs.appendFileSync(path.join(root, 'data', 'agent-activity.jsonl'),
+      JSON.stringify({ phase: 'fingerprint-test', atMs: Date.now() }) + '\n');
+    expect(techStateFingerprint(root)).not.toEqual(before);
   });
 });
 

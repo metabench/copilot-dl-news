@@ -453,8 +453,8 @@ const FINGERPRINT_INPUTS = [
 ];
 const ACTIVITY_INPUT = 'agent-activity.jsonl';
 
-function stampOf(segs) {
-  const p = path.join(ROOT, ...segs);
+function stampOf(segs, root) {
+  const p = path.join(root, ...segs);
   const name = segs[segs.length - 1];
   try {
     const st = fs.statSync(p);
@@ -464,11 +464,20 @@ function stampOf(segs) {
   }
 }
 
-function techStateFingerprint() {
+/**
+ * @param {string} [root] the tree to stat; defaults to the repo.
+ *
+ * Injectable ONLY so tests never touch the live files. Three suites used to
+ * append to the real data/agi-signals.jsonl and restore it from a snapshot
+ * taken before the append — which silently destroys an owner click that lands
+ * during the run, leaving no trace and a green suite. That file is the owner's
+ * request queue, not a fixture.
+ */
+function techStateFingerprint(root = ROOT) {
   const cards = [];
   const activity = [];
   for (const segs of FINGERPRINT_INPUTS) {
-    (segs[segs.length - 1] === ACTIVITY_INPUT ? activity : cards).push(stampOf(segs));
+    (segs[segs.length - 1] === ACTIVITY_INPUT ? activity : cards).push(stampOf(segs, root));
   }
   return { cards: cards.join('|'), activity: activity.join('|') };
 }

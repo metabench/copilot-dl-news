@@ -3,7 +3,7 @@
 const { Control } = require('../shared/jsgui');
 const { el } = require('../shared/el');
 const { of_type } = require('../shared/page-controls');
-const { buildNodeIndexFromTree } = require('../shared/tree-layout');
+const { treeBoardModel } = require('../shared/tree-layout');
 
 /**
  * Live_Strip — the SSE-fed status line.
@@ -47,6 +47,14 @@ class Live_Strip extends Control {
   activate() {
     if (this.__active) return;
     super.activate();
+    // What the board ACTUALLY DREW. Not the same thing as the tech index: the
+    // layout draws a foreign prerequisite once per band that needs it, and never
+    // draws a root that nothing depends on. Measured on the live page: 54 node
+    // elements, 46 distinct ids, index size 53 — so comparing the DOM against
+    // the index could never match, `same` was always false, and EVERY cards
+    // event force-reloaded the page the owner was reading. Including the reload
+    // triggered by their own BEGIN RESEARCH click, since that appends to
+    // data/agi-signals.jsonl and the watcher fires on data/.
     const ssrIds = new Set(
       [...document.querySelectorAll('.ps-tn[data-node-id]')].map((n) => n.getAttribute('data-node-id'))
     );
@@ -59,7 +67,11 @@ class Live_Strip extends Control {
       fetch('/api/status', { cache: 'no-store' }).then((r) => r.json()).then((s) => {
         const page = of_type(this, 'status_widget');
         if (page && page._apply) page._apply(s);
-        const now = new Set(Object.keys(buildNodeIndexFromTree(s.techTree)));
+        // Like for like: run the SAME pure layout the server composed the board
+        // with, and compare the id sets it would draw now against the ones on
+        // screen. A genuine promotion or a new tech changes this; a ledger or
+        // signal write does not.
+        const now = new Set(treeBoardModel(s.techTree).nodes.map((n) => n.id));
         const same = now.size === ssrIds.size && [...ssrIds].every((id) => now.has(id));
         if (!same) {
           try { sessionStorage.setItem('tp-scroll-restore', String(window.scrollY || 0)); } catch (_) {}
