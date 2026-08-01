@@ -43,7 +43,7 @@ Player_Bar.css = `
 .ps-level { display: flex; align-items: baseline; gap: 12px; margin-top: 4px; }
 .ps-level__num { font-size: 26px; font-weight: 700; color: #b8862e; font-variant-numeric: tabular-nums; }
 .ps-level__title { font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; }
-.ps-player .jsgui-progress, .ps-player .progress-bar { margin-top: 8px; }
+.ps-player .jsgui-progress { margin-top: 8px; }
 .ps-xp__label { margin-top: 6px; font-size: 11px; color: #8a8778; font-variant-numeric: tabular-nums; }
 `;
 

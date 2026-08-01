@@ -20,7 +20,17 @@ function activate_children(ctrl) {
   const walk = (c) => {
     if (!c || typeof c !== 'object') return;
     for (const child of (c.content && c.content._arr) || []) {
-      try { if (child && !child.__active && typeof child.activate === 'function') child.activate(); } catch (_) {}
+      try {
+        if (child && !child.__active) {
+          // pre_activate FIRST. It is what installs the listener that syncs
+          // later vdom changes to the DOM, so a control activated without it is
+          // live but deaf: add_class() and dom.attributes writes on it never
+          // reach the element. Skipping this was silently degrading every
+          // control composed at runtime.
+          if (typeof child.pre_activate === 'function') child.pre_activate();
+          if (typeof child.activate === 'function') child.activate();
+        }
+      } catch (_) {}
       walk(child);
     }
   };

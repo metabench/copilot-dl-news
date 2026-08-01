@@ -36,6 +36,7 @@ class Signal_Log extends Panel {
         columns: SIGNAL_COLUMNS,
         rows: signalLogRows(spec.history || []),
         empty_text: 'no requests yet — click a node and BEGIN RESEARCH',
+        aria_label: 'Signal log — every request and its answer',
         // Data_Grid's answer to SSR → reattachment: it serializes columns, rows,
         // sort state and selection into a DOM attribute at compose time and reads
         // them back when the control is reconstructed in the browser. Without it

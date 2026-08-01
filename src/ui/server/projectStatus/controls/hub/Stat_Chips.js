@@ -35,7 +35,7 @@ class Stat_Chips extends Control {
 
 Stat_Chips.css = `
 .ps-chips { display: flex; gap: 10px; margin: 14px 0; flex-wrap: wrap; }
-.ps-chips .stat-card, .ps-chips .jsgui-stat-card { border: 2px solid #2e3440; background: #171a20; border-radius: 6px; padding: 8px 14px; min-width: 108px; }
+.ps-chips .jsgui-stat-card { border: 2px solid #2e3440; background: #171a20; border-radius: 6px; padding: 8px 14px; min-width: 108px; }
 .ps-chips .stat-card-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; color: #e8e4d8; }
 .ps-chips .stat-card-label { font-size: 10px; color: #8a8778; text-transform: uppercase; letter-spacing: 0.06em; }
 `;

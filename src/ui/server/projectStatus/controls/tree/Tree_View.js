@@ -60,9 +60,15 @@ class Tree_View extends Control {
     this.nodes[node.techId] = node;
   }
 
-  /** Exactly-one-selected, plus the panel and the deep link. */
+  /**
+   * The panel and the deep link. Exactly-one-selected is NOT done here: the
+   * stock selectable mixin's action_select_only() has already cleared every
+   * sibling by the time this runs (measured — the board's nodes are siblings
+   * under the svg control, and `ctrl.siblings` IS populated after reattachment,
+   * contrary to what the migration report claimed). `selected` is kept only as
+   * a convenience pointer, which the detail panel and the trail cache read.
+   */
   node_selected(node) {
-    if (this.selected && this.selected !== node) this.selected.selected = false;
     this.selected = node;
     const panel = this.panel();
     if (panel) panel.show(node.techId);
@@ -90,7 +96,12 @@ class Tree_View extends Control {
       const ctrl = this.nodes[decodeURIComponent(mNode[1])];
       if (ctrl) {
         this.hash_guard = true;
-        ctrl.selected = true;
+        // Go through the mixin's ACTION, not the field. Writing `selected = true`
+        // sets this node's state without deselecting anything, so following two
+        // #node= links in a row left both nodes highlighted — the one path where
+        // the deleted hand-rolled deselect was still load-bearing.
+        if (typeof ctrl.action_select_only === 'function') ctrl.action_select_only();
+        else ctrl.selected = true;
         setTimeout(() => { this.hash_guard = false; }, 0);
         if (ctrl.dom.el && ctrl.dom.el.scrollIntoView) ctrl.dom.el.scrollIntoView({ block: 'center' });
       }

@@ -78,7 +78,10 @@ class Tech_Detail_Panel extends Control {
     if ((n.prereqs || []).length) {
       line('ps-detail__h', 'BUILT FROM');
       const box = el(ctx, 'div', 'ps-detail__chips');
-      for (const pr of n.prereqs) box.add(new Chip({ context: ctx, text: pr.id }));
+      // Chip's display text is spec.LABEL. Passing `text` rendered 54 nodes'
+      // worth of blank pills for two cycles, and a live check that counted the
+      // chips rather than reading them did not catch it.
+      for (const pr of n.prereqs) box.add(new Chip({ context: ctx, label: pr.id }));
       this.add(box);
     }
 
@@ -98,6 +101,7 @@ class Tech_Detail_Panel extends Control {
       this.add(new Data_Grid({
         context: ctx,
         columns: ['state', 'when', 'note'],
+        aria_label: 'Your requests for this technology',
         rows: mine.slice(0, 5).map((s) => {
           const row = signalRow(s);
           delete row.tech;
@@ -128,7 +132,7 @@ class Tech_Detail_Panel extends Control {
         })
         .catch(() => { tree.trails[n.id] = []; });
     } else if (cached.length) {
-      this.add(new Data_Grid({ context: ctx, columns: ['cycle', 'date', 'what'], rows: cached }));
+      this.add(new Data_Grid({ context: ctx, columns: ['cycle', 'date', 'what'], rows: cached, aria_label: 'Ledger trail for this technology' }));
     } else {
       line('ps-detail__more', 'no ledger cycle mentions this id yet — the trail writes itself as work lands');
     }

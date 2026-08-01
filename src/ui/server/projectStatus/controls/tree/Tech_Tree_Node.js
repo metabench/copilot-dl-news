@@ -47,7 +47,6 @@ class Tech_Tree_Node extends Control {
   activate() {
     if (this.__active) return;
     super.activate();
-    selectable_mixin(this); // DOM half now that dom.el exists
     const el = this.dom.el;
     this.techId = el ? el.getAttribute('data-node-id') : null;
 
