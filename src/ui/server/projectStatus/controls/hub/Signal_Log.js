@@ -1,10 +1,10 @@
 'use strict';
 
 const { Panel, Data_Grid } = require('../shared/jsgui');
-const { mark, query_ctrl } = require('../shared/page-controls');
+const { region } = require('../shared/page-controls');
 const { SIGNAL_COLUMNS, signalLogRows } = require('../shared/models');
 
-const GRID = '[data-ps-siglog]';
+const GRID = 'data-ps-siglog';
 
 /**
  * Signal_Log — the lightbulb queue: every request the owner has made and its
@@ -30,7 +30,6 @@ class Signal_Log extends Panel {
     spec.__type_name = spec.__type_name || 'signal_log';
     super({ ...spec, title: 'SIGNAL LOG — every request and its answer' });
     this.add_class('ps-panel');
-    mark(this, 'signal_log');
     if (!spec.el) {
       const grid = new Data_Grid({
         context: this.context,
@@ -53,7 +52,7 @@ class Signal_Log extends Panel {
   }
 
   grid() {
-    if (!this._grid || !this._grid.set_data_source) this._grid = query_ctrl(this, GRID);
+    if (!this._grid || !this._grid.set_data_source) this._grid = region(this, GRID);
     return this._grid;
   }
 

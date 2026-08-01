@@ -2,10 +2,10 @@
 
 const { Panel, Control } = require('../shared/jsgui');
 const { el } = require('../shared/el');
-const { mark, region } = require('../shared/page-controls');
+const { region } = require('../shared/page-controls');
 const { repaint } = require('../shared/activate-children');
 
-const BODY = '[data-ps-party]';
+const BODY = 'data-ps-party';
 
 /**
  * Modules_Panel — one card per repo in the ecosystem: what it is, whether it is
@@ -17,7 +17,6 @@ class Modules_Panel extends Panel {
     const party = spec.party || [];
     super({ ...spec, title: `MODULES — ${party.length}` });
     this.add_class('ps-panel');
-    mark(this, 'modules_panel');
     if (!spec.el) {
       const body = new Control({ context: this.context, tagName: 'div' });
       body.add_class('ps-party');

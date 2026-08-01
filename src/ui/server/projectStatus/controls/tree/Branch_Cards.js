@@ -2,11 +2,11 @@
 
 const { Control } = require('../shared/jsgui');
 const { el } = require('../shared/el');
-const { mark, region } = require('../shared/page-controls');
+const { region } = require('../shared/page-controls');
 const { repaint } = require('../shared/activate-children');
 const { branchCardModel, absorbedText } = require('../shared/models');
 
-const BODY = '[data-ps-branches]';
+const BODY = 'data-ps-branches';
 
 /**
  * Branch_Cards — one card per tech-tree branch, plus the line recording how
@@ -20,7 +20,6 @@ class Branch_Cards extends Control {
   constructor(spec = {}) {
     spec.__type_name = spec.__type_name || 'branch_cards';
     super({ ...spec, tagName: 'div' });
-    mark(this, 'branch_cards');
     if (!spec.el) {
       const box = new Control({ context: this.context, tagName: 'div' });
       box.add_class('ps-branches');

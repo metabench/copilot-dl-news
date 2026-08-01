@@ -2,7 +2,6 @@
 
 const { Panel } = require('../shared/jsgui');
 const { el } = require('../shared/el');
-const { mark } = require('../shared/page-controls');
 
 /**
  * History_Panel — the committed progress SVG, drawn from the same ledger the
@@ -14,7 +13,6 @@ class History_Panel extends Panel {
     spec.__type_name = spec.__type_name || 'history_panel';
     super({ ...spec, title: 'HISTORY' });
     this.add_class('ps-panel');
-    mark(this, 'history_panel');
     if (!spec.el) {
       const img = el(this.context, 'img', 'ps-history__img');
       Object.assign(img.dom.attributes, {

@@ -2,7 +2,7 @@
 
 const { Control } = require('../shared/jsgui');
 const { el } = require('../shared/el');
-const { mark, role_ctrl } = require('../shared/page-controls');
+const { of_type } = require('../shared/page-controls');
 const { buildNodeIndexFromTree } = require('../shared/tree-layout');
 
 /**
@@ -20,7 +20,6 @@ class Live_Strip extends Control {
     spec.__type_name = spec.__type_name || 'live_strip';
     super({ ...spec, tagName: 'div' });
     this.add_class('ps-live');
-    mark(this, 'live_strip');
     if (!spec.el) {
       const dot = el(this.context, 'span', 'ps-live__dot');
       dot.dom.attributes['data-live-dot'] = 'true';
@@ -58,7 +57,7 @@ class Live_Strip extends Control {
     es.addEventListener('cards', (e) => {
       painter(e);
       fetch('/api/status', { cache: 'no-store' }).then((r) => r.json()).then((s) => {
-        const page = role_ctrl(this, 'page');
+        const page = of_type(this, 'status_widget');
         if (page && page._apply) page._apply(s);
         const now = new Set(Object.keys(buildNodeIndexFromTree(s.techTree)));
         const same = now.size === ssrIds.size && [...ssrIds].every((id) => now.has(id));

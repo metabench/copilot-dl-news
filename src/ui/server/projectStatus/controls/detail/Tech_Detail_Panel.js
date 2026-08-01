@@ -2,7 +2,7 @@
 
 const { Control, Data_Grid, Key_Value_Table, Chip, Button } = require('../shared/jsgui');
 const { el } = require('../shared/el');
-const { mark, role_ctrl } = require('../shared/page-controls');
+const { of_type } = require('../shared/page-controls');
 const { activate_children } = require('../shared/activate-children');
 const { kindLabel, signalRow } = require('../shared/models');
 
@@ -20,7 +20,6 @@ class Tech_Detail_Panel extends Control {
     spec.__type_name = spec.__type_name || 'tech_detail_panel';
     super({ ...spec, tagName: 'aside' });
     this.add_class('ps-detail');
-    mark(this, 'detail_panel');
     if (!spec.el) {
       this.add(el(this.context, 'div', 'ps-detail__empty', 'Select a node on the tree — its data appears here.'));
     }
@@ -52,7 +51,7 @@ class Tech_Detail_Panel extends Control {
   }
 
   show(id) {
-    const tree = role_ctrl(this, 'tree');
+    const tree = of_type(this, 'tree_view');
     const n = tree && tree.index[id];
     if (!n) return;
     const ctx = this.context;

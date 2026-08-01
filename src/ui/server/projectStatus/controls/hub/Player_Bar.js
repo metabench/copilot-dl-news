@@ -2,7 +2,6 @@
 
 const { Control, Progress_Bar } = require('../shared/jsgui');
 const { el } = require('../shared/el');
-const { mark } = require('../shared/page-controls');
 const { repaint } = require('../shared/activate-children');
 const { xpLabelText } = require('../shared/models');
 
@@ -18,7 +17,6 @@ class Player_Bar extends Control {
     spec.__type_name = spec.__type_name || 'player_bar';
     super({ ...spec, tagName: 'header' });
     this.add_class('ps-player');
-    mark(this, 'player_bar');
     if (!spec.el) this.compose(spec.player);
   }
 

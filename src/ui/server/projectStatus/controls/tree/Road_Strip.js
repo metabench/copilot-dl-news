@@ -2,7 +2,6 @@
 
 const { Control } = require('../shared/jsgui');
 const { el } = require('../shared/el');
-const { mark } = require('../shared/page-controls');
 const { repaint } = require('../shared/activate-children');
 const { roadCardModels } = require('../shared/models');
 
@@ -15,7 +14,6 @@ class Road_Strip extends Control {
     spec.__type_name = spec.__type_name || 'road_strip';
     super({ ...spec, tagName: 'div' });
     this.add_class('ps-road');
-    mark(this, 'road_strip');
     if (!spec.el) this.compose(spec.status);
   }
 

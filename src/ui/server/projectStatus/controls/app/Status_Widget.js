@@ -2,7 +2,7 @@
 
 const { Control, Panel } = require('../shared/jsgui');
 const { el } = require('../shared/el');
-const { mark, role_ctrl } = require('../shared/page-controls');
+const { of_type } = require('../shared/page-controls');
 
 const Live_Strip = require('../hub/Live_Strip');
 const Settings_Control = require('../hub/Settings_Control');
@@ -33,7 +33,6 @@ class Status_Widget extends Control {
     spec.__type_name = spec.__type_name || 'status_widget';
     super({ ...spec, tagName: 'div' });
     this.add_class('ps-root');
-    mark(this, 'page');
     if (!spec.el) this.compose(spec.status || null);
   }
 
@@ -79,17 +78,17 @@ class Status_Widget extends Control {
     // One part failing must not stop the others — but it must not be SILENT
     // either. A swallowed catch here is what let the signal log sit empty
     // through several cycles while everything around it refreshed correctly.
-    const to = (role, fn) => {
-      const c = role_ctrl(this, role);
-      if (!c) { console.warn('[project-status] no control for role', role); return; }
-      try { fn(c); } catch (e) { console.error('[project-status] update failed for', role, e); }
+    const to = (type, fn) => {
+      const c = of_type(this, type);
+      if (!c) { console.warn('[project-status] no control of type', type); return; }
+      try { fn(c); } catch (e) { console.error('[project-status] update failed for', type, e); }
     };
     to('player_bar', (c) => c.set_player(s.player));
     to('stat_chips', (c) => c.set_stats(s.stats));
     to('work_panel', (c) => c.set_status(s));
     to('modules_panel', (c) => c.set_party(s.party));
     to('road_strip', (c) => c.set_status(s));
-    to('tree', (c) => c.set_status(s));
+    to('tree_view', (c) => c.set_status(s));
     to('branch_cards', (c) => c.set_tree(s.techTree));
     to('signal_log', (c) => c.set_history(s.signalHistory || []));
     to('history_panel', (c) => c.bust(Date.now()));
@@ -105,7 +104,7 @@ class Status_Widget extends Control {
         .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
         .then((s) => this._apply(s))
         .catch(() => {
-          const footer = role_ctrl(this, 'status_footer');
+          const footer = of_type(this, 'status_footer');
           if (footer) footer.set_stamp('refresh failed — server away?');
         });
     };

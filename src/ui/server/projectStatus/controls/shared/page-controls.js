@@ -1,69 +1,75 @@
 'use strict';
 
 /**
- * shared/page-controls — reach another control on this page, after reattachment.
+ * shared/page-controls — reach another control by walking the control tree.
  *
- * MEASURED CONSTRAINT (cycle 163, read from jsgui3-html/html-core/html-core.js).
- * Client reattachment builds a FLAT registry: every element carrying
- * data-jsgui-id is turned into a control and stored in context.map_controls by
- * that id. The two branches in that loop that would link parent to child are
- * empty:
+ * MEASURED (cycle 163, live browser): after client reattachment the control tree
+ * is INTACT. The application control reported 10 restored children, `.parent`
+ * set, and named descendants reachable by a plain recursive walk of
+ * `content._arr` with their own children populated. `_ctrl_fields` is hydrated
+ * too, so stock controls get their named children back for free (a reattached
+ * `Panel` has `content_container`; a reattached `Data_Grid` has `table`).
+ * `control-enh.js: pre_activate_content_controls` does all of this.
  *
- *     var ctrl = new Cstr(ctrl_spec);
- *     if (parent_jsgui_id) { if (map_controls[parent_jsgui_id]) { } }
+ * That matters because the previous version of this file did NOT walk the tree.
+ * It marked every control with a `data-ps-role` attribute, looked the element up
+ * with `document.querySelector`, and mapped it back through
+ * `context.map_controls` — an entire parallel addressing system, built on a
+ * belief that the client tree was flat. That belief came from reading the
+ * activation walker in `html-core.js`, whose parent-linking branches are empty,
+ * and never checking. It was wrong. The markers are gone with it.
  *
- * So in the browser a reattached control has NO parent and an EMPTY
- * content._arr. Anything a control assigned to itself during compose
- * (`this.grid = grid`) is undefined once the page is live — reattachment
- * constructs it down the `spec.el` path, which skips compose entirely. That is
- * exactly why the SIGNAL LOG never refreshed: Signal_Log.activate() stashed
- * `this.grid`, which was always undefined, so every _apply silently updated
- * nothing and the panel showed the boot-time SSR snapshot until a restart.
- *
- * context.map_controls IS the framework's own per-page registry, so the honest
- * way to reach a collaborator is: mark it in the markup at compose time, find
- * its element, look the control up. No module-level mutables (which are worse
- * than wrong — they are shared by every page the process renders), and no
- * ordering assumptions: html-core constructs EVERY control before activating
- * ANY of them, so a role is resolvable from inside any activate().
+ * What is genuinely NOT restored is anything a control assigned to ITSELF during
+ * compose (`this.grid = grid`), because reattachment constructs down the
+ * `spec.el` path and skips compose entirely. Resolve those lazily, here.
  */
 
-const ROLE_ATTR = 'data-ps-role';
+const is_type = (c, type) => !!(c && c.__type_name === type);
 
-/** Mark a control as the page's one X, at compose time. */
-function mark(ctrl, role) {
-  ctrl.dom.attributes[ROLE_ATTR] = role;
-  return ctrl;
+const has_attribute = (c, name) =>
+  !!(c && c.dom && c.dom.attributes && c.dom.attributes[name] !== undefined);
+
+const children_of = (c) => (c && c.content && c.content._arr) || [];
+
+/** The outermost control this one hangs from. */
+function root_of(ctrl) {
+  let c = ctrl;
+  while (c && c.parent) c = c.parent;
+  return c;
 }
 
-/** The control that owns this element, via the page's control registry. */
-function ctrl_of(context, el) {
-  const id = el && el.getAttribute && el.getAttribute('data-jsgui-id');
-  if (!id) return null;
-  const map = context && context.map_controls;
-  return (map && map[id]) || null;
-}
-
-/** The page's control for a role, or null (server-side, or not composed). */
-function role_ctrl(ctrl, role) {
-  if (typeof document === 'undefined') return null;
-  return ctrl_of(ctrl.context, document.querySelector(`[${ROLE_ATTR}="${role}"]`));
-}
-
-/** The control behind the first element matching a CSS selector. */
-function query_ctrl(ctrl, selector) {
-  if (typeof document === 'undefined') return null;
-  return ctrl_of(ctrl.context, document.querySelector(selector));
+/** Depth-first search of a control's subtree. */
+function descendant(ctrl, predicate) {
+  let found = null;
+  const walk = (c) => {
+    if (found) return;
+    for (const child of children_of(c)) {
+      if (predicate(child)) { found = child; return; }
+      walk(child);
+    }
+  };
+  walk(ctrl);
+  return found;
 }
 
 /**
- * A control's own repaintable region. Held directly when this control composed
- * it (server, or a runtime rebuild); looked up through the registry when the
- * page arrived as SSR markup and was reattached.
+ * The page's one control of a given type. Each of these is a singleton by
+ * construction — one player bar, one signal log — so the type name IS the
+ * address, and no marker attribute is needed to say so.
  */
-function region(ctrl, selector) {
-  if (!ctrl._ps_region) ctrl._ps_region = query_ctrl(ctrl, selector);
+function of_type(ctrl, type) {
+  if (is_type(ctrl, type)) return ctrl;
+  return descendant(root_of(ctrl), (c) => is_type(c, type));
+}
+
+/**
+ * A control's own repaintable region, identified by the attribute it composed
+ * itself with. Held directly when this control composed it; found by walking
+ * when the page arrived as SSR markup and was reattached.
+ */
+function region(ctrl, attribute) {
+  if (!ctrl._ps_region) ctrl._ps_region = descendant(ctrl, (c) => has_attribute(c, attribute));
   return ctrl._ps_region || null;
 }
 
-module.exports = { ROLE_ATTR, mark, ctrl_of, role_ctrl, query_ctrl, region };
+module.exports = { is_type, of_type, descendant, region, root_of };

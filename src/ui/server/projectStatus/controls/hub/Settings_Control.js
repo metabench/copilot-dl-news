@@ -2,7 +2,6 @@
 
 const { Control } = require('../shared/jsgui');
 const { el } = require('../shared/el');
-const { mark } = require('../shared/page-controls');
 
 /**
  * Settings_Control — the gear and the page-scale dialog.
@@ -17,7 +16,6 @@ class Settings_Control extends Control {
     spec.__type_name = spec.__type_name || 'settings_control';
     super({ ...spec, tagName: 'div' });
     this.add_class('ps-settings');
-    mark(this, 'settings');
     if (!spec.el) this.compose();
   }
 

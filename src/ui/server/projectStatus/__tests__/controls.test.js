@@ -76,15 +76,14 @@ describe('project-status controls — composition', () => {
     expect(html).toContain('PROJECT STATUS — news-crawler ecosystem');
   });
 
-  test('every part the live refresh talks to is findable by role', () => {
-    // _apply dispatches by role; a missing mark means that part silently stops
-    // updating, which is precisely how the signal log went stale unnoticed.
-    for (const role of [
-      'page', 'live_strip', 'settings', 'player_bar', 'stat_chips', 'work_panel',
-      'modules_panel', 'road_strip', 'tree', 'detail_panel', 'branch_cards',
-      'signal_log', 'history_panel', 'milestones_panel', 'status_footer'
-    ]) {
-      expect(html).toContain(`data-ps-role="${role}"`);
+  test('every app control renders with the type the client reattaches by', () => {
+    // _apply dispatches by walking the control tree for a __type_name, and
+    // reattachment reconstructs each control from data-jsgui-type. A type that
+    // never reaches the markup is a part that silently stops updating — which is
+    // precisely how the signal log went stale unnoticed.
+    for (const type of Object.keys(APP_CONTROLS)) {
+      if (type === 'project_status_page') continue; // the document itself
+      expect([type, html.includes(`data-jsgui-type="${type}"`)]).toEqual([type, true]);
     }
   });
 

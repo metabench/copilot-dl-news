@@ -1,7 +1,6 @@
 'use strict';
 
 const { Control, Stat_Card } = require('../shared/jsgui');
-const { mark } = require('../shared/page-controls');
 const { repaint } = require('../shared/activate-children');
 const { CHIP_DEFS } = require('../shared/models');
 
@@ -17,7 +16,6 @@ class Stat_Chips extends Control {
     spec.__type_name = spec.__type_name || 'stat_chips';
     super({ ...spec, tagName: 'div' });
     this.add_class('ps-chips');
-    mark(this, 'stat_chips');
     if (!spec.el) this.compose(spec.stats);
   }
 

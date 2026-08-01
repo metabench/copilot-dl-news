@@ -2,7 +2,6 @@
 
 const { Control } = require('../shared/jsgui');
 const { el } = require('../shared/el');
-const { mark } = require('../shared/page-controls');
 
 const SOURCES = 'sources: IMPROVEMENT_LEDGER stanzas · repo-scope.json · RESEARCH_BACKLOG states · roadmap.json · annotations.json — every number recountable · ';
 
@@ -19,7 +18,6 @@ class Status_Footer extends Control {
     spec.__type_name = spec.__type_name || 'status_footer';
     super({ ...spec, tagName: 'footer' });
     this.add_class('ps-foot');
-    mark(this, 'status_footer');
     if (!spec.el) {
       const ctx = this.context;
       this.add(SOURCES);

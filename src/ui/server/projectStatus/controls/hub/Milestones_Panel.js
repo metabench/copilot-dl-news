@@ -2,7 +2,6 @@
 
 const { Panel } = require('../shared/jsgui');
 const { el } = require('../shared/el');
-const { mark } = require('../shared/page-controls');
 
 /**
  * Milestones_Panel — the achievements row. Earned from the ledger, so the set
@@ -13,7 +12,6 @@ class Milestones_Panel extends Panel {
     spec.__type_name = spec.__type_name || 'milestones_panel';
     super({ ...spec, title: 'MILESTONES' });
     this.add_class('ps-panel');
-    mark(this, 'milestones_panel');
     if (!spec.el) {
       const ctx = this.context;
       const row = el(ctx, 'div', 'ps-ach');

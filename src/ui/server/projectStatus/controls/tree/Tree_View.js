@@ -2,7 +2,7 @@
 
 const { Control } = require('../shared/jsgui');
 const { el } = require('../shared/el');
-const { mark, role_ctrl } = require('../shared/page-controls');
+const { of_type } = require('../shared/page-controls');
 const { buildNodeIndexFromTree } = require('../shared/tree-layout');
 const Tech_Tree_Board = require('./Tech_Tree_Board');
 const Tech_Detail_Panel = require('../detail/Tech_Detail_Panel');
@@ -28,7 +28,6 @@ class Tree_View extends Control {
     spec.__type_name = spec.__type_name || 'tree_view';
     super({ ...spec, tagName: 'div' });
     this.add_class('ps-treeview');
-    mark(this, 'tree');
 
     // View state — one owner, no module globals.
     this.nodes = {};        // techId → activated Tech_Tree_Node
@@ -54,7 +53,7 @@ class Tree_View extends Control {
   }
 
   panel() {
-    return role_ctrl(this, 'detail_panel');
+    return of_type(this, 'tech_detail_panel');
   }
 
   register_node(node) {

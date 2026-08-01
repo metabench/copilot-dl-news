@@ -2,11 +2,11 @@
 
 const { Panel, Control } = require('../shared/jsgui');
 const { el } = require('../shared/el');
-const { mark, region } = require('../shared/page-controls');
+const { region } = require('../shared/page-controls');
 const { repaint } = require('../shared/activate-children');
 const { owedText, recentText, signalText, activityLines } = require('../shared/models');
 
-const BODY = '[data-ps-work-body]';
+const BODY = 'data-ps-work-body';
 
 /**
  * Work_Panel — what is being worked on, what is owed, what the agent is doing
@@ -21,7 +21,6 @@ class Work_Panel extends Panel {
     spec.__type_name = spec.__type_name || 'work_panel';
     super({ ...spec, title: 'WORK' });
     this.add_class('ps-panel');
-    mark(this, 'work_panel');
     if (!spec.el) {
       const body = new Control({ context: this.context, tagName: 'div' });
       body.dom.attributes['data-ps-work-body'] = 'true';

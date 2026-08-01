@@ -1,7 +1,7 @@
 'use strict';
 
 const { Control, selectable_mixin } = require('../shared/jsgui');
-const { role_ctrl } = require('../shared/page-controls');
+const { of_type } = require('../shared/page-controls');
 const { TB } = require('../shared/tree-layout');
 
 /**
@@ -51,7 +51,7 @@ class Tech_Tree_Node extends Control {
     const el = this.dom.el;
     this.techId = el ? el.getAttribute('data-node-id') : null;
 
-    const tree = role_ctrl(this, 'tree');
+    const tree = of_type(this, 'tree_view');
     if (tree && this.techId) tree.register_node(this);
 
     // Fog nodes are not yet conceptualised — there is nothing to show, so they
@@ -62,7 +62,7 @@ class Tech_Tree_Node extends Control {
     this.selectable = true;
     this.on('change', (e) => {
       if (e.name === 'selected' && e.value === true) {
-        const tv = role_ctrl(this, 'tree');
+        const tv = of_type(this, 'tree_view');
         if (tv) tv.node_selected(this);
       }
     });
