@@ -6,13 +6,32 @@
     "allowed": []
   },
   "skills": {
-    "_rule": "Installing skills is GATED. These three predate the gate and are the approved baseline; a NEW directory here means a skill was installed.",
-    "allowed": ["singularity", "wlilo", "wlilo-workspace"]
+    "_rule": "Installing skills is GATED. A NEW directory here means a skill was installed; it must be listed AND its approval recorded below.",
+    "allowed": [
+      "singularity",
+      "wlilo",
+      "wlilo-workspace",
+      "jsgui3-verify",
+      "loop-audit"
+    ],
+    "approvals": [
+      {
+        "skills": [
+          "jsgui3-verify",
+          "loop-audit"
+        ],
+        "date": "2026-08-02",
+        "cycle": 166,
+        "owner_words": "If there are skills you can load or point me towards, or even make / them, that will help with a deeper analysis after this one, please tell me about it or make it / them."
+      }
+    ]
   },
   "backups": {
     "_rule": "Deleting a backup is GATED and irreversible. The check asserts the remaining one still EXISTS — a tripwire against deletion, not a size assertion.",
     "_decision": "OWNER 2026-07-27 (cycle 132), per-action approval in chat: DELETE news.db.predup-bak only (28.16 GB freed), KEEP news.db.pre-placenames-bak as the safety net. predup-bak predated the http_responses dedup that was verified lossless (325,614 -> 290,144 rows, 0 unique content lost). The probe correctly went RED on the deletion before this record was updated - that red was the tripwire working, not a fault.",
-    "mustExist": ["data/news.db.pre-placenames-bak"]
+    "mustExist": [
+      "data/news.db.pre-placenames-bak"
+    ]
   },
   "politeness": {
     "_rule": "Loosening politeness is GATED. There is no single floor CONSTANT to assert (the effective floor is max() of robots + stored values, and adaptive speed-up is pre-existing behaviour), so the check guards the part that matters most and IS static: the 429 backoff escalation must not be weakened or deleted.",
