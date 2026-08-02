@@ -174,12 +174,88 @@ function computeMetrics(cycles, baselineCosts, opts = {}) {
   }
 
   // Composite verdict — plateau-honesty made computable.
-  const verdict = deriveVerdict({ costTrend, secondOrder, ncdbDebt, scaffold, haveStanzas });
+  // Measured from git, not from the stanzas — see productOutcome.
+  const product = productOutcome(cycles, path.resolve(__dirname, '..', '..'));
+  const verdict = deriveVerdict({ costTrend, secondOrder, ncdbDebt, scaffold, haveStanzas, product });
 
-  return { window, cyclesParsed: cycles.length, costTrend, improvementsPerTurn, secondOrder, quality, ncdbDebt, scaffold, verdict };
+  return { window, cyclesParsed: cycles.length, costTrend, improvementsPerTurn, secondOrder, quality, ncdbDebt, scaffold, product, verdict };
 }
 
-function deriveVerdict({ costTrend, secondOrder, ncdbDebt, scaffold, haveStanzas }) {
+/**
+ * productOutcome — did the PRODUCT move, measured from git rather than from the
+ * stanzas the agent writes about itself.
+ *
+ * Every other input to the verdict (cost_turns, second_order, ncdb_debt,
+ * scaffold) is a field the agent types into its own cycle stanza. A loop
+ * grading itself on its own self-report can report COMPOUNDING while shipping
+ * nothing: measured 2026-08-02, the last 40 cycles crawled 26 pages and changed
+ * ZERO lines in the crawler engine, and the verdict stayed COMPOUNDING
+ * throughout because no term could see it.
+ *
+ * This term cannot be hand-written. It is `git log --numstat` over the product
+ * repos and the non-UI source of this one. Instrumentation — tools/agi,
+ * tools/dev, docs/agi, src/ui — is deliberately excluded: improving the loop's
+ * own machinery is real work, but it is not product progress and must not be
+ * able to masquerade as it.
+ */
+const PRODUCT_REPOS = [
+  'news-crawler-itself', 'news-crawler-db', 'news-db-pure-analysis', 'news-db-analysis',
+  'news-crawler-document-intelligence', 'news-crawler-url-intelligence',
+  'news-crawler-places-intelligence', 'news-crawler-general-intelligence'
+];
+// Generated and vendored output must not count. Measured while building this:
+// a single commit of an esbuild bundle (public/dashboard-client.js) contributed
+// 5,694 of 5,922 "product" lines, which would let the loop show product progress
+// by committing build output. Hand-written source only.
+const NOT_SOURCE = [
+  ':(exclude)**/dist/**', ':(exclude)**/build/**', ':(exclude)**/public/**',
+  ':(exclude)**/coverage/**', ':(exclude)**/node_modules/**',
+  ':(exclude)**/*.min.js', ':(exclude)**/*.bundle.js', ':(exclude)**/*-client.js',
+  ':(exclude)**/package-lock.json', ':(exclude)**/*.map'
+];
+// Pathspec for THIS repo: product source only, never the UI or the tooling.
+const PRODUCT_PATHS_HERE = ['src', ':(exclude)src/ui', ...NOT_SOURCE];
+
+function gitChurn(cwd, since, paths) {
+  const { execFileSync } = require('child_process');
+  const args = ['log', `--since=${since}`, '--numstat', '--pretty=tformat:', '--', ...paths];
+  const out = execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  let lines = 0;
+  let files = 0;
+  for (const row of out.split(/\r?\n/)) {
+    const m = /^(\d+)\t(\d+)\t/.exec(row);
+    if (!m) continue;
+    lines += Number(m[1]) + Number(m[2]);
+    files += 1;
+  }
+  return { lines, files };
+}
+
+function productOutcome(cycles, repoRoot) {
+  const path = require('path');
+  const fs = require('fs');
+  const dated = cycles.map((c) => c.date).filter(Boolean).sort();
+  if (!dated.length) return { measurable: false, why: 'no dated stanzas in window' };
+  const since = dated[0];
+  const siblings = path.resolve(repoRoot, '..');
+  const scanned = [];
+  let lines = 0;
+  let files = 0;
+  const tally = (dir, paths, label) => {
+    try {
+      if (!fs.existsSync(path.join(dir, '.git'))) return;
+      const r = gitChurn(dir, since, paths);
+      lines += r.lines;
+      files += r.files;
+      if (r.lines > 0) scanned.push(`${label}:+${r.lines}`);
+    } catch (_) { /* unreadable repo is not evidence of absence — see measurable */ }
+  };
+  tally(repoRoot, PRODUCT_PATHS_HERE, 'copilot-dl-news/src');
+  for (const name of PRODUCT_REPOS) tally(path.join(siblings, name), ['.', ...NOT_SOURCE], name);
+  return { measurable: true, since, lines, files, movedIn: scanned };
+}
+
+function deriveVerdict({ costTrend, secondOrder, ncdbDebt, scaffold, haveStanzas, product }) {
   if (!haveStanzas) {
     return { label: 'INSUFFICIENT-DATA', rationale: 'No machine stanzas yet; showing a prose-baseline cost trend only. Emit `<!-- cycle:{...} -->` stanzas to compute the full verdict.' };
   }
@@ -194,8 +270,34 @@ function deriveVerdict({ costTrend, secondOrder, ncdbDebt, scaffold, haveStanzas
   const debtNonIncreasing = ncdbDebt.delta === null || ncdbDebt.delta <= 0;
   const scaffoldGrowing = scaffold.net > 0;
 
+  // PRODUCT GATE — checked FIRST, and it can veto every self-reported signal
+  // below it. All of those are fields the agent writes about itself; this one is
+  // git. A loop that ships nothing cannot be COMPOUNDING no matter how good its
+  // own paperwork looks.
+  if (product && product.measurable && product.lines === 0) {
+    return {
+      label: 'SELF-REFERENTIAL',
+      rationale: `ZERO lines changed under the product since ${product.since} (crawler engine, DB layer, intelligence modules, and this repo's src outside src/ui). Cost and second-order signals describe the loop improving its own machinery, which is not product progress → put the next cycle on the crawler, or take the choice back to the owner.`
+    };
+  }
+  // Scaffold accretion is a bloat signal in its own right, at ANY cost trend.
+  // The old rule required cost to be RISING, so a loop adding scaffold at a
+  // steady cost — measured 4.5:1 added:retired across 120 cycles, worsening —
+  // could never trip it.
+  // Floor first: a young or small window legitimately adds without retiring, and
+  // calling that bloat is a false positive (the pre-existing unit fixture — 2
+  // added, 0 retired over 4 cycles — is exactly that case). The real signal is
+  // sustained: 372:89 across 123 cycles.
+  const ratio = scaffold.retired > 0 ? scaffold.added / scaffold.retired : (scaffold.added > 0 ? Infinity : 0);
+  if (scaffoldGrowing && scaffold.added >= 10 && ratio >= 3) {
+    return {
+      label: 'BLOATING',
+      rationale: `scaffold added:retired ${scaffold.added}:${scaffold.retired} (${ratio === Infinity ? 'nothing retired' : ratio.toFixed(1) + ':1'}), net +${scaffold.net}, cost ${costTrend.dir} → spend a cycle pruning before adding more.`
+    };
+  }
   if (costFalling || (costFlat && soRate > 0 && debtNonIncreasing)) {
-    return { label: 'COMPOUNDING', rationale: `cost-per-improvement ${costTrend.dir}; second-order rate ${soRate}; ncdb-debt delta ${ncdbDebt.delta}.` };
+    const moved = product && product.measurable ? ` product +${product.lines} lines since ${product.since}` : ' product churn unmeasured';
+    return { label: 'COMPOUNDING', rationale: `cost-per-improvement ${costTrend.dir}; second-order rate ${soRate}; ncdb-debt delta ${ncdbDebt.delta};${moved}.` };
   }
   if ((costFlat || costTrend.dir === 'rising') && soRate < 0.15) {
     return { label: 'PLATEAU', rationale: `cost ${costTrend.dir} and second-order rate ${soRate} (~0) over the window → shift the next cycle to portable-capital work (tests/harnesses/memory for the next model).` };
@@ -279,4 +381,4 @@ function fmt(v) { return v === null || v === undefined ? 'n/a' : (typeof v === '
 
 if (require.main === module) main();
 
-module.exports = { parseStanzas, baselineCostsFromProse, computeMetrics, deriveVerdict, median, slope, direction };
+module.exports = { parseStanzas, baselineCostsFromProse, computeMetrics, deriveVerdict, productOutcome, median, slope, direction };
