@@ -246,11 +246,28 @@ function gatherSurfaces(gated) {
     for (const e of fs.readdirSync(path.join(dotClaude, 'hooks'))) hooks.push(`hooks/${e}`);
   } catch (_) {}
 
-  let skills = [];
-  try {
-    skills = fs.readdirSync(path.join(dotClaude, 'skills'), { withFileTypes: true })
-      .filter((d) => d.isDirectory()).map((d) => d.name).sort();
-  } catch (_) {}
+  // Skills are gated, so the scan must cover EVERY place a skill can load from,
+  // not just this repo. A skill installed at the user level (~/.claude/skills)
+  // loads into every session — including sessions rooted somewhere this repo's
+  // gate never looks — so scanning only the repo left an install path that
+  // bypassed the gate entirely. Found 2026-08-02 while installing two
+  // owner-approved skills there. Junctions/symlinks are followed on purpose:
+  // linking a repo skill to the user level is still an install.
+  const skillDirs = [path.join(dotClaude, 'skills')];
+  const home = process.env.USERPROFILE || process.env.HOME;
+  if (home) skillDirs.push(path.join(home, '.claude', 'skills'));
+  const seen = new Set();
+  for (const dir of skillDirs) {
+    try {
+      for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
+        // isDirectory() is false for a junction/symlink, so stat through it.
+        let isDir = d.isDirectory();
+        if (!isDir) { try { isDir = fs.statSync(path.join(dir, d.name)).isDirectory(); } catch (_) {} }
+        if (isDir) seen.add(d.name);
+      }
+    } catch (_) {}
+  }
+  const skills = [...seen].sort();
 
   const mustExist = (gated.backups && gated.backups.mustExist) || [];
   const missingBackups = mustExist.filter((rel) => !fs.existsSync(path.join(ROOT, rel)));

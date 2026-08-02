@@ -6,7 +6,7 @@
     "allowed": []
   },
   "skills": {
-    "_rule": "Installing skills is GATED. A NEW directory here means a skill was installed; it must be listed AND its approval recorded below.",
+    "_rule": "Installing skills is GATED. The scan covers BOTH this repo (.claude/skills) and the user level (~/.claude/skills), because a user-level skill loads into every session — including ones rooted where this gate never looks. A NEW name in either means a skill was installed; it must be listed AND its approval recorded.",
     "allowed": [
       "singularity",
       "wlilo",
@@ -22,7 +22,8 @@
         ],
         "date": "2026-08-02",
         "cycle": 166,
-        "owner_words": "If there are skills you can load or point me towards, or even make / them, that will help with a deeper analysis after this one, please tell me about it or make it / them."
+        "owner_words": "If there are skills you can load or point me towards, or even make / them, that will help with a deeper analysis after this one, please tell me about it or make it / them.",
+        "note": "Installed in the repo AND junctioned into ~/.claude/skills so they load in every session (the owner chose this so jsgui3-verify reaches the jsgui3-only session). The repo remains the single source of truth; the junctions are live."
       }
     ]
   },
