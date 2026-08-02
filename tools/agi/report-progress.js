@@ -94,9 +94,26 @@ async function main() {
 
   // App not running: write the same record the server would have appended, so
   // the strip is correct as soon as the owner starts it.
+  //
+  // ...but "not delivered" is not the same as "not received" (cycle 167). A busy
+  // app can append the record and still miss the 1.5s response deadline, and the
+  // fallback then finds the app's OWN record sitting in the log, throttles on it,
+  // and told the agent "nothing written, by design" — about a record that had in
+  // fact just been written. That is the one failure this channel must never have:
+  // it reports on whether the owner can see the work. So before claiming a drop,
+  // check whether the log already contains what we tried to send.
+  const landed = activity.newest();
+  const alreadyLanded = landed
+    && landed.phase === String(opts.phase).trim().slice(0, 40)
+    && landed.note === String(opts.note || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+  if (alreadyLanded) {
+    console.log(`progress: ${opts.phase} (app took >${TIMEOUT_MS}ms to answer, but the record landed)`);
+    return 0;
+  }
+
   const direct = activity.report(body);
   if (direct.ok) console.log(`progress: ${opts.phase} (app not running — appended to the log directly)`);
-  else if (direct.throttled) console.log('progress: throttled — nothing written, by design');
+  else if (direct.throttled) console.log(`progress: throttled — a different record landed <${Math.round(activity.MIN_INTERVAL_MS / 1000)}s ago, so THIS note was dropped`);
   else console.log(`progress: not recorded (${direct.error || viaHttp.reason}); continuing anyway`);
   return 0;
 }

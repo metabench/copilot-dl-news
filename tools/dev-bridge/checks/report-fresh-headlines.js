@@ -75,19 +75,19 @@ function extractHeadline(html) {
 // The most reliable signal is the URL SHAPE, not the title text: a section/author/
 // utility page has a shallow or trailing-slash path (/sports/, /author/sal-christ,
 // /purpose/), whereas an article ends in a substantial slug (long id/hash, 6+ digit
-// id, date path, or a many-word hyphenated slug). Mirrors ArticleSignalsService
-// .isArticleShapedUrl (kept inline so this read-only tool stays dependency-free).
-function isArticleShapedUrl(url) {
-  try {
-    const p = new URL(url).pathname;
-    if (p.endsWith('/')) return false;
-    const segs = p.split('/').filter(Boolean);
-    if (segs.length < 2) return false;
-    const last = segs[segs.length - 1];
-    const hyphenParts = last.split('-').filter(Boolean).length;
-    return /[a-f0-9]{12,}|\d{6,}/i.test(last) || /\/(19|20)\d{2}\/\d{1,2}\/\d{1,2}\//.test(p) || hyphenParts >= 4;
-  } catch (_) { return false; }
-}
+// id, date path, or a many-word hyphenated slug).
+//
+// cycle 167: this was an INLINE COPY justified as "kept inline so this read-only
+// tool stays dependency-free", and its comment claimed it mirrored
+// ArticleSignalsService.isArticleShapedUrl. Measured, it did not: the copy predated
+// every cycle-75 fix (trailing-slash strip, media/hub segment vetoes, CMS
+// /articles/<id>, live-blog fragment reject) and cycle 167's depth-1 gate, so the
+// report was hiding real headlines the crawler's own predicate admits. The
+// dependency argument does not survive contact either — this file already requires
+// better-sqlite3, while ArticleSignalsService pulls in exactly one dependency-free
+// sibling module. One predicate, one place, so the two cannot drift again.
+const ArticleSignalsService = require(path.join(ROOT, 'src', 'core', 'crawler', 'ArticleSignalsService.js'));
+const isArticleShapedUrl = (url) => ArticleSignalsService.isArticleShapedUrl(url);
 const SECTION_UTILITY = /^(opinion|sports?|business|politics|video(s)?|quiz(zes)?|about( us)?|privacy( settings)?|data|life( ?& ?style)?|culture|entertainment|society|education|books|premium|elections?|sci-?tech|home|news|my ?account|newsletters?|subscribe|weather|podcasts?|photos?|live|standards editor|columnist|contributors?|authors?)\b/i;
 // A row is noise if its URL is not article-shaped (the primary signal), OR the
 // title is a short section word / known boilerplate (catches junk titles on

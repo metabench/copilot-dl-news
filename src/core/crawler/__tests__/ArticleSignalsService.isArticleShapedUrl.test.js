@@ -100,4 +100,42 @@ describe('ArticleSignalsService.isArticleShapedUrl', () => {
     // but a media container is unconditional: a /podcast/ .ece is audio, dropped
     expect(isArt('https://www.thehindu.com/podcast/parley/article12345678.ece')).toBe(false);
   });
+
+  // cycle 167 — FLAT-SLUG newsrooms publish stories at path depth 1. The blanket
+  // `segs.length < 2` reject made them invisible to both consumers of this
+  // predicate (frontier `preferArticleShaped` selection AND the
+  // /api/v1/crawl/articles listing filter). Measured on 120k already-fetched
+  // titles: 0 of 2,443 depth-1 rows were admitted before this fix.
+  it('accepts depth-1 flat-slug stories (businessinsider and friends)', () => {
+    expect(isArt('https://www.businessinsider.com/milken-private-credit-under-fire-blackstone-golub-goldentree-2026-5')).toBe(true);
+    expect(isArt('https://www.businessinsider.com/trump-retirement-plans-401k-ira-work-full-time-2026-4')).toBe(true);
+    expect(isArt('https://www.newsweek.com/russia-ukraine-war-map-shows-pokrovsk-frontline-shift-2026')).toBe(true);
+  });
+
+  // The depth-1 gate is deliberately STRICTER than the 4 hyphen parts accepted at
+  // depth>=2: a flat path has no section context to disambiguate, so section
+  // landings must stay out. Measured split at 6+ parts: 163 real stories vs 3
+  // non-articles across the whole ground-truth corpus.
+  it('still rejects depth-1 section landings and utility pages', () => {
+    expect(isArt('https://www.cnbc.com/markets/')).toBe(false);
+    expect(isArt('https://www.cnbc.com/world-markets/')).toBe(false);
+    expect(isArt('https://metro.co.uk/entertainment/')).toBe(false);
+    expect(isArt('https://www.nbcnews.com/artificial-intelligence')).toBe(false);
+    expect(isArt('https://www.theguardian.com/uk')).toBe(false);
+    expect(isArt('https://www.standard.co.uk/forgotten-password')).toBe(false);
+    expect(isArt('https://www.express.co.uk/newsletter-preference-centre')).toBe(false);
+    // 5 parts is below the depth-1 bar even though 5 >= the depth>=2 threshold of 4
+    expect(isArt('https://www.telegraph.co.uk/republic-of-ireland-football-team/')).toBe(false);
+    expect(isArt('https://cf-particle-html.eip.telegraph.co.uk/99465a2f-43ba-4137-bc1a-a4936d0086a8.html')).toBe(false);
+  });
+
+  // The change must be PURELY ADDITIVE — measured over 200k live frontier URLs:
+  // 1,462 gained, 0 lost, and every gain at depth 1. These pin the "0 lost" half
+  // so a later edit cannot quietly start dropping depth>=2 articles.
+  it('takes nothing away from depth>=2 (monotonic)', () => {
+    expect(isArt('https://apnews.com/article/dei-military-website-department-of-defense-02673c3aa354f3191405fc9d7b249ab3')).toBe(true);
+    expect(isArt('https://www.theguardian.com/world/2025/sep/15/gender-critical-women-have-a-right-to-be-heard')).toBe(true);
+    expect(isArt('https://www.bbc.com/sport/football/articles/c0m2rkwm87po')).toBe(true);
+    expect(isArt('https://www.thehindu.com/news/national/failure-to-count-dnts-gn-devy/article70607271.ece')).toBe(true);
+  });
 });

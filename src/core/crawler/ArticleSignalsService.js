@@ -125,7 +125,18 @@ class ArticleSignalsService {
     // strip they are still too shallow or carry no article signal.
     if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
     const segs = p.split('/').filter(Boolean);
-    if (segs.length < 2) return false;               // /congress , /video , /business = too shallow
+    if (segs.length < 1) return false;               // homepage
+    // UNDER-selection fix (cycle 167, measured on 120k already-fetched titles): a
+    // blanket `segs.length < 2` reject made FLAT-SLUG newsrooms invisible — every
+    // businessinsider.com/<slug>-2026-5, nbcnews.com/<slug>, apnews-style depth-1
+    // story. Measured: 0 of 2,443 depth-1 rows were admitted, and the loss hit BOTH
+    // consumers (frontier `preferArticleShaped` selection AND the
+    // /api/v1/crawl/articles listing filter, which dropped them from the product UI).
+    // Depth-1 needs a STRONGER slug signal than depth>=2 (which accepts 4 hyphen
+    // parts) because a flat path carries no section context to disambiguate: at 6+
+    // parts the measured split is 163 real stories vs 3 non-articles, while section
+    // landings (/markets, /news, /video, /business) carry 1-3 parts and stay rejected.
+    if (segs.length === 1 && segs[0].split('-').filter(Boolean).length < 6) return false;
     const lower = segs.map((s) => s.toLowerCase());
     const last = segs[segs.length - 1];
     const prev = segs[segs.length - 2] || '';
