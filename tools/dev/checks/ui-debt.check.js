@@ -36,7 +36,11 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 
 // Baseline measured 2026-08-03 (cycle 168): 680 tracked files under src/ui,
 // minus 37 in projectStatus. Lower this as extractions/retirements land.
-const CEILING = 643;
+// 643 → 519 (cycle 171): first retirement batch — 21 dead UI surfaces (the
+// opsHub cluster, four stale electron apps, orphaned checks/builders), every
+// deletion reference-verified against live code first; docsViewer deliberately
+// kept (staged by scripts/deploy-remote.js — needs a deploy-aware pass).
+const CEILING = 519;
 
 function trackedFiles(prefix) {
   const out = execFileSync('git', ['ls-files', prefix], { cwd: ROOT, encoding: 'utf8' });

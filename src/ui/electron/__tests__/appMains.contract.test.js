@@ -18,7 +18,10 @@ const apps = fs.readdirSync(ROOT, { withFileTypes: true })
 
 describe('electron app mains — security + preload contracts', () => {
   test('discovered the app set', () => {
-    expect(apps.length).toBeGreaterThanOrEqual(6); // unifiedApp, crawlerApp, taskMonitor, backgroundTasksMonitor, placeHubGuessingApp, trayMonitor
+    // 2, not 6 (cycle 171): crawlerApp, taskMonitor, backgroundTasksMonitor and
+    // trayMonitor were retired in the ui-debt batch (stale since Jan/May 2026,
+    // referenced only by their own launch scripts and this discovery test).
+    expect(apps.length).toBeGreaterThanOrEqual(2); // unifiedApp, placeHubGuessingApp
   });
 
   describe.each(apps)('%s/main.js', (app) => {
