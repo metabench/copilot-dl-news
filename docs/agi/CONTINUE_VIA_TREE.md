@@ -101,7 +101,10 @@ A cycle is not done when the code works — it is done when the board says so.
 
 ## Gates — these bind, and probes check most of them
 
-Live `news.db` writes are owner-gated · both ~30 GB backups must keep existing ·
+Live `news.db` writes are owner-gated · the ~28.9 GB `news.db.pre-placenames-bak`
+must keep existing (this said "both ~30 GB backups" until 2026-08-03; the owner
+approved deleting `predup-bak` in cycle 132, and `config/gated-surfaces.json` is
+the authority the probe reads) ·
 Defender exclusions are owner-only · never weaken politeness or 429 backoff ·
 crawler concurrency default ≤ 3 · installing skills or hooks needs approval, and
 `config/gated-surfaces.json` must record it (the scan covers `.claude/skills` and

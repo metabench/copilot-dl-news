@@ -32,9 +32,28 @@ node tools/agi/next-prompt.js         # the loop's own suggested selection
 
 Read `docs/agi/BOOT.md`. Then check reality rather than assuming it:
 
-- **The crawl server on :3170 is DOWN** (Electron is not running). Nothing can
-  crawl until it is up. `bridge-health` and `frontier-api` are red for that
-  reason alone and are not defects.
+- **The crawl server on :3170 is DOWN** (Electron is not running). `bridge-health`
+  and `frontier-api` are red for that reason alone and are not defects.
+  **This does NOT stop you crawling** — that claim stood here until 2026-08-03 and
+  was measured false. It binds only the paths that speak HTTP to the unified app:
+  the frontier API, the crawl-status UI, and `crawl-batch.js` (which POSTs to
+  `/api/v1/crawl/operations/:name/start`, and whose own error text names the plain
+  Node fallback: `node src/ui/server/unifiedApp/server.js` — Electron is not
+  required even there). **`src/crawl.js` runs the engine IN-PROCESS and needs no
+  server at all**, and it takes `--db <path>`, so a bounded crawl can be measured
+  against a scratch database without touching the owner-gated `news.db`. Verified
+  2026-08-03: 417 downloads in 196 s (2.13/s) against a scratch DB with :3170 down.
+- **Pick the host before trusting a throughput number.** The same verification run
+  scored 8 downloads in 221 s (~130/hr) on its first attempt and 2.13/s on its
+  second. The difference was entirely the host: `theguardian.com` is in
+  `domain_fetch_policies` as `tls-fingerprint` → `puppeteer`, so every fetch drives
+  a real browser — and it is ALSO `src/crawl.js`'s default start URL, so the
+  no-argument invocation silently gets the slowest path the crawler has. Five hosts
+  are protected this way (theguardian, bloomberg, wsj, lemonde, reuters); the rest
+  take the fast direct path.
+- **"Downloads" is ambiguous by ~4×.** In that run, 417 fetches produced 101 stored
+  content rows (~24%) — hubs and non-articles are fetched for link discovery but
+  not stored. Say which one a target means before quoting a duration.
 - **The Oracle box IS up** — `http://141.144.193.218:3300` returned 200.
 - Last real crawler-engine commit: **2026-07-29** (anti-zombie worker liveness).
 
@@ -59,7 +78,12 @@ generating findings than at shipping. Ship something that fetches pages.
 ## Standing gates — these bind, and a probe checks most of them
 
 - **Live `news.db` writes** are owner-gated. The crawler writes; the agent does not.
-- **The two ~30 GB backups must continue to exist.**
+- **The backup `data/news.db.pre-placenames-bak` must continue to exist** (~28.9 GB).
+  This line said "the two ~30 GB backups" until 2026-08-03; that is stale, and
+  `config/gated-surfaces.json` — which the probe actually reads — is the authority:
+  the owner approved deleting `news.db.predup-bak` in cycle 132, so exactly ONE
+  backup is now required. A doc demanding a file the owner deliberately removed
+  teaches the next agent to treat a satisfied gate as a violation.
 - **Defender exclusions are owner-only** — agents must not modify security settings.
 - **Politeness is never weakened** — do not touch 429 backoff escalation, and do
   not shrink per-host crawl delays. A slow host with a regular gap is robots
