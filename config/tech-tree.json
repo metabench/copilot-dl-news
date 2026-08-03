@@ -620,6 +620,25 @@
       ]
     },
     {
+      "id": "TECH-CRAWLCONSOLE",
+      "branch": "crawler",
+      "title": "Crawl Console (news-crawler-ui)",
+      "research": "rebuild the crawl-status UI as jsgui3 controls in the news-crawler-ui sibling — the founding consumer of the owner's 2026-08-03 UI-extraction scope change",
+      "prereqs": [
+        "CR-ENGINE",
+        "TR-PAGE"
+      ],
+      "state": "available",
+      "detail": [
+        "Owner-founded 2026-08-03: 'news-crawler-ui please' — the scope change recorded in docs/plans/2026-07-22-module-ecosystem.md (operational UIs move out of copilot-dl-news; projectStatus stays as the loop's own instrument; the ~40 stale UI dirs retire in place rather than move). The repo exists, is private on GitHub (metabench/news-crawler-ui), and carries the contract (AGENTS.md), the target design (design/crawl-console.html + .png), and the validated design tokens (design/tokens.js) as its founding commit.",
+        "The target design is measured, not aspirational: every panel answers a question this crawler has actually made someone ask. The liveness bar shows state WITH its throughput evidence (the 6.8-day zombie-state incident); the yield funnel makes the ~4x fetched-vs-stored ambiguity explicit (measured 417 fetches -> 101 stored, 2026-08-03); host rows carry policy labels (BROWSER = TLS-fingerprint -> puppeteer ~40x slower, the measured 60x per-host spread) so nobody debugs a working crawler; politeness is surfaced as a gate with deliberately NO loosening controls.",
+        "DONE means (per the c161 rule that a migration is done when the old thing is deleted): the console lives in news-crawler-ui, is consumed by copilot-dl-news via file: dep from a real code path, covers crawlerMonitor's feature list (workers, queue depth, throughput, errors), and BOTH src/ui/server/crawlStatus AND src/ui/server/crawlerMonitor are deleted from the monorepo — which moves the ui-debt ratchet (probe ui-debt-ratchet, baseline 643) down by their file count.",
+        "The rebuild retires a known defect class with the old page: crawl-status-client.js emits its whole client from one ~40KB backtick template literal that eats regex backslashes — the trap that has bitten four distinct ways (banked in the crawl-status-client-template-trap memory). jsgui3 Server({Ctrl}) SSR + activation with one control per file is the projectStatus-proven idiom that dissolves it.",
+        "TECH-CSLIVE's live-check goal transfers to the rebuilt console rather than being obsoleted: the c135-style five-point live browser check (activation, on-load fetch, DOM-vs-live-API, console errors, resources) should be born WITH the new page, not retrofitted — take the two techs together.",
+        "Anti-freezer gate carried from the 2026-08-03 module-ecosystem audit: news-crawler-ui does not grow beyond design/ until copilot-dl-news wires the dependency from a real code path, and every extraction cycle must move ui-debt down — the ncdb ratchet (269->241, the one extraction that stayed alive) is the working precedent."
+      ]
+    },
+    {
       "id": "TECH-DATALINKS",
       "branch": "tree",
       "title": "Per-Tech Datalinks Pages",

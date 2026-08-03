@@ -34,8 +34,27 @@ breakthroughs" — focused in-module deep work is an explicit goal, not just hyg
 | ~~`http-cache-store`~~ | NOT part of this ecosystem (owner: "I have not been using http-cache-store"). | out |
 
 `copilot-dl-news` remains: the Electron/unified-app shell, the coordination point, the
-live `data/news.db` custodian, the UI, and the operational tooling — **calling** module
+live `data/news.db` custodian, ~~the UI,~~ and the operational tooling — **calling** module
 APIs rather than containing their implementations.
+
+> **SCOPE CHANGE (owner, 2026-08-03):** "the UI" no longer stays here. The owner:
+> "I did not intend it all to stay there" — and, confirming the new home:
+> "news-crawler-ui please." **Operational UIs move to `../news-crawler-ui`**
+> (founded 2026-08-03, private remote `metabench/news-crawler-ui`, `confirmed:true`
+> in repo-scope.json). Two deliberate exceptions, and one rule:
+> - `src/ui/server/projectStatus` (the tech-tree board) STAYS — it is the
+>   improvement loop's own instrument, coupled to this repo's ledger and probes.
+> - The remote worker dashboard stays with `news-crawler-itself` (served by the
+>   worker runtime).
+> - The ~40 stale UI dirs (untouched Jan–May 2026) are **retired in place, not
+>   moved** — relocating dead pages is busy-work.
+>
+> This change ships with its instrument, per the 2026-08-03 audit finding that
+> probed extractions advance (ncdb 269→241) while prose-only ones freeze (six
+> repos, zero commits since 2026-05-19): the **`ui-debt` ratchet**
+> (`tools/dev/checks/ui-debt.check.js`, probe `ui-debt-ratchet`, baseline **643** =
+> tracked `src/ui` files minus projectStatus) only moves down, via extraction-with-
+> deletion or retirement. The board carries the work as `TECH-CRAWLCONSOLE`.
 
 **Machine-checkable scope (2026-07-27):** this table is mirrored in
 [`config/repo-scope.json`](../../config/repo-scope.json) and verified by
