@@ -40,7 +40,15 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // opsHub cluster, four stale electron apps, orphaned checks/builders), every
 // deletion reference-verified against live code first; docsViewer deliberately
 // kept (staged by scripts/deploy-remote.js — needs a deploy-aware pass).
-const CEILING = 519;
+// 519 → 497 (cycle 172): owner-scoped second batch — the UNAMBIGUOUS dead only
+// (adminDashboard, wysiwyg-demo, roadmapServer, the dangling geoImport
+// check/control/client/css). The hand-launchable standalone servers
+// (dataExplorer family, templateTeacher, gazetteerInfoServer, factsServer)
+// were explicitly KEPT by owner choice for the supervised session — static
+// analysis cannot see hand-launches. homeCardData.js was proposed dead and
+// RESTORED pre-commit when the dangling scan showed the kept dataExplorer
+// family requires it: the scan is part of the deletion, not an afterthought.
+const CEILING = 497;
 
 function trackedFiles(prefix) {
   const out = execFileSync('git', ['ls-files', prefix], { cwd: ROOT, encoding: 'utf8' });
