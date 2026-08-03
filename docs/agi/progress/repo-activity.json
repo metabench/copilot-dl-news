@@ -38,10 +38,10 @@
         ],
         [
           "2026-08-03",
-          3
+          5
         ]
       ],
-      "total": 64
+      "total": 66
     },
     {
       "name": "news-crawler-itself",
@@ -129,10 +129,10 @@
       "days": [
         [
           "2026-08-03",
-          2
+          3
         ]
       ],
-      "total": 2
+      "total": 3
     },
     {
       "name": "jsgui3-html",

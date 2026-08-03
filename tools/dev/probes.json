@@ -195,6 +195,16 @@
       "timeoutMs": 180000
     },
     {
+      "id": "crawl-console-live",
+      "description": "loads the Crawl Console (news-crawler-ui, the UI-split founding consumer) in a REAL browser at orient: spawns its own runner on :3195 against the live news.db READ-ONLY, then runs the module's own checks/console.live.check.js — activation, on-load fetch, DOM-vs-API liveness agreement, durable content (policy hosts + the owner-gated politeness line + the launcher), zero console errors, and COMPUTED-STYLE application (cycle 169: the page once served 39 bytes of collected css and rendered unstyled while eleven text assertions passed). Readiness budget 90s covers the documented bundle-publish boot (the cycle-169 probe-flake lesson). Expected strings are durable facts, not day-fresh data",
+      "cmd": "node",
+      "args": [
+        "tools/dev/checks/crawl-console-live.check.js"
+      ],
+      "needsServer": false,
+      "timeoutMs": 180000
+    },
+    {
       "id": "agi-signal",
       "description": "the owner's big-lightbulb research signal (cycle 139): a click on a signal-bearing tech node POSTs to the status server, which appends a pending record to data/agi-signals.jsonl. RED here is not breakage - it is the OWNER TALKING: orient cannot pass until the requested research is taken up and acknowledged (node tools/agi/ack-signal.js <id> \"note\"). The same pending records render as a ⚡ OWNER SIGNAL line above the ▶ selection in the generated next-prompt, so the click reaches the agent on both surfaces it provably reads every cycle",
       "cmd": "node",

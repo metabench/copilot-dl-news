@@ -25,6 +25,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const argv = process.argv.slice(2);
@@ -92,6 +93,49 @@ function readPolicies() {
   } catch (_) { return []; }  // scratch DBs may not carry the table
 }
 
+// ── crawl-API health, cached (drives the launcher's enable state AND
+// liveness's claimsRunning) ─────────────────────────────────────────────────
+// Checked in the background every 30s, never per request: getRaw() must stay
+// synchronous and fast. `claimsRunning` is true/false ONLY when a jobs API
+// actually answered — a dead API yields null, and the model treats null as
+// "no claim", so STALLED can never fire on a guess (the liveness rule).
+const API_BASES = ['http://127.0.0.1:3170', 'http://127.0.0.1:3000'];
+const apiCache = { reachable: false, bases: API_BASES.map((b) => ({ base: b, ok: false })), claimsRunning: null };
+
+function probeApiOnce() {
+  let pending = API_BASES.length;
+  const bases = [];
+  let claims = null;
+  for (const base of API_BASES) {
+    const req = http.get(`${base}/api/v1/crawl/jobs`, { timeout: 1200 }, (res) => {
+      let body = '';
+      res.on('data', (c) => { body += c; if (body.length > 262144) req.destroy(); });
+      res.on('end', () => {
+        bases.push({ base, ok: true });
+        try {
+          const j = JSON.parse(body);
+          const jobs = Array.isArray(j) ? j : (j.jobs || j.items || []);
+          if (Array.isArray(jobs)) claims = jobs.some((x) => /running|active/i.test(String(x.status || x.state || '')));
+        } catch (_) { /* answered but not a jobs shape — reachable, no claim */ }
+        if (--pending === 0) finish();
+      });
+    });
+    req.on('timeout', () => req.destroy());
+    req.on('error', () => { bases.push({ base, ok: false }); if (--pending === 0) finish(); });
+  }
+  function finish() {
+    apiCache.bases = bases;
+    apiCache.reachable = bases.some((b) => b.ok);
+    apiCache.claimsRunning = apiCache.reachable ? claims : null;
+  }
+}
+probeApiOnce();
+setInterval(probeApiOnce, 30000).unref();
+
+// Launch profiles are the composition root's config, passed down as data.
+const { PROFILES } = require(path.join(ROOT, 'src', 'core', 'crawler', 'config', 'defaultCrawlProfiles.js'));
+const profileList = Object.values(PROFILES).map((p) => ({ name: p.name, description: p.description, overrides: p.overrides }));
+
 function getRaw() {
   const fetchEvents = stmts.fetchEvents ? stmts.fetchEvents.all(SLICE) : [];
   const headlineRows = (stmts.headlineRows ? stmts.headlineRows.all() : []).map((r) => ({
@@ -108,7 +152,16 @@ function getRaw() {
     policies: readPolicies(),
     storedCount: boundedCount('content_storage'),
     queueCount: boundedCount('crawl_queue'),
-    claimsRunning: null  // wired to the jobs API when :3170 is up — never faked
+    profiles: profileList,
+    apiStatus: { reachable: apiCache.reachable, bases: apiCache.bases },
+    politeness: {
+      // 3 is the owner-gated ceiling the ritual-compliance probe enforces
+      // (tools/dev/checks/ritual-compliance.check.js, check B1) — displayed
+      // from the same constant family, never configurable from the console.
+      concurrencyCeiling: 3,
+      gateSource: 'owner directive · enforced by the ritual-compliance probe'
+    },
+    claimsRunning: apiCache.claimsRunning  // true/false only when a jobs API answered; else null
   };
 }
 
