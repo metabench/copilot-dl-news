@@ -159,3 +159,18 @@ client" page — not for the defects I invented.
 - **`persist_activation_state`** and the **`_ctrl_fields` hydration** are careful,
   correct answers to the hardest part of this architecture. They mostly need to
   be louder and better documented, not changed.
+
+## 2026-08-03 (cycle 169, measured): the style separator cannot see interpolated `Ctrl.css` template literals
+
+The jsgui3-server publisher's "Separating styles and JS" pass parses the bundled
+client source for literal `X.css = \`...\`` spans. Controls whose css template
+literals INTERPOLATE values (`${tokens.surface.panel}` — the pattern any
+design-token system produces) are invisible to it: the Crawl Console published
+with **39 bytes** of collected css and rendered as unstyled document text while
+every DOM/text assertion passed. Workaround (proven, also used by
+CrawlStatusPage): inject the composed css at page level via a raw
+`String_Control` inside a `<style>` head node. Library-side fix worth
+considering: collect css by EVALUATING `Ctrl.css` on registered controls at
+publish time instead of (or in addition to) source-text scanning. Found by
+looking at a screenshot after 11 string assertions had passed — a computed-style
+assertion (`getComputedStyle(document.body).backgroundColor`) now guards it.

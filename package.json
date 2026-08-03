@@ -181,6 +181,7 @@
     "linkedom": "^0.18.12",
     "ndjson": "^2.0.0",
     "news-crawler-db": "file:../news-crawler-db",
+    "news-crawler-ui": "file:../news-crawler-ui",
     "news-crawler-itself": "file:../news-crawler-itself",
     "news-db-pure-analysis": "file:../news-db-pure-analysis",
     "node-fetch": "^3.3.2",
