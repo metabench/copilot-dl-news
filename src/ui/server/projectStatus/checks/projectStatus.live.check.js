@@ -54,7 +54,13 @@ function getJson(url) {
   });
 }
 
-async function waitForServer(timeoutMs = 30000) {
+// 90s, not 30s (cycle 169, measured): the server publishes its bundle at boot
+// — the project's own docs say "give it ~40s" — and boot-to-ready measured 33s
+// once the library grew, so a 30s wait failed on exactly the margin. Every
+// "flaky" red of this probe in cycles 168-169 was this number: the check's
+// budget must cover the DOCUMENTED boot time with headroom, or the probe
+// reports machine load as an application failure.
+async function waitForServer(timeoutMs = 90000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try { await getJson(`${BASE}/api/status`); return true; } catch (_) { await sleep(300); }
