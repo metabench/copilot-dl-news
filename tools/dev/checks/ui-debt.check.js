@@ -48,7 +48,17 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // analysis cannot see hand-launches. homeCardData.js was proposed dead and
 // RESTORED pre-commit when the dangling scan showed the kept dataExplorer
 // family requires it: the scan is part of the deletion, not an afterthought.
-const CEILING = 497;
+// 497 → 488 (cycle 173, the supervised session): crawlStatus + crawlerMonitor
+// deleted at PROVEN parity — the console's launcher POST, live ACTIVE flip and
+// jobs line were verified in a real browser against a real crawl started
+// through the console itself before the old pages died (the c161 rule, done
+// with runtime evidence). Their checks and the crawl-status-ssr probe went
+// with them; crawl-console-live is the successor tripwire. The same session
+// RESTORED hubGuessing (+4): it was a shared library for the floor-protected
+// topic/place pages, misclassified as a page by c171's grep (which missed
+// relative requires) — the supervised boot was what exposed it. 497 +4 −1
+// (colorSelector orphan check) −12 (parity deletions) = 488.
+const CEILING = 488;
 
 function trackedFiles(prefix) {
   const out = execFileSync('git', ['ls-files', prefix], { cwd: ROOT, encoding: 'utf8' });

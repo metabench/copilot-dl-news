@@ -100,7 +100,7 @@ function readPolicies() {
 // actually answered — a dead API yields null, and the model treats null as
 // "no claim", so STALLED can never fire on a guess (the liveness rule).
 const API_BASES = ['http://127.0.0.1:3170', 'http://127.0.0.1:3000'];
-const apiCache = { reachable: false, bases: API_BASES.map((b) => ({ base: b, ok: false })), claimsRunning: null };
+const apiCache = { reachable: false, bases: API_BASES.map((b) => ({ base: b, ok: false })), claimsRunning: null, jobs: [] };
 
 function probeApiOnce() {
   let pending = API_BASES.length;
@@ -115,7 +115,17 @@ function probeApiOnce() {
         try {
           const j = JSON.parse(body);
           const jobs = Array.isArray(j) ? j : (j.jobs || j.items || []);
-          if (Array.isArray(jobs)) claims = jobs.some((x) => /running|active/i.test(String(x.status || x.state || '')));
+          if (Array.isArray(jobs)) {
+            claims = jobs.some((x) => /running|active/i.test(String(x.status || x.state || '')));
+            apiCache.jobs = jobs.slice(0, 4).map((x) => ({
+              id: String(x.id || '').slice(0, 8),
+              status: String(x.status || x.state || '?'),
+              startUrl: String(x.startUrl || ''),
+              downloaded: x.progress ? x.progress.downloaded : null,
+              queued: x.progress ? x.progress.queued : null,
+              errors: x.progress ? x.progress.errors : null
+            }));
+          }
         } catch (_) { /* answered but not a jobs shape — reachable, no claim */ }
         if (--pending === 0) finish();
       });
@@ -153,7 +163,7 @@ function getRaw() {
     storedCount: boundedCount('content_storage'),
     queueCount: boundedCount('crawl_queue'),
     profiles: profileList,
-    apiStatus: { reachable: apiCache.reachable, bases: apiCache.bases },
+    apiStatus: { reachable: apiCache.reachable, bases: apiCache.bases, jobs: apiCache.jobs },
     politeness: {
       // 3 is the owner-gated ceiling the ritual-compliance probe enforces
       // (tools/dev/checks/ritual-compliance.check.js, check B1) — displayed
@@ -165,6 +175,36 @@ function getRaw() {
   };
 }
 
-startConsoleServer({ port: PORT, getRaw, label: 'crawl-console' })
-  .then(() => console.log(`[crawl-console] serving ${path.basename(DB_PATH)} read-only`))
+// ── the ONE write-path action, supervised (owner permission 2026-08-04) ─────
+// The console POSTs {profile, startUrl} to its own origin; THIS function — the
+// composition root — forwards to the unified app's v1 API. The crawl API being
+// down surfaces as a clean error, never a hung button. Overrides come from the
+// SAME profile table the CLI uses, so console-started crawls obey the same
+// politeness/concurrency defaults (safe: concurrency 3, ≤ the owner gate).
+function startCrawl({ profile, startUrl } = {}) {
+  return new Promise((resolve, reject) => {
+    const base = (apiCache.bases || []).find((b) => b.ok);
+    if (!base) { reject(new Error('crawl API not reachable — start the unified app first')); return; }
+    const prof = PROFILES[profile] || PROFILES.safe;
+    const payload = JSON.stringify({ startUrl: String(startUrl || '').trim() || undefined, overrides: prof.overrides });
+    const req = http.request(`${base.base}/api/v1/crawl/operations/basicArticleCrawl/start`, {
+      method: 'POST', timeout: 15000,
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+    }, (res) => {
+      let body = '';
+      res.on('data', (c) => { body += c; if (body.length > 262144) req.destroy(); });
+      res.on('end', () => {
+        let parsed; try { parsed = JSON.parse(body); } catch (_) { parsed = { raw: body.slice(0, 200) }; }
+        if (res.statusCode >= 200 && res.statusCode < 300) resolve(parsed);
+        else reject(new Error(`crawl API HTTP ${res.statusCode}: ${JSON.stringify(parsed).slice(0, 180)}`));
+      });
+    });
+    req.on('timeout', () => { req.destroy(); reject(new Error('crawl API timeout')); });
+    req.on('error', (e) => reject(e));
+    req.end(payload);
+  });
+}
+
+startConsoleServer({ port: PORT, getRaw, label: 'crawl-console', actions: { startCrawl } })
+  .then(() => console.log(`[crawl-console] serving ${path.basename(DB_PATH)} read-only · startCrawl wired to the v1 API`))
   .catch((err) => { console.error('[crawl-console] failed to start:', err.message); process.exit(1); });

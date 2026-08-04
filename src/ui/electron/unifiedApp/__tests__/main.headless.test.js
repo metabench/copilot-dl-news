@@ -67,7 +67,7 @@ describe('electron unifiedApp main (headless)', () => {
   afterEach(() => { process.argv = argvBackup; });
 
   test('boot with --use-existing-server: secure window loads the app URL', async () => {
-    process.argv = ['node', 'main.js', '--port', String(PORT), '--use-existing-server', '--app', 'crawl-status'];
+    process.argv = ['node', 'main.js', '--port', String(PORT), '--use-existing-server', '--app', 'analytics'];
     require('../main.js');
     whenReadyResolve();
     await flush();
@@ -76,7 +76,7 @@ describe('electron unifiedApp main (headless)', () => {
     const win = windows[0];
     expect(win.opts.webPreferences.contextIsolation).toBe(true);
     expect(win.opts.webPreferences.nodeIntegration).toBe(false);
-    expect(win.loadedUrl).toBe(`http://127.0.0.1:${PORT}/?app=crawl-status`);
+    expect(win.loadedUrl).toBe(`http://127.0.0.1:${PORT}/?app=analytics`);
     expect(spawnCalls.length).toBe(0); // existing server → no spawn
   });
 

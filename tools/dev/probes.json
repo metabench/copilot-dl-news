@@ -12,16 +12,6 @@
       "timeoutMs": 20000
     },
     {
-      "id": "crawl-status-ssr",
-      "description": "crawl-status SSR markers + emitted client script parse (template-literal trap tripwire)",
-      "cmd": "node",
-      "args": [
-        "src/ui/server/checks/crawlStatusFrontier.check.js"
-      ],
-      "needsServer": false,
-      "timeoutMs": 30000
-    },
-    {
       "id": "remote-endpoints",
       "description": "fleet resolver + port inventory coherent (v2=3200 deployed, worker 8081, legacy 3120 orphaned) + Oracle v2 reachability surfaced informationally — the D1 guard against remote-config sprawl (2026-07-21, cycle 65)",
       "cmd": "node",

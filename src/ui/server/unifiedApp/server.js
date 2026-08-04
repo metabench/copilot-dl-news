@@ -38,23 +38,20 @@ const {
 
 const { createRateLimitDashboardRouter } = require('../rateLimitDashboard/server');
 const { createWebhookDashboardRouter } = require('../webhookDashboard/server');
-const { createPluginDashboardRouter } = require('../pluginDashboard/server');
 const { createQueryTelemetryRouter } = require('../queryTelemetry/server');
 const { createQualityDashboardRouter } = require('../qualityDashboard/server');
 const { createAnalyticsHubRouter } = require('../analyticsHub/server');
 const { createDocsViewerRouter } = require('../docsViewer/server');
-const { createDesignStudioRouter } = require('../designStudio/server');
 const { createPlaceHubGuessingRouter } = require('../placeHubGuessing/server');
 const { createPlaceHubsTableRouter } = require('../placeHubsTable/server');
 const { createTopicHubGuessingRouter } = require('../topicHubGuessing/server');
 const { createTopicListsRouter } = require('../topicLists/server');
+// Six stale sub-apps retired (cycle 171 batch, mounts completed cycle 173 —
+// the supervised boot was what exposed the relative-require dependencies the
+// c171 static scan missed): pluginDashboard, designStudio, crawlerProfiles,
+// domainRegistry, multiModalCrawl, crawlStrategies.
 const { createCrawlObserverRouter } = require('../crawlObserver/server');
-const { createCrawlStatusRouter } = require('../crawlStatus/server');
-const { createCrawlerProfilesRouter } = require('../crawlerProfiles/server');
-const { createDomainRegistryRouter } = require('../domainRegistry/server');
 const { createSchedulerDashboardRouter } = require('../schedulerDashboard/server');
-const { createMultiModalCrawlRouter } = require('../multiModalCrawl/server');
-const { createCrawlStrategiesRouter } = require('../crawlStrategies/server');
 const { DomainRegistryStore } = require('../../../core/crawler/domains/DomainRegistryStore');
 const { SearchService } = require('../../../search/SearchService');
 const { TelemetryIntegration } = require('../../../core/crawler/telemetry/TelemetryIntegration');
@@ -2786,12 +2783,6 @@ load(); setInterval(load, 60000);
       full: () => createWebhookDashboardRouter({ getDbRW })
     },
     {
-      id: 'plugins',
-      mountPath: '/plugins',
-      apiOnly: () => createPluginDashboardRouter({ includeRootRoute: false }),
-      full: () => createPluginDashboardRouter({})
-    },
-    {
       id: 'query-telemetry',
       mountPath: '/telemetry',
       full: () => createQueryTelemetryRouter({
@@ -2848,72 +2839,21 @@ load(); setInterval(load, 60000);
       })
     },
     {
-      id: 'design',
-      mountPath: '/design',
-      full: () => createDesignStudioRouter({
-        designPath: path.join(process.cwd(), 'design')
-      })
-    },
-    {
       id: 'crawl-observer',
       mountPath: '/crawl-observer',
       full: () => createCrawlObserverRouter({
         getDbHandle: () => getDbRW()?.db
       })
     },
-    {
-      id: 'crawler-profiles',
-      mountPath: '/crawler-profiles',
-      apiOnly: () => createCrawlerProfilesRouter({
-        getDbRW,
-        includeRootRoute: false,
-        includeApiRoutes: true
-      }),
-      full: () => createCrawlerProfilesRouter({
-        getDbRW,
-        includeRootRoute: true,
-        includeApiRoutes: false
-      })
-    },
-    {
-      id: 'domain-registry',
-      mountPath: '/domain-registry',
-      apiOnly: () => createDomainRegistryRouter({
-        getDbRW,
-        includeRootRoute: false,
-        includeApiRoutes: true
-      }),
-      full: () => createDomainRegistryRouter({
-        getDbRW,
-        includeRootRoute: true,
-        includeApiRoutes: false
-      })
-    },
-    {
-      id: 'crawl-status',
-      mountPath: '/crawl-status',
-      full: () => createCrawlStatusRouter({
-        jobsApiPath: '/api/v1/crawl/jobs',
-        apiBasePath: '/api/v1/crawl',
-        eventsPath: '/api/crawl-telemetry/events',
-        telemetryHistoryPath: '/api/crawl-telemetry/history'
-      })
-    },
-    {
-      id: 'multi-modal-crawl',
-      mountPath: '/multi-modal',
-      full: () => createMultiModalCrawlRouter({ getDbRW })
-    },
+    // crawl-status retired 2026-08-04 (cycle 173): replaced by the Crawl Console
+    // in ../news-crawler-ui (run: node tools/ui/run-crawl-console.js), deleted at
+    // proven parity during the supervised session — launcher POST + live ACTIVE
+    // verified in a real browser against this very server.
     {
       id: 'scheduler',
       mountPath: '/scheduler',
       apiOnly: () => createSchedulerDashboardRouter({ getDbRW, includeRootRoute: false }),
       full: () => createSchedulerDashboardRouter({ getDbRW })
-    },
-    {
-      id: 'crawl-strategies',
-      mountPath: '/crawl-strategies',
-      full: () => createCrawlStrategiesRouter({ logger: log, getDbRW })
     },
     {
       id: 'remote-crawl-admin',
