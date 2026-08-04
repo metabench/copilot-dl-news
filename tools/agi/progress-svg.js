@@ -79,7 +79,17 @@ function computeSeries(cycles) {
     const correction = Boolean(c.retracts || c.corrects);
     return {
       id: c.id, date: c.date || '', vi, cum, pre, post,
-      pages: Number(c.pages_crawled) || 0, correction
+      pages: Number(c.pages_crawled) || 0, correction,
+      // Debt vector (cycle 197): stanzas carry ratchet readings when a cycle
+      // measured them; carry-forward happens at render time so a flat lane is
+      // a VISIBLE stall, which is the entire point of the debt panel.
+      debt: {
+        engine: c.engine_debt != null ? Number(c.engine_debt) : null,
+        ui: c.ui_debt != null ? Number(c.ui_debt) : null,
+        ncdb: c.ncdb_debt != null ? Number(c.ncdb_debt) : null,
+        phantom: c.phantom_edges != null ? Number(c.phantom_edges) : null,
+        knownFailures: c.known_failures != null ? Number(c.known_failures) : null
+      }
     };
   });
   const totals = {
@@ -123,13 +133,18 @@ function renderSvg({ rows, totals }, annotations = [], activity = null, frontier
   // backward-compatible rule — absent or unreadable spec renders the previous
   // layout byte-for-byte, so the staleness compare never breaks on a bad spec.
   const front = frontier && Array.isArray(frontier.branches) && frontier.branches.length ? frontier : null;
-  const frontY0 = 668, frontStride = 18;
+  // chart C renders only when stanzas carry debt readings — absent, the layout
+  // stays byte-identical to the pre-debt-panel output (the same backward-compat
+  // rule as lanes and the frontier band; pinned by progress-surface.test).
+  const hasDebt = rows.filter((r) => r.debt && Object.values(r.debt).some((v) => v != null)).length >= 2;
+  // frontY0 668 -> 856 when chart C (debt ratchets, 640-806) renders (c197).
+  const frontY0 = hasDebt ? 856 : 668, frontStride = 18;
   // trailing space is 34, not 14: the band's legend line sits at the bottom and
   // the repo-lanes heading sits 12px above laneY0 — at 14 they collided, caught
   // by svg-collisions --strict (2 HIGH text-overlaps) before this shipped.
   const frontH = front ? 26 + front.branches.length * frontStride + 34 : 0;
   const laneStride = 16, laneY0 = frontY0 + frontH;
-  const H = lanes ? laneY0 + lanes.repos.length * laneStride + 46 : (front ? laneY0 + 10 : 664);
+  const H = lanes ? laneY0 + lanes.repos.length * laneStride + 46 : (front ? laneY0 + 10 : (hasDebt ? 830 : 664));
   const s = [];
   s.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="AGI loop progress dashboard">`);
   s.push(`<rect width="${W}" height="${H}" fill="${C.bg}"/>`);
@@ -251,6 +266,55 @@ function renderSvg({ rows, totals }, annotations = [], activity = null, frontier
   });
   rows.forEach((r, i) => { if (i % tickEvery === 0 || i === rows.length - 1) T(xi(i), bBot + 14, String(r.id), 9, C.muted, 'text-anchor="middle"'); });
   s.push(`<line x1="${x0}" y1="${bBot}" x2="${x1}" y2="${bBot}" stroke="${C.axis}" stroke-width="1"/>`);
+
+  // ---- chart C: debt ratchets (cycle 197, DEBT plan item 6) ----
+  // Each metric normalized to ITS OWN first-seen value so every trend is
+  // visible on one panel; carry-forward between stanzas so a FLAT lane is a
+  // visible stall — which is the panel's entire reason to exist. Current
+  // absolute values sit as direct labels at the line ends (identity is never
+  // color-alone; the label carries name + number).
+  const DEBT_DEFS = [
+    { key: 'engine', label: 'engine', color: C.gold },
+    { key: 'ui', label: 'ui', color: '#7d9bc0' },
+    { key: 'ncdb', label: 'ncdb', color: '#a37fb3' },
+    { key: 'phantom', label: 'phantom', color: C.green },
+    { key: 'knownFailures', label: 'known-fail', color: C.red }
+  ];
+  const debtRows = hasDebt ? rows.filter((r) => r.debt && Object.values(r.debt).some((v) => v != null)) : [];
+  if (debtRows.length >= 2) {
+    const cTop = 652, cBot = 792, cH = cBot - cTop;
+    T(PAD, 640, 'Debt ratchets (normalized to first reading; labels carry current absolutes)', 13, C.ink, 'font-weight="600"');
+    T(x1 - 232, 640, 'x-axis: cycle sequence · flat = stalled', 10, C.muted);
+    s.push(`<line x1="${x0}" y1="${cBot}" x2="${x1}" y2="${cBot}" stroke="${C.axis}" stroke-width="1"/>`);
+    const xiC = (i) => x0 + (debtRows.length === 1 ? 0 : (i / (debtRows.length - 1)) * (x1 - x0 - 120));
+    DEBT_DEFS.forEach((def, di) => {
+      // carry-forward series
+      let lastV = null;
+      const series = debtRows.map((r) => {
+        if (r.debt[def.key] != null) lastV = r.debt[def.key];
+        return lastV;
+      });
+      const firstIdx = series.findIndex((v) => v != null);
+      if (firstIdx < 0) return;
+      const base = Math.max(1, series[firstIdx]);
+      const pts = [];
+      series.forEach((v, i) => {
+        if (v == null) return;
+        const y = r1(cBot - Math.min(1.05, v / base) * (cH - 14));
+        pts.push(`${r1(xiC(i))},${y}`);
+      });
+      if (pts.length < 2) return;
+      s.push(`<path d="M${pts.join(' L')}" fill="none" stroke="${def.color}" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>`);
+      const cur = series[series.length - 1];
+      const endY = r1(cBot - Math.min(1.05, cur / base) * (cH - 14));
+      T(x1 - 112, Math.max(cTop + 10, Math.min(cBot - 2, endY + 3 + (di === 4 ? 0 : 0))), `${def.label} ${cur}`, 10, def.color);
+    });
+    debtRows.forEach((r, i) => {
+      if (i % Math.max(1, Math.ceil(debtRows.length / 10)) === 0 || i === debtRows.length - 1) {
+        T(xiC(i), cBot + 13, String(r.id), 9, C.muted, 'text-anchor="middle"');
+      }
+    });
+  }
 
   // ---- repo activity lanes (from the committed repo-activity.json snapshot) ----
   if (lanes) {

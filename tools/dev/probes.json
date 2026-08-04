@@ -289,6 +289,16 @@
       ],
       "needsServer": false,
       "timeoutMs": 60000
+    },
+    {
+      "id": "silent-catches",
+      "description": "BARE (uncommented) silent catches ratchet down from the measured 378 (cycle 197 survey: 859 silent catches total across 347 files, both repos — commented ones are reviewed decisions and legal; bare ones are unreviewed swallows, the class that produced or hid FOUR production defects: recordUrlAlias, the 4%-keyword-base classifier fallback, the Readability fallback, swallowed hierarchy writes). Convert each bare swallow to a loud warn or a commented decision — never delete the catch unread",
+      "cmd": "node",
+      "args": [
+        "tools/dev/checks/silent-catches.check.js"
+      ],
+      "needsServer": false,
+      "timeoutMs": 60000
     }
   ]
 }

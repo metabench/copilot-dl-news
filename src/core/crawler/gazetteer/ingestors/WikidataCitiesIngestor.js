@@ -496,7 +496,10 @@ class WikidataCitiesIngestor {
     if (adm1Qid) {
       try {
         adm1Code = ingestQueries.getAdm1CodeForWikidataRegion(this.db, country.country_code, adm1Qid);
-      } catch (_) {}
+      } catch (error) {
+        // Loud (c197): a bare swallow here hid db-layer breaks entirely.
+        this.logger?.warn?.('[WikidataCitiesIngestor] adm1 lookup failed:', error?.message || error);
+      }
     }
 
     // Build attributes for attributes field
@@ -555,7 +558,10 @@ class WikidataCitiesIngestor {
     // Create hierarchy relationship to country
     try {
       ingestQueries.insertAdminParentHierarchy(this.db, country.id, placeId);
-    } catch (_) {}
+    } catch (error) {
+      // Loud (c197): a swallowed hierarchy WRITE is the recordUrlAlias class.
+      this.logger?.warn?.('[WikidataCitiesIngestor] country hierarchy write failed:', error?.message || error);
+    }
 
     // If we have ADM1, create relationship to region
     if (adm1Code) {
@@ -564,7 +570,9 @@ class WikidataCitiesIngestor {
         if (adm1PlaceId) {
           ingestQueries.insertAdminParentHierarchy(this.db, adm1PlaceId, placeId);
         }
-      } catch (_) {}
+      } catch (error) {
+        this.logger?.warn?.('[WikidataCitiesIngestor] adm1 hierarchy write failed:', error?.message || error);
+      }
     }
 
     return true;
