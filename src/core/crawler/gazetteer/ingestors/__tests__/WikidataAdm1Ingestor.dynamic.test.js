@@ -83,17 +83,19 @@ describe('WikidataAdm1Ingestor - Dynamic Mode', () => {
       expect(ingestor.id).toBe('wikidata-adm1');
     });
 
-    test('creates cache directory if it does not exist', () => {
-      const newCacheDir = path.join(tempCacheDir, 'nested', 'cache');
-      
+    test('constructs its httpFacade cache backend', () => {
+      // c194: the file cache (and its eager mkdir) died in the httpFacade
+      // rewrite — construction's cache contract is the facade now.
       const ingestor = new WikidataAdm1Ingestor({
         db,
         useDynamicFetch: true,
-        cacheDir: newCacheDir,
+        cacheDir: path.join(tempCacheDir, 'nested', 'cache'),
         useCache: true
       });
 
-      expect(fs.existsSync(newCacheDir)).toBe(true);
+      expect(ingestor.httpFacade).toBeDefined();
+      expect(typeof ingestor.httpFacade.getCachedHttpResponse).toBe('function');
+      expect(typeof ingestor.httpFacade.cacheHttpResponse).toBe('function');
     });
 
     test('defaults to snapshot mode', () => {
@@ -257,8 +259,12 @@ describe('WikidataAdm1Ingestor - Dynamic Mode', () => {
         ]
       };
 
-      const cachePath = ingestor._getCachePath('IT');
-      fs.writeFileSync(cachePath, JSON.stringify(cacheData), 'utf8');
+      // c194: cache reads go through the httpFacade now — seed it there,
+      // not on disk (the file cache no longer exists).
+      ingestor.httpFacade = {
+        getCachedHttpResponse: jest.fn(() => cacheData),
+        cacheHttpResponse: jest.fn()
+      };
 
       const mockFetchSparql = jest.spyOn(ingestor, '_fetchSparql');
 
@@ -465,88 +471,79 @@ describe('WikidataAdm1Ingestor - Dynamic Mode', () => {
   });
 
   describe('Cache Management', () => {
-    test('_getCachePath() generates consistent paths', () => {
-      const ingestor = new WikidataAdm1Ingestor({
-        db,
-        cacheDir: tempCacheDir
-      });
-
-      const path1 = ingestor._getCachePath('IT');
-      const path2 = ingestor._getCachePath('IT');
-
-      expect(path1).toBe(path2);
-      expect(path1).toContain('adm1-it');
+    // c194: the file cache (_getCachePath, file writes, file-age TTL) died in
+    // the httpFacade rewrite — caching is metadata-keyed through the facade
+    // (category/subcategory/countryCode, ttlDays owned by the facade). These
+    // tests pin the FACADE contract; expiry is the facade's business now.
+    const facadeMock = () => ({
+      getCachedHttpResponse: jest.fn(() => null),
+      cacheHttpResponse: jest.fn()
     });
 
-    test('_cacheRegions() writes cache file', () => {
+    test('_cacheRegions() writes through the facade with stable metadata', () => {
       const ingestor = new WikidataAdm1Ingestor({
         db,
         cacheDir: tempCacheDir,
         useCache: true
       });
+      ingestor.httpFacade = facadeMock();
 
-      const regions = [
-        {
-          qid: 'Q1460',
-          label: 'Abruzzo',
-          isoCode: 'IT-65',
-          population: 1311580
-        }
-      ];
-
+      const regions = [{ qid: 'Q1460', label: 'Abruzzo', isoCode: 'IT-65', population: 1311580 }];
       ingestor._cacheRegions('IT', regions);
 
-      const cachePath = ingestor._getCachePath('IT');
-      expect(fs.existsSync(cachePath)).toBe(true);
-
-      const cached = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
-      expect(cached.countryCode).toBe('IT');
-      expect(cached.regions).toHaveLength(1);
+      expect(ingestor.httpFacade.cacheHttpResponse).toHaveBeenCalledTimes(1);
+      const [metadata, payload] = ingestor.httpFacade.cacheHttpResponse.mock.calls[0];
+      expect(metadata).toMatchObject({ category: 'wikidata', subcategory: 'adm1-regions', countryCode: 'it' });
+      expect(payload.countryCode).toBe('IT');
+      expect(payload.regions).toHaveLength(1);
     });
 
-    test('_getCachedRegions() returns null for expired cache', () => {
+    test('_getCachedRegions() returns null when the facade has nothing', () => {
       const ingestor = new WikidataAdm1Ingestor({
         db,
         cacheDir: tempCacheDir,
         useCache: true
       });
+      ingestor.httpFacade = facadeMock();
 
-      // Create expired cache (31 days old)
-      const expiredTimestamp = Date.now() - (31 * 24 * 60 * 60 * 1000);
-      const cacheData = {
-        countryCode: 'IT',
-        timestamp: expiredTimestamp,
-        regions: [{ qid: 'Q1460' }]
-      };
-
-      const cachePath = ingestor._getCachePath('IT');
-      fs.writeFileSync(cachePath, JSON.stringify(cacheData), 'utf8');
-
-      const result = ingestor._getCachedRegions('IT');
-
-      expect(result).toBeNull();
+      expect(ingestor._getCachedRegions('IT')).toBeNull();
+      expect(ingestor.httpFacade.getCachedHttpResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ category: 'wikidata', subcategory: 'adm1-regions', countryCode: 'it' })
+      );
     });
 
-    test('_getCachedRegions() returns data for fresh cache', () => {
+    test('_getCachedRegions() returns regions from a facade hit', () => {
       const ingestor = new WikidataAdm1Ingestor({
         db,
         cacheDir: tempCacheDir,
         useCache: true
       });
-
-      const cacheData = {
+      ingestor.httpFacade = facadeMock();
+      ingestor.httpFacade.getCachedHttpResponse.mockReturnValue({
         countryCode: 'IT',
         timestamp: Date.now(),
         regions: [{ qid: 'Q1460', label: 'Abruzzo' }]
-      };
-
-      const cachePath = ingestor._getCachePath('IT');
-      fs.writeFileSync(cachePath, JSON.stringify(cacheData), 'utf8');
+      });
 
       const result = ingestor._getCachedRegions('IT');
 
       expect(result).toHaveLength(1);
       expect(result[0].qid).toBe('Q1460');
+    });
+
+    test('useCache: false short-circuits both paths without touching the facade', () => {
+      const ingestor = new WikidataAdm1Ingestor({
+        db,
+        cacheDir: tempCacheDir,
+        useCache: false
+      });
+      ingestor.httpFacade = facadeMock();
+
+      expect(ingestor._getCachedRegions('IT')).toBeNull();
+      ingestor._cacheRegions('IT', [{ qid: 'Q1460' }]);
+
+      expect(ingestor.httpFacade.getCachedHttpResponse).not.toHaveBeenCalled();
+      expect(ingestor.httpFacade.cacheHttpResponse).not.toHaveBeenCalled();
     });
   });
 

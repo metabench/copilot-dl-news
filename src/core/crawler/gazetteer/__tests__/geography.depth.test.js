@@ -270,8 +270,10 @@ describe('Geography Crawl - Depth Filtering', () => {
 
       // Verify cities ingestor configuration
       // The actual ingestor is created with maxCitiesPerCountry: 200
-      // and minPopulation: 10000
-      expect(crawler.gazetteerOptions).toBeDefined();
+      // and minPopulation: 10000 (GazetteerManager cities stage).
+      // c194: crawler.gazetteerOptions was removed in the GazetteerManager
+      // refactor — configurePipeline's real output is gazetteerPlanner.
+      expect(crawler.gazetteerPlanner).toBeDefined();
     });
   });
 

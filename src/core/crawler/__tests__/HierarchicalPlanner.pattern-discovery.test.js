@@ -17,7 +17,9 @@ describe('HierarchicalPlanner - Pattern Discovery', () => {
     db = openNewsCrawlerDb(':memory:');
     
     // Create required tables from migration
-    const migrationPath = path.join(__dirname, '../../../data/db/migrations/006-hierarchical-planning.sql');
+    const migrationPath = // c194: the copilot copy of this migration is a PLACEHOLDER (ownership
+      // moved to news-crawler-db) — the REAL DDL lives in the ncdb package.
+      path.join(path.dirname(require.resolve('news-crawler-db/package.json')), 'src/db/sqlite/migrations/copilot-legacy/root/006-hierarchical-planning.sql');
     const migrationSql = fs.readFileSync(migrationPath, 'utf8');
     db.exec(migrationSql);
 

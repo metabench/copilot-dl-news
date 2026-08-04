@@ -42,10 +42,10 @@
         ],
         [
           "2026-08-04",
-          24
+          25
         ]
       ],
-      "total": 93
+      "total": 94
     },
     {
       "name": "news-crawler-itself",
@@ -202,10 +202,10 @@
         ],
         [
           "2026-08-04",
-          1
+          3
         ]
       ],
-      "total": 12
+      "total": 14
     },
     {
       "name": "jsgui3-ecosystem",
