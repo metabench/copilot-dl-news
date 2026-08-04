@@ -8,7 +8,7 @@ const HubFreshnessController = require('./HubFreshnessController');
 const { UrlPolicy } = require('./urlPolicy');
 const { DeepUrlAnalyzer } = require('./deepUrlAnalysis');
 const { UrlDecisionService } = require('./UrlDecisionService');
-const { LinkExtractor } = require('./LinkExtractor');
+const { LinkExtractor } = require('news-crawler-itself/link-extraction');
 const { CrawlerEvents } = require('./CrawlerEvents');
 const { CrawlerTelemetry } = require('./CrawlerTelemetry');
 const ProblemResolutionHandler = require('./ProblemResolutionHandler');
@@ -32,7 +32,7 @@ const { GazetteerManager } = require('./components/GazetteerManager');
 const { ConfigManager } = require('../../shared/config/ConfigManager');
 const { setPriorityConfigProfile, resolvePriorityProfileFromCrawlType } = require('../../shared/utils/priorityConfig');
 const { is_array } = require('lang-tools');
-const { parseRetryAfter } = require('./utils');
+const { parseRetryAfter } = require('news-crawler-itself/utils');
 
 const DEFAULT_STARTUP_FETCH_TIMEOUT_MS = Number(process.env.CRAWLER_STARTUP_FETCH_TIMEOUT_MS || 15000);
 
@@ -142,7 +142,7 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     ProblemClusteringService: require('./ProblemClusteringService').ProblemClusteringService,
     PlannerKnowledgeService: require('./PlannerKnowledgeService').PlannerKnowledgeService,
     ProblemResolutionService: require('./ProblemResolutionService').ProblemResolutionService,
-    CrawlPlaybookService: require('./CrawlPlaybookService').CrawlPlaybookService,
+    CrawlPlaybookService: require('news-crawler-itself/playbook').CrawlPlaybookService,
     CountryHubGapService: require('./CountryHubGapService').CountryHubGapService,
     CountryHubBehavioralProfile: require('./CountryHubBehavioralProfile').CountryHubBehavioralProfile,
     logger: console

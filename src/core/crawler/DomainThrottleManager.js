@@ -1,4 +1,4 @@
-const { sleep, nowMs, safeHostFromUrl, safeCall, safeCallAsync } = require('./utils');
+const { sleep, nowMs, safeHostFromUrl, safeCall, safeCallAsync } = require('news-crawler-itself/utils');
 
 class DomainThrottleManager {
   constructor({

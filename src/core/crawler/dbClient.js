@@ -1,7 +1,7 @@
 const fs = require('fs').promises;
 const { recordPlaceHubSeed } = require('./data/placeHubs');
 const NewsWebsiteService = require('../../services/NewsWebsiteService');
-const { safeCall } = require('./utils');
+const { safeCall } = require('news-crawler-itself/utils');
 const { getDb } = require('../../db');
 const { updateUrlStatus: updateUrlStatusInDb } = require('news-crawler-db');
 

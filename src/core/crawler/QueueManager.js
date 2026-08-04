@@ -1,7 +1,7 @@
 "use strict";
 
 const { isTotalPrioritisationEnabled } = require('../../shared/utils/priorityConfig');
-const { safeCall, safeCallAsync } = require('./utils');
+const { safeCall, safeCallAsync } = require('news-crawler-itself/utils');
 
 function nowMs() { return Date.now(); }
 

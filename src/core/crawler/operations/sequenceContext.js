@@ -11,7 +11,7 @@
  * - Learned crawl patterns
  */
 
-const { CrawlPlaybookService } = require('../CrawlPlaybookService');
+const { CrawlPlaybookService } = require('news-crawler-itself/playbook');
 const { getDb } = require('../../../db');
 const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 

@@ -1,6 +1,6 @@
 'use strict';
 
-const { safeCall } = require('./utils');
+const { safeCall } = require('news-crawler-itself/utils');
 
 /**
  * Manages hub freshness configuration and policies for the crawler.

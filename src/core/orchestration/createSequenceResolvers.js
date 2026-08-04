@@ -2,7 +2,7 @@
 
 const path = require('path');
 const { ConfigManager } = require('../../shared/config/ConfigManager');
-const { CrawlPlaybookService } = require('../../core/crawler/CrawlPlaybookService');
+const { CrawlPlaybookService } = require('news-crawler-itself/playbook');
 const { ensureDb } = require('../../data/db/sqlite/ensureDb');
 
 const DEFAULT_DB_PATH = path.join(process.cwd(), 'data', 'news.db');

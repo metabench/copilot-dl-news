@@ -16,13 +16,17 @@ function registerProcessingServices(container, config) {
   // Link extractor
   container.register('linkExtractor', (c) => {
     try {
-      const LinkExtractor = require('../../LinkExtractor');
+      // Destructured (cycle 177): same new-on-module-object bug as the
+      // articleProcessor entry below had — `new` on the module always threw
+      // and the silent catch served the regex shim forever. Pre-existing;
+      // found while repointing the extraction.
+      const { LinkExtractor } = require('news-crawler-itself/link-extraction');
       return new LinkExtractor({
         baseUrl: config.startUrl,
         followExternal: config.followExternal || false
       });
     } catch (e) {
-      // Provide minimal shim if LinkExtractor doesn't exist
+      console.warn('[ProcessingServices] real LinkExtractor unavailable — serving regex shim:', e.message);
       return {
         extract(html, baseUrl) {
           const links = [];

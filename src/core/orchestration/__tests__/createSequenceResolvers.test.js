@@ -20,7 +20,10 @@ const mockGenerateCandidateActions = jest.fn(async () => [
 
 const mockClosePlaybookService = jest.fn();
 
-jest.mock('../../crawler/CrawlPlaybookService', () => ({
+// Mock target follows the cycle-177 extraction: the impl now requires the
+// engine package, so mocking the old (deleted) relative path would silently
+// stop intercepting and hit the real class.
+jest.mock('news-crawler-itself/playbook', () => ({
   CrawlPlaybookService: jest.fn(() => ({
     loadPlaybook: mockLoadPlaybook,
     generateCandidateActions: mockGenerateCandidateActions,

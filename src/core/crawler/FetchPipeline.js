@@ -1,5 +1,5 @@
 const { shouldUseCache } = require('../../cache');
-const { safeCall, safeCallAsync } = require('./utils');
+const { safeCall, safeCallAsync } = require('news-crawler-itself/utils');
 const NetworkRetryPolicy = require('./NetworkRetryPolicy');
 const HostRetryBudgetManager = require('./HostRetryBudgetManager');
 const { classifyFreshness } = require('./FreshnessClassifier');

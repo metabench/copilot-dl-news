@@ -78,9 +78,7 @@ const {
 const {
   ProblemResolutionService
 } = require('./ProblemResolutionService');
-const {
-  CrawlPlaybookService
-} = require('./CrawlPlaybookService');
+const { CrawlPlaybookService } = require('news-crawler-itself/playbook');
 const {
   CountryHubGapService
 } = require('./CountryHubGapService');
@@ -136,9 +134,7 @@ const {
 const {
   CrawlerTelemetry
 } = require('./CrawlerTelemetry');
-const {
-  LinkExtractor
-} = require('./LinkExtractor');
+const { LinkExtractor } = require('news-crawler-itself/link-extraction');
 const { ArticleProcessor } = require('news-crawler-itself/processing');
 const {
   NavigationDiscoveryService
@@ -152,7 +148,7 @@ const {
   nowMs,
   jitter,
   parseRetryAfter
-} = require('./utils');
+} = require('news-crawler-itself/utils');
 const {
   AdaptiveSeedPlanner
 } = require('./planner/AdaptiveSeedPlanner');

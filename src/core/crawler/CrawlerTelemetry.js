@@ -1,6 +1,6 @@
  'use strict';
 
-const { safeCall } = require('./utils');
+const { safeCall } = require('news-crawler-itself/utils');
 
 // Queue-event actions that explain why a URL did or did not progress. When the
 // CRAWLER_LOG_QUEUE_DROPS env knob is set, these are mirrored to stderr so a

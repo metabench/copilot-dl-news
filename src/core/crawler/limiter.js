@@ -1,4 +1,4 @@
-const { sleep, nowMs } = require('./utils');
+const { sleep, nowMs } = require('news-crawler-itself/utils');
 
 class DomainLimiter {
   constructor({ pacerJitterMinMs = 25, pacerJitterMaxMs = 50 } = {}) {

@@ -1,4 +1,4 @@
-const { safeCall } = require('./utils');
+const { safeCall } = require('news-crawler-itself/utils');
 
 class ExitManager {
   constructor({ telemetry = null } = {}) {

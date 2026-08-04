@@ -57,7 +57,16 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // through EACH side's own dependency tree (jsdom+readability+cheerio+counts),
 // 120/120 deep-equal. One portability bug caught pre-ship: internal code must
 // never require its own package by name (jest resolves it; raw Node does not).
-const CEILING = 358;
+// 358 → 349 (cycle 177, slice 3 — the small-leaf batch): utils (13 engine
+// consumers; its test travelled FIXED — the 'pre-existing utils.safeCall
+// failure' was a wrong import path, broken since it was written),
+// LinkExtractor+links (120/120 stored-doc differential), WorkerTaskProcessor,
+// CrawlPlaybookService (its coordinator-global getDb() fallback REMOVED — an
+// upward dependency the engine must not have; every real site passes db).
+// 23 repoints match-checked; a jest.mock on the deleted path retargeted; the
+// linkExtractor container entry had the same new-on-module silent-shim bug
+// as c176's articleProcessor — fixed loud.
+const CEILING = 349;
 
 function main() {
   const argv = process.argv.slice(2);

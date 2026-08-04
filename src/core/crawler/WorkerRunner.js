@@ -1,5 +1,5 @@
 const { URL } = require('url');
-const { processTaskResult } = require('./WorkerTaskProcessor');
+const { processTaskResult } = require('news-crawler-itself/worker-task-processor');
 
 class WorkerRunner {
   constructor({
@@ -93,7 +93,7 @@ class WorkerRunner {
         this._emitExitReason(reason, workerId, details);
       }
     };
-    const { processTaskResult } = require('./WorkerTaskProcessor');
+    const { processTaskResult } = require('news-crawler-itself/worker-task-processor');
     while (true) {
       if (this.isAbortRequested()) {
         signalExit('abort-requested', { phase: 'pre-loop' });
@@ -238,7 +238,7 @@ class WorkerRunner {
     this.onBusyChange(-1);
 
     if (result) {
-      const { processTaskResult } = require('./WorkerTaskProcessor');
+      const { processTaskResult } = require('news-crawler-itself/worker-task-processor');
       await processTaskResult({
         result,
         item,
