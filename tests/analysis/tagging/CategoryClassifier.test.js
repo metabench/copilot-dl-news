@@ -6,7 +6,7 @@
  * Tests for rule-based topic classification.
  */
 
-const { CategoryClassifier, UNCATEGORIZED, getDefaultConfig } = require('../../../src/analysis/tagging/CategoryClassifier');
+const { CategoryClassifier, UNCATEGORIZED, getDefaultConfig } = require('../../../src/intelligence/analysis/tagging/CategoryClassifier');
 
 describe('CategoryClassifier', () => {
   let classifier;

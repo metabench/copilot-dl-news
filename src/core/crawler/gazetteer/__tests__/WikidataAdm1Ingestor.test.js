@@ -4,7 +4,7 @@ const { openNewsCrawlerDb } = require('../../../../db/openNewsCrawlerDb');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { initGazetteerTables } = require('../../../../data/db/sqlite/schema');
+const { initSqliteV1GazetteerTables: initGazetteerTables } = require('news-crawler-db');
 const WikidataAdm1Ingestor = require('../ingestors/WikidataAdm1Ingestor');
 
 function createSnapshot(entries) {

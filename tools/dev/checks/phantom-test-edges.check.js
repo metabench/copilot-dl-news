@@ -101,7 +101,21 @@ function resolves(spec, fromDir) {
 // 124 → 123 (cycle 185): Crawler.test's jest.mock retargeted to the package
 // subpath — the c179 extraction had repointed the require but not the mock,
 // and the suite failed from that day; 26/26 the moment both edges resolved.
-const CEILING = 123;
+// 123 → 49 (cycle 186, the graveyard burn-down): 27 files bulk-repathed to
+// the post-reorganization tree (src/analysis→src/intelligence/analysis,
+// src/crawler/coordinator→src/core/crawler/coordinator, src/export→
+// src/data/export) — 711 of 718 tests pass where ZERO ran before; the
+// schema four repointed to ncdb's real export (renamed at the package
+// boundary: initSqliteV1GazetteerTables) which ALSO fixed the broken live
+// tool import-gazetteer.js; topicAdapter+summaryAdapter resurrected 34/34
+// against ncdb root exports; seven orphan suites DELETED deliberately
+// (testStudio ×4 — subsystem retired; sdk — never existed; layoutAdapter —
+// long-ghosted; schema-sync — tool gone); and the runtime-fixtures pragma
+// added after ripple-analysis measured 21/21 — its "phantom" edges were
+// fixture files the suite writes before requiring (js-edit same: edit-tool
+// input strings are DATA, not edges). The instrument over-counting was
+// itself a finding.
+const CEILING = 49;
 
 function main() {
   const phantoms = [];
@@ -112,6 +126,9 @@ function main() {
       for (const file of walk(path.join(repo.root, dir))) {
         files++;
         const src = fs.readFileSync(file, 'utf8');
+        // Suites that WRITE their fixture modules before requiring them (or edit
+        // require-strings as DATA) opt out: ripple-analysis 21/21, js-edit measured.
+        if (src.includes('phantom-sweep: runtime-fixtures')) continue;
         for (const { spec, line } of specsIn(src)) {
           edges++;
           if (!resolves(spec, path.dirname(file))) {

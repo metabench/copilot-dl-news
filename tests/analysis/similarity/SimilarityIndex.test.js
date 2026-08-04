@@ -6,9 +6,9 @@
  * Tests for the LSH (Locality-Sensitive Hashing) index implementation.
  */
 
-const { SimilarityIndex, createIndex } = require('../../../src/analysis/similarity/SimilarityIndex');
-const SimHasher = require('../../../src/analysis/similarity/SimHasher');
-const MinHasher = require('../../../src/analysis/similarity/MinHasher');
+const { SimilarityIndex, createIndex } = require('../../../src/intelligence/analysis/similarity/SimilarityIndex');
+const SimHasher = require('../../../src/intelligence/analysis/similarity/SimHasher');
+const MinHasher = require('../../../src/intelligence/analysis/similarity/MinHasher');
 
 describe('SimilarityIndex', () => {
   // Sample articles for testing

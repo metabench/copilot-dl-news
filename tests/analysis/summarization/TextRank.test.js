@@ -12,7 +12,7 @@ const {
   DEFAULT_CONVERGENCE, 
   MAX_ITERATIONS,
   MIN_SIMILARITY 
-} = require('../../../src/analysis/summarization/TextRank');
+} = require('../../../src/intelligence/analysis/summarization/TextRank');
 
 describe('TextRank', () => {
   let textRank;

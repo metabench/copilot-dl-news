@@ -4,7 +4,7 @@
  * Tests for TagRecommender
  */
 
-const { TagRecommender, CATEGORY_BOOST, MIN_KEYWORD_OVERLAP } = require('../../../src/analysis/recommendations/TagRecommender');
+const { TagRecommender, CATEGORY_BOOST, MIN_KEYWORD_OVERLAP } = require('../../../src/intelligence/analysis/recommendations/TagRecommender');
 
 describe('TagRecommender', () => {
   describe('constructor', () => {

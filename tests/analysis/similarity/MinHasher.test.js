@@ -6,7 +6,7 @@
  * Tests for the MinHash signature implementation.
  */
 
-const MinHasher = require('../../../src/analysis/similarity/MinHasher');
+const MinHasher = require('../../../src/intelligence/analysis/similarity/MinHasher');
 
 describe('MinHasher', () => {
   describe('tokenize', () => {

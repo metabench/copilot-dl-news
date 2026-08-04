@@ -6,7 +6,7 @@ const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
  * 
  * Tests for the database adapter for article summaries.
  */
-const { createSummaryAdapter } = require('../../../src/db/sqlite/v1/queries/summaryAdapter');
+const { createSummaryAdapter } = require('news-crawler-db');
 
 describe('summaryAdapter', () => {
   let db;

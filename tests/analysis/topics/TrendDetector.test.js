@@ -15,7 +15,7 @@ const {
   BASELINE_DAYS,
   TREND_SIGMA_THRESHOLD,
   MIN_DAILY_ARTICLES
-} = require('../../../src/analysis/topics/TrendDetector');
+} = require('../../../src/intelligence/analysis/topics/TrendDetector');
 
 describe('TrendDetector', () => {
   describe('mean()', () => {

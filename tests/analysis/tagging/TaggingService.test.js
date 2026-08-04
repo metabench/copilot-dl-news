@@ -7,10 +7,10 @@
  * For full integration tests with database, use the check scripts.
  */
 
-const { TaggingService } = require('../../../src/analysis/tagging/TaggingService');
-const { KeywordExtractor } = require('../../../src/analysis/tagging/KeywordExtractor');
-const { CategoryClassifier, UNCATEGORIZED } = require('../../../src/analysis/tagging/CategoryClassifier');
-const { EntityRecognizer } = require('../../../src/analysis/tagging/EntityRecognizer');
+const { TaggingService } = require('../../../src/intelligence/analysis/tagging/TaggingService');
+const { KeywordExtractor } = require('../../../src/intelligence/analysis/tagging/KeywordExtractor');
+const { CategoryClassifier, UNCATEGORIZED } = require('../../../src/intelligence/analysis/tagging/CategoryClassifier');
+const { EntityRecognizer } = require('../../../src/intelligence/analysis/tagging/EntityRecognizer');
 
 describe('TaggingService', () => {
   let service;

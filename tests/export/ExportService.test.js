@@ -6,11 +6,11 @@
  * Tests for the data export orchestration layer.
  */
 
-const { ExportService } = require('../../src/export/ExportService');
-const { JsonFormatter, JsonlFormatter } = require('../../src/export/formatters/JsonFormatter');
-const { CsvFormatter } = require('../../src/export/formatters/CsvFormatter');
-const { RssFormatter } = require('../../src/export/formatters/RssFormatter');
-const { AtomFormatter } = require('../../src/export/formatters/AtomFormatter');
+const { ExportService } = require('../../src/data/export/ExportService');
+const { JsonFormatter, JsonlFormatter } = require('../../src/data/export/formatters/JsonFormatter');
+const { CsvFormatter } = require('../../src/data/export/formatters/CsvFormatter');
+const { RssFormatter } = require('../../src/data/export/formatters/RssFormatter');
+const { AtomFormatter } = require('../../src/data/export/formatters/AtomFormatter');
 
 // Mock articles for testing
 const mockArticles = [

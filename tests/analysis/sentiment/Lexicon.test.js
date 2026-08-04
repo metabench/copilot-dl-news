@@ -12,7 +12,7 @@ const {
   NEGATION_WORDS, 
   INTENSIFIERS, 
   BUT_WORDS 
-} = require('../../../src/analysis/sentiment/Lexicon');
+} = require('../../../src/intelligence/analysis/sentiment/Lexicon');
 
 describe('Lexicon', () => {
   let lexicon;

@@ -6,7 +6,7 @@
  * Tests for the main duplicate detection service.
  */
 
-const { DuplicateDetector } = require('../../../src/analysis/similarity/DuplicateDetector');
+const { DuplicateDetector } = require('../../../src/intelligence/analysis/similarity/DuplicateDetector');
 
 describe('DuplicateDetector', () => {
   // Mock adapters
@@ -364,8 +364,8 @@ describe('DuplicateDetector', () => {
       const similarityAdapter = createMockSimilarityAdapter();
       
       // Pre-populate adapter with fingerprints
-      const SimHasher = require('../../../src/analysis/similarity/SimHasher');
-      const MinHasher = require('../../../src/analysis/similarity/MinHasher');
+      const SimHasher = require('../../../src/intelligence/analysis/similarity/SimHasher');
+      const MinHasher = require('../../../src/intelligence/analysis/similarity/MinHasher');
       
       const text = 'Sample article content for initialization testing here now';
       similarityAdapter.saveFingerprint({

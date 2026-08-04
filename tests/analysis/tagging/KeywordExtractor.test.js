@@ -6,7 +6,7 @@
  * Tests for TF-IDF based keyword extraction.
  */
 
-const { KeywordExtractor, tokenize, stem, MIN_WORD_LENGTH } = require('../../../src/analysis/tagging/KeywordExtractor');
+const { KeywordExtractor, tokenize, stem, MIN_WORD_LENGTH } = require('../../../src/intelligence/analysis/tagging/KeywordExtractor');
 
 describe('KeywordExtractor', () => {
   describe('tokenize()', () => {

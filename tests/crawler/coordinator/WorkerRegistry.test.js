@@ -1,6 +1,6 @@
 'use strict';
 
-const { WorkerRegistry } = require('../../../src/crawler/coordinator/WorkerRegistry');
+const { WorkerRegistry } = require('../../../src/core/crawler/coordinator/WorkerRegistry');
 
 describe('WorkerRegistry', () => {
   let registry;

@@ -6,7 +6,7 @@
  * Tests for the SimHash fingerprinting implementation.
  */
 
-const SimHasher = require('../../../src/analysis/similarity/SimHasher');
+const SimHasher = require('../../../src/intelligence/analysis/similarity/SimHasher');
 
 describe('SimHasher', () => {
   describe('tokenize', () => {

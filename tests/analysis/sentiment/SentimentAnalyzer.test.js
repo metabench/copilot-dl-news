@@ -6,7 +6,7 @@
  * Tests for the main sentiment analysis engine.
  */
 
-const { SentimentAnalyzer, Lexicon } = require('../../../src/analysis/sentiment');
+const { SentimentAnalyzer, Lexicon } = require('../../../src/intelligence/analysis/sentiment');
 
 describe('SentimentAnalyzer', () => {
   let analyzer;

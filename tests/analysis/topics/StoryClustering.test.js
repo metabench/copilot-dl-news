@@ -13,8 +13,8 @@ const {
   MAX_HAMMING_DISTANCE,
   MIN_SHARED_ENTITIES,
   MAX_TIME_DIFF_HOURS
-} = require('../../../src/analysis/topics/StoryClustering');
-const SimHasher = require('../../../src/analysis/similarity/SimHasher');
+} = require('../../../src/intelligence/analysis/topics/StoryClustering');
+const SimHasher = require('../../../src/intelligence/analysis/similarity/SimHasher');
 
 describe('StoryClustering', () => {
   describe('calculateEntityOverlap()', () => {

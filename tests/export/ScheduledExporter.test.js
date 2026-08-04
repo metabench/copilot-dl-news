@@ -8,8 +8,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ScheduledExporter, CronParser, loadExportConfig, DEFAULT_CONFIG } = require('../../src/export/ScheduledExporter');
-const { ExportService } = require('../../src/export/ExportService');
+const { ScheduledExporter, CronParser, loadExportConfig, DEFAULT_CONFIG } = require('../../src/data/export/ScheduledExporter');
+const { ExportService } = require('../../src/data/export/ExportService');
 
 // Mock articles
 const mockArticles = [

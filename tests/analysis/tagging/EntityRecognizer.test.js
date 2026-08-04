@@ -6,7 +6,7 @@
  * Tests for named entity recognition (PERSON, ORG, GPE).
  */
 
-const { EntityRecognizer, PERSON_TITLES, ORG_SUFFIXES, ORG_KEYWORDS, COMMON_FIRST_NAMES } = require('../../../src/analysis/tagging/EntityRecognizer');
+const { EntityRecognizer, PERSON_TITLES, ORG_SUFFIXES, ORG_KEYWORDS, COMMON_FIRST_NAMES } = require('../../../src/intelligence/analysis/tagging/EntityRecognizer');
 
 // Entity type constants (module exports the sets/arrays, not type constants)
 const ENTITY_TYPES = {

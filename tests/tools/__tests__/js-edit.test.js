@@ -1,3 +1,4 @@
+// phantom-sweep: runtime-fixtures — edit-tool fixture strings contain require() paths that are DATA, not edges.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');

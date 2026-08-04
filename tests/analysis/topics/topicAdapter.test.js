@@ -14,7 +14,7 @@ const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
  * For now, we test basic connectivity and table creation only.
  * Full API tests should be added when the adapter API stabilizes.
  */
-const { createTopicAdapter } = require('../../../src/db/sqlite/v1/queries/topicAdapter');
+const { createTopicAdapter } = require('news-crawler-db');
 
 describe('topicAdapter', () => {
   let db;

@@ -34,6 +34,10 @@ function fnv1a64(str) {
  * @returns {string[]}
  */
 function tokenize(text, options = {}) {
+  // Legacy contract (pinned by the resurrected suite): null/empty → [].
+  // news-db-pure-analysis tokenize throws on null — the guard lives at this
+  // adapter boundary, where the legacy promise was made.
+  if (text == null || text === '') return [];
   // Map legacy options to pure options
   // pure.text.tokenize supports: { minLength, removeStopwords, lowercase }
   // Legacy SimHasher supports: { minWordLength, removeStopwords }

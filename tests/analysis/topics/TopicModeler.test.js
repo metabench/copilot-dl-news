@@ -7,7 +7,7 @@
  */
 
 const path = require('path');
-const { TopicModeler, tokenize, calculateTermFrequencies, STOPWORDS } = require('../../../src/analysis/topics/TopicModeler');
+const { TopicModeler, tokenize, calculateTermFrequencies, STOPWORDS } = require('../../../src/intelligence/analysis/topics/TopicModeler');
 
 describe('TopicModeler', () => {
   describe('tokenize()', () => {

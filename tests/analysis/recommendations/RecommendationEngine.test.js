@@ -4,7 +4,7 @@
  * Tests for RecommendationEngine
  */
 
-const { RecommendationEngine, DEFAULT_WEIGHTS, MAX_PER_DOMAIN, STRATEGIES } = require('../../../src/analysis/recommendations/RecommendationEngine');
+const { RecommendationEngine, DEFAULT_WEIGHTS, MAX_PER_DOMAIN, STRATEGIES } = require('../../../src/intelligence/analysis/recommendations/RecommendationEngine');
 
 describe('RecommendationEngine', () => {
   describe('constructor', () => {

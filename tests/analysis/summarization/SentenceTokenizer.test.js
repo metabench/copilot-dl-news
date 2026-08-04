@@ -13,7 +13,7 @@ const {
   truncateToWords,
   isAbbreviation,
   ABBREVIATIONS 
-} = require('../../../src/analysis/summarization/SentenceTokenizer');
+} = require('../../../src/intelligence/analysis/summarization/SentenceTokenizer');
 
 describe('SentenceTokenizer', () => {
   describe('tokenize()', () => {

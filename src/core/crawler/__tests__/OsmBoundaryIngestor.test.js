@@ -1,6 +1,6 @@
 'use strict';
 const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
-const { initGazetteerTables } = require('../../../data/db/sqlite/schema');
+const { initSqliteV1GazetteerTables: initGazetteerTables } = require('news-crawler-db');
 const OsmBoundaryIngestor = require('../gazetteer/ingestors/OsmBoundaryIngestor');
 
 describe('OsmBoundaryIngestor', () => {

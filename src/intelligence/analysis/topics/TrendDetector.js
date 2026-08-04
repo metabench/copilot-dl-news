@@ -31,9 +31,13 @@ const MAX_TRENDS = 20;
 const {
   calculateBaseline: pureCalculateBaseline,
   calculateTrendScore: pureCalculateTrendScore,
-  mean,
+  mean: pureMean,
   stddev
 } = require('news-db-pure-analysis');
+
+// Legacy contract (pinned by the resurrected suite): mean(null/undefined) → 0.
+// The pure implementation throws — the guard lives at this adapter boundary.
+const mean = (values) => (values == null || values.length === 0 ? 0 : pureMean(values));
 
 /**
  * Get ISO date string (YYYY-MM-DD) from Date object
@@ -142,7 +146,10 @@ class TrendDetector {
 
     return {
       score,
-      isTrending,
+      // Legacy contract (pinned by the resurrected suite): a count below the
+      // minDailyArticles floor is never trending, whatever its z-score — the
+      // pure lib only applies sigma, so the floor is re-applied here.
+      isTrending: isTrending && currentCount >= this.minDailyArticles,
       change: Math.round((currentCount - baseline.mean) * 100) / 100,
       percentChange
     };

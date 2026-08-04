@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const ndjson = require('ndjson');
-const { initGazetteerTables } = require('../data/db/sqlite/schema');
+const { initSqliteV1GazetteerTables: initGazetteerTables } = require('news-crawler-db');
 const { findProjectRoot } = require('../shared/utils/project-root');
 const { openNewsCrawlerDb } = require('../db/openNewsCrawlerDb');
 

@@ -6,7 +6,7 @@
  * Tests for entity-level sentiment analysis.
  */
 
-const { EntitySentiment, Lexicon } = require('../../../src/analysis/sentiment');
+const { EntitySentiment, Lexicon } = require('../../../src/intelligence/analysis/sentiment');
 
 describe('EntitySentiment', () => {
   let entitySentiment;

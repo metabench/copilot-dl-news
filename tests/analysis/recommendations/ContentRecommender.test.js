@@ -4,7 +4,7 @@
  * Tests for ContentRecommender
  */
 
-const { ContentRecommender, DEFAULT_SIMHASH_THRESHOLD } = require('../../../src/analysis/recommendations/ContentRecommender');
+const { ContentRecommender, DEFAULT_SIMHASH_THRESHOLD } = require('../../../src/intelligence/analysis/recommendations/ContentRecommender');
 
 describe('ContentRecommender', () => {
   describe('constructor', () => {

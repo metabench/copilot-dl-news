@@ -4,7 +4,7 @@
  * Tests for TrendingCalculator
  */
 
-const { TrendingCalculator, DEFAULT_DECAY_RATE } = require('../../../src/analysis/recommendations/TrendingCalculator');
+const { TrendingCalculator, DEFAULT_DECAY_RATE } = require('../../../src/intelligence/analysis/recommendations/TrendingCalculator');
 
 describe('TrendingCalculator', () => {
   describe('constructor', () => {

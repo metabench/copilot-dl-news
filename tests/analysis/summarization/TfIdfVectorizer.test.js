@@ -6,7 +6,7 @@
  * Tests for TF-IDF vectorization and cosine similarity.
  */
 
-const { TfIdfVectorizer, tokenizeWords } = require('../../../src/analysis/summarization/TfIdfVectorizer');
+const { TfIdfVectorizer, tokenizeWords } = require('../../../src/intelligence/analysis/summarization/TfIdfVectorizer');
 
 describe('TfIdfVectorizer', () => {
   describe('tokenizeWords()', () => {

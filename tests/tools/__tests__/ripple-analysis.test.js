@@ -1,3 +1,4 @@
+// phantom-sweep: runtime-fixtures — this suite WRITES its fixture modules before requiring them (21/21 green); the sweep must not count those edges.
 /**
  * ripple-analysis.test.js — Jest tests for ripple analysis module
  * 

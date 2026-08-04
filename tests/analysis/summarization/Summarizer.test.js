@@ -10,7 +10,7 @@ const {
   Summarizer, 
   DEFAULT_CONFIG, 
   MIN_SENTENCES_FOR_SUMMARIZATION 
-} = require('../../../src/analysis/summarization/Summarizer');
+} = require('../../../src/intelligence/analysis/summarization/Summarizer');
 
 describe('Summarizer', () => {
   let summarizer;
