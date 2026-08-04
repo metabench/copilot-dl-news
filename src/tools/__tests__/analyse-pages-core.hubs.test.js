@@ -30,7 +30,12 @@ function cleanupTempDb(temp) {
 }
 
 function seedSampleData(dbPath, { url, host, placeName, section }) {
-  const db = ensureDb(dbPath);
+  // c195: ensureDb stopped creating the full schema when ownership moved to
+  // news-crawler-db — NewsDatabase builds the live-mirroring schema
+  // (articles/fetches/places/place_names included), the placeHubs precedent.
+  const NewsDatabase = require('../../db');
+  const ndb = new NewsDatabase(dbPath);
+  const db = ndb.db;
   try {
     const placeId = db.prepare(
       `INSERT INTO places(kind, country_code, status) VALUES ('country', 'CA', 'current')`
@@ -48,20 +53,26 @@ function seedSampleData(dbPath, { url, host, placeName, section }) {
        VALUES (?, ?, ?, 200, 'nav', 18, 6, 150, ?)`
     ).run(url, now, now, host);
 
-    db.prepare(
-      `INSERT INTO articles(url, host, title, section, crawled_at, fetched_at, http_status, text, word_count, article_xpath)
-       VALUES (?, ?, ?, ?, ?, ?, 200, ?, 150, NULL)`
-    ).run(
+    // c195: there is no legacy `articles` table in the current schema (nor in
+    // the LIVE db — measured); article content lives in the normalized store.
+    // Seed through the API the crawler itself uses.
+    ndb.upsertArticle({
       url,
       host,
-      `${placeName} | Example News`,
+      title: `${placeName} | Example News`,
       section,
-      now,
-      now,
-      `${placeName} latest updates and headlines.`,
-    );
+      // html is what feeds content_storage — without it the cascade stops
+      // before content_analysis and the page can never be "pending".
+      html: `<html><body><nav>${section}</nav><h1>${placeName} | Example News</h1><p>${placeName} latest updates and headlines. ${'More coverage. '.repeat(20)}</p></body></html>`,
+      request_started_at: now,
+      fetched_at: now,
+      http_status: 200,
+      content_type: 'text/html',
+      word_count: 150,
+      article_xpath: null
+    });
   } finally {
-    db.close();
+    try { ndb.close(); } catch (_) { /* temp db teardown */ }
   }
 }
 
@@ -88,7 +99,9 @@ describe('analysePages hub assignment', () => {
   test('dry-run reports hub assignments without writing to database', async () => {
     const summary = await analysePages({
       dbPath: temp.dbPath,
-      analysisVersion: 1,
+      // c195: the API seed's cascade writes analysis_version 1, and pending
+      // means version < requested — so the first analysis pass asks for 2.
+      analysisVersion: 2,
       limit: 10,
       dryRun: true,
       collectHubSummary: true,
@@ -115,7 +128,9 @@ describe('analysePages hub assignment', () => {
   test('real run upserts hubs into database', async () => {
     const summary = await analysePages({
       dbPath: temp.dbPath,
-      analysisVersion: 1,
+      // c195: the API seed's cascade writes analysis_version 1, and pending
+      // means version < requested — so the first analysis pass asks for 2.
+      analysisVersion: 2,
       limit: 10
     });
 
@@ -137,13 +152,15 @@ describe('analysePages hub assignment', () => {
   test('subsequent higher-version run updates existing hubs', async () => {
     await analysePages({
       dbPath: temp.dbPath,
-      analysisVersion: 1,
+      // c195: the API seed's cascade writes analysis_version 1, and pending
+      // means version < requested — so the first analysis pass asks for 2.
+      analysisVersion: 2,
       limit: 10
     });
 
     const summary = await analysePages({
       dbPath: temp.dbPath,
-      analysisVersion: 2,
+      analysisVersion: 3,
       limit: 10,
       collectHubSummary: true,
       hubSummaryLimit: 5
