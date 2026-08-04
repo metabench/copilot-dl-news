@@ -139,9 +139,7 @@ const {
 const {
   LinkExtractor
 } = require('./LinkExtractor');
-const {
-  ArticleProcessor
-} = require('./ArticleProcessor');
+const { ArticleProcessor } = require('news-crawler-itself/processing');
 const {
   NavigationDiscoveryService
 } = require('./NavigationDiscoveryService');

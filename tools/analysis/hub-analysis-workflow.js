@@ -12,7 +12,7 @@ const http = require('http');
 const { ensureDatabase } = require('../../src/data/db/sqlite');
 const { resolveNewsCrawlerDbModule } = require('../../src/db/openNewsCrawlerDb');
 const HubValidator = require('../../src/geo/hub-validation/HubValidator');
-const { createJsdom } = require('../../src/shared/utils/jsdomUtils');
+const { createJsdom } = require('news-crawler-itself/jsdom-utils');
 const { summarizeLinks } = require('../../src/shared/utils/linkClassification');
 
 const {

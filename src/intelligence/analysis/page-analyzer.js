@@ -12,8 +12,8 @@ const { detectPlaceHub } = require('../../tools/placeHubDetector');
 const { performDeepAnalysis } = require('./deep-analyzer');
 const { extractDomain } = require('../../services/shared/dxpl');
 const { performance } = require('perf_hooks');
-const { createDom } = require('../../shared/utils/domFactory');
-const { countWords } = require('../../shared/utils/textMetrics');
+const { createDom } = require('news-crawler-itself/dom-factory');
+const { countWords } = require('news-crawler-itself/text-metrics');
 const { summarizeLinks } = require('../../shared/utils/linkClassification');
 
 async function analyzePage(args) {

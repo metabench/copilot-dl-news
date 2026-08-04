@@ -45,13 +45,18 @@ function registerProcessingServices(container, config) {
   // Article processor
   container.register('articleProcessor', (c) => {
     try {
-      const ArticleProcessor = require('../../ArticleProcessor');
+      // Destructured, not the module object (cycle 176): the previous
+      // `new require(...)` on the module ALWAYS threw ("not a constructor")
+      // and the silent catch below served the shim forever — found while
+      // verifying the engine extraction, present since before it. A silent
+      // catch is how a dead feature survives; this one now says so.
+      const { ArticleProcessor } = require('news-crawler-itself/processing');
       return new ArticleProcessor({
         context: c.get('context'),
         config
       });
     } catch (e) {
-      // Provide minimal shim
+      console.warn('[ProcessingServices] real ArticleProcessor unavailable — serving minimal shim:', e.message);
       return {
         process(url, html, metadata = {}) {
           const context = c.get('context');

@@ -8,7 +8,7 @@
 // - Ensure any JSDOM windows are explicitly closed to free memory.
 
 const path = require('path');
-const { createJsdom } = require('../shared/utils/jsdomUtils');
+const { createJsdom } = require('news-crawler-itself/jsdom-utils');
 const { ensureDb } = require('../data/db/sqlite');
 const { CliFormatter } = require('../shared/utils/CliFormatter');
 const { CliArgumentParser } = require('../shared/utils/CliArgumentParser');

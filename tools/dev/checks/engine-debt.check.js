@@ -49,7 +49,15 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // live-URL differential showed 0 disagreements before deletion, 13 consumers
 // repointed with match-checked edits, sibling suite 76/76 with the tests
 // travelling. The engine's URL-signal brain now lives in the engine's repo.
-const CEILING = 360;
+// 360 → 358 (cycle 176, slice 2): ArticleProcessor + its test delegated to
+// news-crawler-itself/processing, taking its FULL closure with it — jsdomUtils,
+// textMetrics and domFactory (found by chasing the tendril's tendril) moved to
+// the engine's src/lib with stable root subpaths, 11 coordinator consumers
+// repointed downward. Differential before deletion: 120 stored documents
+// through EACH side's own dependency tree (jsdom+readability+cheerio+counts),
+// 120/120 deep-equal. One portability bug caught pre-ship: internal code must
+// never require its own package by name (jest resolves it; raw Node does not).
+const CEILING = 358;
 
 function main() {
   const argv = process.argv.slice(2);

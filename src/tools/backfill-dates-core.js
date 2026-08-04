@@ -1,6 +1,6 @@
 'use strict';
 
-const { createJsdom } = require('../shared/utils/jsdomUtils');
+const { createJsdom } = require('news-crawler-itself/jsdom-utils');
 const { ensureDb } = require('../data/db/sqlite');
 const { createBackfillDatesQueries } = require('news-crawler-db');
 

@@ -1,7 +1,7 @@
 /**
  * ArticleXPathAnalyzer - Analyzes HTML structure to identify XPath patterns for article content extraction
  */
-const { createDom } = require('./domFactory');
+const { createDom } = require('news-crawler-itself/dom-factory');
 
 class ArticleXPathAnalyzer {
   constructor(options = {}) {

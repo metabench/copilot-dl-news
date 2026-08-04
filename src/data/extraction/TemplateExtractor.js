@@ -1,7 +1,7 @@
 'use strict';
 
 const { JSDOM } = require('jsdom');
-const { countWords } = require('../../shared/utils/textMetrics');
+const { countWords } = require('news-crawler-itself/text-metrics');
 
 /**
  * Template Extractor - CSS Selector-based Content Extraction

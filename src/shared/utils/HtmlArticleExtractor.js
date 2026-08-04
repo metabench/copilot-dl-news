@@ -7,7 +7,7 @@
 
 const { Readability } = require('@mozilla/readability');
 const { JSDOM } = require('jsdom');
-const { countWords } = require('./textMetrics');
+const { countWords } = require('news-crawler-itself/text-metrics');
 
 /**
  * HTML Article Extractor
