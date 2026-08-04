@@ -16,14 +16,16 @@ class SkeletonDiff {
             if (typeof instance !== 'function' || typeof instance.root !== 'function') {
                 throw new Error(`Entry at index ${idx} is not a cheerio instance`);
             }
-            return { $, root: instance.root() };
+            // c193: was `{ $, ... }` — a bare shorthand for a variable that
+            // never existed; every generateMask call threw "$ is not defined".
+            return { $: instance, root: instance.root() };
         });
 
         const dynamicPaths = [];
         const pathBuilder = [];
 
         const traverse = (nodes) => {
-            const childrenBySample = nodes.map(({ node }) => this._getElementChildren(node));
+            const childrenBySample = nodes.map(({ $, node }) => this._getElementChildren(node, $));
             const expectedCount = childrenBySample[0].length;
 
             // Structure mismatch
@@ -62,12 +64,15 @@ class SkeletonDiff {
             }
         };
 
-        traverse(roots.map(r => ({ $, node: r.root[0] })));
+        traverse(roots.map(r => ({ $: r.$, node: r.root[0] })));
 
         return { dynamicPaths };
     }
 
-    _getElementChildren(node) {
+    // c193: $ is threaded per-instance — the whole class was written against
+    // a module-scope $ that never existed, so no generateMask call ever
+    // completed.
+    _getElementChildren(node, $) {
         if (!node || !node.children) return [];
         return node.children
             .filter(child => child.type === 'tag')
@@ -92,7 +97,16 @@ class SkeletonDiff {
             })
             .join('|');
 
-        const text = this._normalizeText($(el).text());
+        // c193: OWN text only (direct text children), not subtree .text() —
+        // subtree text made every text-differing ANCESTOR read as dynamic,
+        // which skipped descent and hid structural mismatches underneath
+        // (the throw path could never fire).
+        const ownText = $(el).contents()
+            .filter((_, n) => n.type === 'text')
+            .map((_, n) => n.data || '')
+            .get()
+            .join(' ');
+        const text = this._normalizeText(ownText);
         return `${tag}|${normalizedAttrs}|${text}`;
     }
 

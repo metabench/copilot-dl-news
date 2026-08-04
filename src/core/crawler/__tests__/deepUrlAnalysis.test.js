@@ -34,7 +34,9 @@ describe('DeepUrlAnalyzer', () => {
       expect(result.exists).toBe(true);
       expect(result.recorded).toBe(true);
 
-      const row = db.db.prepare('SELECT url, alias_url, url_exists AS exists_flag FROM url_aliases WHERE url = ?').get(decision.analysis.normalized);
+      // url_aliases keys by url_id/alias_url_id (c193 modernization — the old
+      // url/alias_url column SELECT predated the url_id schema).
+      const row = db.db.prepare('SELECT u.url AS url, au.url AS alias_url, ua.url_exists AS exists_flag FROM url_aliases ua JOIN urls u ON u.id = ua.url_id JOIN urls au ON au.id = ua.alias_url_id WHERE u.url = ?').get(decision.analysis.normalized);
       expect(row).toBeDefined();
       expect(row.alias_url).toBe(existingUrl);
       expect(row.exists_flag).toBe(1);

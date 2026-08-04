@@ -9,7 +9,10 @@ const path = require('path');
 // from the SAME lineage — initializeGazetteerSchema, whose places table has
 // place_type. The V1 init used before comes from a different legacy schema
 // without that column, which is why every ingest INSERT failed.
-const { initializeGazetteerSchema: initGazetteerTables } = require('news-crawler-db');
+// c193: back to the V1 (live-shaped) init — the ingest module is now
+// schema-tolerant (probes places for place_type), so the init that mirrors
+// the LIVE schema (attr-shaped attributes, no place_type) is the truth.
+const { initSqliteV1GazetteerTables: initGazetteerTables } = require('news-crawler-db');
 const WikidataAdm1Ingestor = require('../ingestors/WikidataAdm1Ingestor');
 
 function createSnapshot(entries) {

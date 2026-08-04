@@ -7,7 +7,12 @@ describe('SkeletonDiff.generateMask', () => {
         const htmlB = '<div><p class="hero">Hi</p><p>World</p></div>';
 
         const result = SkeletonDiff.generateMask([cheerio.load(htmlA), cheerio.load(htmlB)]);
-        expect(result.dynamicPaths).toEqual(['0']);
+        // c193: the leaf <p> is the dynamic node — 0.1.0.0 = html > body >
+        // div > first p. The old expectation ('0') pinned the broken
+        // subtree-text behavior, which flagged the whole document at the root
+        // and skipped descent (hiding structural mismatches — see the
+        // now-passing structure-throw test).
+        expect(result.dynamicPaths).toEqual(['0.1.0.0']);
     });
 
     it('normalizes class order when comparing nodes', () => {
