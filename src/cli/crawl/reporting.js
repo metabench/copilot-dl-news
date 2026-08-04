@@ -1,5 +1,5 @@
 const { parsePositiveInteger } = require('../../shared/config/overrideHelpers');
-const { OUTPUT_VERBOSITY_LEVELS } = require('../../shared/utils/outputVerbosity');
+const { OUTPUT_VERBOSITY_LEVELS } = require('news-crawler-itself/output-verbosity');
 const { getLoggerWriter } = require('./cliRuntime');
 
 function formatNumber(value) {

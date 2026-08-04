@@ -103,7 +103,19 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // tendrils wait for their own slices.
 // 297 → 296 (cycle 181 close): NavigationDiscoveryRunner.test travelled AFTER
 // the first bank — the post-delete scan caught it dangling and it counted too.
-const CEILING = 296;
+// 296 → 292 (cycle 182, batch 8 — the injection pair): PriorityScorer (its
+// `new ConfigManager()` fallback DISCHARGED to an inert empty-config source —
+// coordinator injects the real one at wiring) and CrawlerEvents (CliFormatter
+// tendril DISCHARGED: icons/colors injected at wiring, plain-ASCII defaults;
+// the old `new CliFormatter()` was dead weight — only the constants were used),
+// plus both test suites. outputVerbosity moved DOWN as a pure engine subpath
+// (it is the vocabulary of engine log lines; PageExecutionService and the
+// NewsCrawler shell keep consuming it downward). Third phantom-path suite
+// RESURRECTED: src/__tests__/enhanced-features.test.js had never run
+// ('../../src/crawler/PriorityScorer' never existed); 13/13 on first run —
+// its null-config expectation only holds BECAUSE of the inert-default
+// discharge. Two dead organ-imports deleted from NewsCrawler in passing.
+const CEILING = 292;
 
 function main() {
   const argv = process.argv.slice(2);

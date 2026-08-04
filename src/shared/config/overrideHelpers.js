@@ -1,5 +1,5 @@
 const { CliArgumentParser } = require('../../shared/utils/CliArgumentParser');
-const { normalizeOutputVerbosity, OUTPUT_VERBOSITY_LEVELS } = require('../../shared/utils/outputVerbosity');
+const { normalizeOutputVerbosity, OUTPUT_VERBOSITY_LEVELS } = require('news-crawler-itself/output-verbosity');
 
 function parsePositiveInteger(value) {
   if (value === undefined || value === null) {

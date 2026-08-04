@@ -9,7 +9,7 @@ const { buildOptions } = require('../../shared/utils/optionsBuilder');
 const {
   normalizeOutputVerbosity,
   DEFAULT_OUTPUT_VERBOSITY
-} = require('../../shared/utils/outputVerbosity');
+} = require('news-crawler-itself/output-verbosity');
 
 // Modularized config and mode imports
 const {
@@ -59,9 +59,6 @@ const {
 const {
   EnhancedDatabaseAdapter
 } = require('./EnhancedDatabaseAdapter');
-const {
-  PriorityScorer
-} = require('./PriorityScorer');
 const {
   ProblemClusteringService
 } = require('./ProblemClusteringService');
@@ -120,9 +117,6 @@ const {
   UrlEligibilityService
 } = require('./UrlEligibilityService');
 const { FetchPipeline } = require('news-crawler-itself/fetch-pipeline');
-const {
-  CrawlerEvents
-} = require('./CrawlerEvents');
 const {
   CrawlerTelemetry
 } = require('news-crawler-itself/crawler-telemetry');

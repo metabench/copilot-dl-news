@@ -1,6 +1,6 @@
-const { PriorityScorer } = require('../../src/crawler/PriorityScorer');
-const { ConfigManager } = require('../../src/config/ConfigManager');
-const { ProblemClusteringService } = require('../../src/crawler/ProblemClusteringService');
+const { PriorityScorer } = require('news-crawler-itself/priority-scorer');
+const { ConfigManager } = require('../shared/config/ConfigManager');
+const { ProblemClusteringService } = require('../core/crawler/ProblemClusteringService');
 
 describe('Enhanced Crawler Features', () => {
   let configManager;

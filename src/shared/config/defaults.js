@@ -1,5 +1,5 @@
 const path = require('path');
-const { normalizeOutputVerbosity } = require('../../shared/utils/outputVerbosity');
+const { normalizeOutputVerbosity } = require('news-crawler-itself/output-verbosity');
 
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 const DEFAULT_OUTPUT_VERBOSITY = 'extra-terse';

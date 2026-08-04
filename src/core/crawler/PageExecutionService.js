@@ -5,7 +5,7 @@ const {
   normalizeOutputVerbosity,
   DEFAULT_OUTPUT_VERBOSITY,
   isSilent
-} = require('../../shared/utils/outputVerbosity');
+} = require('news-crawler-itself/output-verbosity');
 
 class PageExecutionService {
   constructor({

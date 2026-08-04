@@ -9,7 +9,7 @@ const { UrlPolicy } = require('./urlPolicy');
 const { DeepUrlAnalyzer } = require('./deepUrlAnalysis');
 const { UrlDecisionService } = require('./UrlDecisionService');
 const { LinkExtractor } = require('news-crawler-itself/link-extraction');
-const { CrawlerEvents } = require('./CrawlerEvents');
+const { CrawlerEvents } = require('news-crawler-itself/crawler-events');
 const { CrawlerTelemetry } = require('news-crawler-itself/crawler-telemetry');
 const ProblemResolutionHandler = require('./ProblemResolutionHandler');
 const ExitManager = require('./ExitManager');
@@ -138,7 +138,7 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
   crawler.enhancedFeatures = new EnhancedFeaturesManager({
     ConfigManager,
     EnhancedDatabaseAdapter: require('./EnhancedDatabaseAdapter').EnhancedDatabaseAdapter,
-    PriorityScorer: require('./PriorityScorer').PriorityScorer,
+    PriorityScorer: require('news-crawler-itself/priority-scorer').PriorityScorer,
     ProblemClusteringService: require('./ProblemClusteringService').ProblemClusteringService,
     PlannerKnowledgeService: require('./PlannerKnowledgeService').PlannerKnowledgeService,
     ProblemResolutionService: require('./ProblemResolutionService').ProblemResolutionService,
@@ -206,7 +206,11 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     logger: console,
     outputVerbosity: crawler.outputVerbosity,
     loggingQueue: crawler.loggingQueue,
-    prettyOutput: opts.prettyOutput
+    prettyOutput: opts.prettyOutput,
+    // Injected (cycle 182): the engine's CrawlerEvents no longer requires the
+    // coordinator's CliFormatter — pretty mode gets the real icons/colors here.
+    icons: require('../../shared/utils/CliFormatter').ICONS,
+    colors: require('../../shared/utils/CliFormatter').COLORS
   });
   crawler.telemetry = new CrawlerTelemetry({ events: crawler.events });
   crawler.problemResolutionHandler = new ProblemResolutionHandler({ telemetry: crawler.telemetry, state: crawler.state, normalizeUrl: (u, ctx) => crawler.normalizeUrl(u, ctx), domain: crawler.domain, domainNormalized: crawler.domainNormalized });

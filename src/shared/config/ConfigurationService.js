@@ -3,7 +3,7 @@ const path = require('path');
 const yaml = require('js-yaml');
 const { buildOptions } = require('../../shared/utils/optionsBuilder');
 const { crawlerOptionsSchema } = require('./defaults');
-const { normalizeOutputVerbosity, OUTPUT_VERBOSITY_LEVELS } = require('../../shared/utils/outputVerbosity');
+const { normalizeOutputVerbosity, OUTPUT_VERBOSITY_LEVELS } = require('news-crawler-itself/output-verbosity');
 const { buildSharedOverridesFromFlags, parsePositiveInteger } = require('./overrideHelpers');
 
 const DEFAULT_SEQUENCE_PRESET = 'basicArticleDiscovery';
