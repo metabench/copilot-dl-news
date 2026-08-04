@@ -86,7 +86,7 @@ function extractHeadline(html) {
 // dependency argument does not survive contact either — this file already requires
 // better-sqlite3, while ArticleSignalsService pulls in exactly one dependency-free
 // sibling module. One predicate, one place, so the two cannot drift again.
-const ArticleSignalsService = require(path.join(ROOT, 'src', 'core', 'crawler', 'ArticleSignalsService.js'));
+const { ArticleSignalsService } = require('news-crawler-itself/signals');
 const isArticleShapedUrl = (url) => ArticleSignalsService.isArticleShapedUrl(url);
 const SECTION_UTILITY = /^(opinion|sports?|business|politics|video(s)?|quiz(zes)?|about( us)?|privacy( settings)?|data|life( ?& ?style)?|culture|entertainment|society|education|books|premium|elections?|sci-?tech|home|news|my ?account|newsletters?|subscribe|weather|podcasts?|photos?|live|standards editor|columnist|contributors?|authors?)\b/i;
 // A row is noise if its URL is not article-shaped (the primary signal), OR the

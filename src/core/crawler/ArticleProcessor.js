@@ -3,7 +3,7 @@
 const cheerio = require('cheerio');
 const crypto = require('crypto');
 const { Readability } = require('@mozilla/readability');
-const { extractSchemaSignals } = require('./schemaSignals');
+const { extractSchemaSignals } = require('news-crawler-itself/signals');
 const { createJsdom } = require('../../shared/utils/jsdomUtils');
 const { countWords } = require('../../shared/utils/textMetrics');
 const zlib = require('zlib');

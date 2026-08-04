@@ -18,7 +18,7 @@
  * @see src/classifiers/StageAggregator.js
  */
 
-const ArticleSignalsService = require('../../core/crawler/ArticleSignalsService');
+const { ArticleSignalsService } = require('news-crawler-itself/signals');
 const { Stage1UrlClassifier, Stage2ContentClassifier, StageAggregator } = require('../../intelligence/classifiers');
 
 // Singleton instances for reuse

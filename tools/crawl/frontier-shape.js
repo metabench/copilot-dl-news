@@ -22,7 +22,7 @@ const { createRequire } = require('module');
 const REPO = path.resolve(__dirname, '..', '..');
 const req = createRequire(path.join(REPO, 'package.json'));
 const Database = req(require.resolve('better-sqlite3', { paths: [REPO, path.join(REPO, '..', 'news-crawler-db')] }));
-const ArticleSignalsService = req(path.join(REPO, 'src', 'core', 'crawler', 'ArticleSignalsService.js'));
+const { ArticleSignalsService } = require('news-crawler-itself/signals');
 
 function arg(name, dflt) {
   const i = process.argv.indexOf(name);

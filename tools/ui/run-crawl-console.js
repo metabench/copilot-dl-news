@@ -40,7 +40,7 @@ const SLICE = Math.max(500, Math.min(20000, Number(getArg('--slice', 4000))));
 // Consumed as a sibling module (declared in package.json as file:../news-crawler-ui;
 // resolved by path so the runner also works before an npm install has linked it).
 const { startConsoleServer } = require(path.resolve(ROOT, '..', 'news-crawler-ui', 'console', 'server.js'));
-const ArticleSignalsService = require(path.join(ROOT, 'src', 'core', 'crawler', 'ArticleSignalsService.js'));
+const { ArticleSignalsService } = require('news-crawler-itself/signals');
 const Database = require(require.resolve('better-sqlite3', { paths: [ROOT, path.join(ROOT, '..', 'news-crawler-db')] }));
 
 if (!fs.existsSync(DB_PATH)) {

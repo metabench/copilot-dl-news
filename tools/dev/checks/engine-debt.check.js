@@ -44,7 +44,12 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 
 // Baseline measured 2026-08-04 (cycle 174): 365 tracked files (252 source +
 // 113 tests). Lower as delegations/retirements land; raise deliberate-only.
-const CEILING = 365;
+// 365 → 360 (cycle 175, first slice): ArticleSignalsService + schemaSignals +
+// their three test files DELEGATED to news-crawler-itself/signals — 200,000
+// live-URL differential showed 0 disagreements before deletion, 13 consumers
+// repointed with match-checked edits, sibling suite 76/76 with the tests
+// travelling. The engine's URL-signal brain now lives in the engine's repo.
+const CEILING = 360;
 
 function main() {
   const argv = process.argv.slice(2);

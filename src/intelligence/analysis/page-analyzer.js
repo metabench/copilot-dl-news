@@ -7,7 +7,7 @@ const {
   inferContext
 } = require('./place-extraction');
 const { evaluateArticleCandidate } = require('./articleDetection');
-const ArticleSignalsService = require('../../core/crawler/ArticleSignalsService');
+const { ArticleSignalsService } = require('news-crawler-itself/signals');
 const { detectPlaceHub } = require('../../tools/placeHubDetector');
 const { performDeepAnalysis } = require('./deep-analyzer');
 const { extractDomain } = require('../../services/shared/dxpl');

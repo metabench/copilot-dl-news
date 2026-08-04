@@ -148,7 +148,7 @@ const {
 const {
   ContentAcquisitionService
 } = require('./ContentAcquisitionService');
-const ArticleSignalsService = require('./ArticleSignalsService');
+const { ArticleSignalsService } = require('news-crawler-itself/signals');
 const {
   sleep,
   nowMs,

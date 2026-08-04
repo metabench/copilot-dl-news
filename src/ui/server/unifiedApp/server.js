@@ -1607,7 +1607,7 @@ load(); setInterval(load, 60000);
       // Inject the (pure, static) URL-shape predicate so the article-new branch
       // PREFERS article-shaped URLs over the unclassified section pages that
       // otherwise dominate the frontier (task #48 — the headline-freshness lever).
-      const ArticleSignalsService = require('../../../core/crawler/ArticleSignalsService');
+      const { ArticleSignalsService } = require('news-crawler-itself/signals');
       const facade = getDbRW();
       const handle = facade && facade.db ? facade.db : facade;
       const recencyMs = Math.round(currentHubRecencyDays() * 24 * 60 * 60 * 1000);
@@ -2562,7 +2562,7 @@ load(); setInterval(load, 60000);
   unifiedApp.get('/api/v1/crawl/recent-articles', (req, res) => {
     try {
       const { listRecentArticlesForDetail } = require('news-crawler-db');
-      const ArticleSignalsService = require('../../../core/crawler/ArticleSignalsService');
+      const { ArticleSignalsService } = require('news-crawler-itself/signals');
       const facade = getDbRW();
       const handle = facade && facade.db ? facade.db : facade;
       const limit = Math.max(1, Math.min(60, Number(req.query.limit) || 30));

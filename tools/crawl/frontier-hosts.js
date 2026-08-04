@@ -35,7 +35,7 @@ let _signals = null;
 function getSignals() {
   if (_signals) return _signals;
   try {
-    const ArticleSignalsService = require(path.resolve(__dirname, '..', '..', 'src', 'core', 'crawler', 'ArticleSignalsService.js'));
+    const { ArticleSignalsService } = require('news-crawler-itself/signals');
     _signals = new ArticleSignalsService({});
   } catch (_) {
     _signals = { looksLikeArticle: () => true };

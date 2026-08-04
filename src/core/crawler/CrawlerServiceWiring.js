@@ -1,6 +1,6 @@
 "use strict";
 
-const ArticleSignalsService = require('./ArticleSignalsService');
+const { ArticleSignalsService } = require('news-crawler-itself/signals');
 const { createStoredRateLimitProvider } = require('./storedRateLimitProvider');
 const { EnhancedFeaturesManager } = require('./EnhancedFeaturesManager');
 const { ArticleCache } = require('../../cache');

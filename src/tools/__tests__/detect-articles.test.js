@@ -1,6 +1,6 @@
 'use strict';
 
-const ArticleSignalsService = require('../../core/crawler/ArticleSignalsService');
+const { ArticleSignalsService } = require('news-crawler-itself/signals');
 const { evaluateArticleCandidate } = require('../detect-articles');
 
 describe('evaluateArticleCandidate', () => {

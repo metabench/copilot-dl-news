@@ -33,7 +33,7 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const ArticleSignalsService = require(path.join(ROOT, 'src', 'core', 'crawler', 'ArticleSignalsService.js'));
+const { ArticleSignalsService } = require('news-crawler-itself/signals');
 const { createUrlClassifier } = require(path.join(ROOT, 'src', 'intelligence', 'urlIntelligence.js'));
 
 const argv = process.argv.slice(2);
