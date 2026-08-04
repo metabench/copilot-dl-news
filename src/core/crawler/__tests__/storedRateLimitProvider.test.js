@@ -15,7 +15,7 @@ const os = require('os');
 const path = require('path');
 
 const { resolveSqliteHandle, createStoredRateLimitProvider } = require('../storedRateLimitProvider');
-const { DomainThrottleManager } = require('../DomainThrottleManager');
+const { DomainThrottleManager } = require('news-crawler-itself/politeness');
 const { createCrawlerDb } = require('../dbClient');
 
 describe('resolveSqliteHandle', () => {
@@ -104,7 +104,7 @@ describe('createStoredRateLimitProvider against a REAL createCrawlerDb adapter',
 
   // End-to-end through the throttle manager: a real adapter must produce a real floor.
   it('applies the stored floor end-to-end via DomainThrottleManager', async () => {
-    const { CrawlerState } = require('../CrawlerState');
+    const { CrawlerState } = require('news-crawler-itself/crawler-state');
     const manager = new DomainThrottleManager({
       state: new CrawlerState(),
       getDbAdapter: () => ({ isEnabled: () => false }),
@@ -121,7 +121,7 @@ describe('createStoredRateLimitProvider against a REAL createCrawlerDb adapter',
   // politenessFloorMs > 0 (limiter.js:50-53). Assert the floor reaches the REAL limiter,
   // otherwise the whole feature is inert exactly as it was in cycle 14.
   it('pushes the stored floor into the REAL DomainLimiter (the path that paces production)', async () => {
-    const { CrawlerState } = require('../CrawlerState');
+    const { CrawlerState } = require('news-crawler-itself/crawler-state');
     const manager = new DomainThrottleManager({
       state: new CrawlerState(),
       getDbAdapter: () => ({ isEnabled: () => false }),
@@ -138,7 +138,7 @@ describe('createStoredRateLimitProvider against a REAL createCrawlerDb adapter',
   });
 
   it('leaves a no-row host unpaced in the REAL limiter (no invented floor)', async () => {
-    const { CrawlerState } = require('../CrawlerState');
+    const { CrawlerState } = require('news-crawler-itself/crawler-state');
     const manager = new DomainThrottleManager({
       state: new CrawlerState(),
       getDbAdapter: () => ({ isEnabled: () => false }),

@@ -36,10 +36,11 @@
   },
   "politeness": {
     "_rule": "Loosening politeness is GATED. There is no single floor CONSTANT to assert (the effective floor is max() of robots + stored values, and adaptive speed-up is pre-existing behaviour), so the check guards the part that matters most and IS static: the 429 backoff escalation must not be weakened or deleted.",
-    "file": "src/core/crawler/DomainThrottleManager.js",
+    "file": "../news-crawler-itself/src/politeness/DomainThrottleManager.js",
     "requiredPatterns": [
       "err429Streak >= 2",
       "err429Streak >= 3"
-    ]
+    ],
+    "_moved": "cycle 179 (2026-08-04): the politeness pair extracted to news-crawler-itself under the gate protocol — file path updated in the SAME commit as the monorepo deletion; requiredPatterns unchanged; the ritual-compliance check reads across the repo boundary (path.join handles ..). Loosening still owner-gated."
   }
 }

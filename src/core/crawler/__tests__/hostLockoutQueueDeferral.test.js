@@ -1,7 +1,7 @@
 'use strict';
 
-const HostRetryBudgetManager = require('../HostRetryBudgetManager');
-const { DomainThrottleManager } = require('../DomainThrottleManager');
+const { HostRetryBudgetManager } = require('news-crawler-itself/fetch-pipeline');
+const { DomainThrottleManager } = require('news-crawler-itself/politeness');
 
 /**
  * Regression: a host retry-budget lockout must reach the queue's host

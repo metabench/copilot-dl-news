@@ -1,7 +1,7 @@
 'use strict';
 
 const { PageExecutionService } = require('../PageExecutionService');
-const { CrawlerState } = require('../CrawlerState');
+const { CrawlerState } = require('news-crawler-itself/crawler-state');
 
 describe('PageExecutionService place hub pattern learning', () => {
   // Minimal mocks for PageExecutionService dependencies

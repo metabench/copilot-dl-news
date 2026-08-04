@@ -36,12 +36,8 @@ const {
 const {
   UrlDecisionService
 } = require('./UrlDecisionService');
-const {
-  ErrorTracker
-} = require('./ErrorTracker');
-const {
-  DomainThrottleManager
-} = require('./DomainThrottleManager');
+const { ErrorTracker } = require('news-crawler-itself/error-tracker');
+const { DomainThrottleManager } = require('news-crawler-itself/politeness');
 const http = require('http');
 const https = require('https');
 const {
@@ -111,9 +107,7 @@ const normalizeHost = normalizeHostFromConfig;
 const {
   loadSitemaps
 } = require('./sitemap');
-const {
-  CrawlerState
-} = require('./CrawlerState');
+const { CrawlerState } = require('news-crawler-itself/crawler-state');
 const {
   RobotsAndSitemapCoordinator
 } = require('./RobotsAndSitemapCoordinator');

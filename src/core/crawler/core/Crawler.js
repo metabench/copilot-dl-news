@@ -38,7 +38,7 @@
 const EventedCrawlerBase = require('./EventedCrawlerBase');
 const http = require('http');
 const https = require('https');
-const { CrawlerState } = require('../CrawlerState');
+const { CrawlerState } = require('news-crawler-itself/crawler-state');
 const { StartupProgressTracker } = require('../StartupProgressTracker');
 
 /**

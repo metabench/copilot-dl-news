@@ -28,11 +28,10 @@
  *     tokens: cycle 171's grep missed relative requires and cycle 173's first
  *     boot paid for it.
  *
- * KNOWN CONSTRAINT for future slices: config/gated-surfaces.json's politeness
- * gate points INTO this tree (src/core/crawler/DomainThrottleManager.js
- * requiredPatterns). Any slice that moves that file must move the gate config
- * in the SAME commit, owner-visibly — the 429-backoff escalation is never
- * weakened, and never left unwatched.
+ * The politeness-gate constraint was DISCHARGED in cycle 179: the pair moved
+ * to news-crawler-itself/src/politeness under the protocol (gate config
+ * repointed in the same commit, requiredPatterns unchanged, escalation
+ * byte-intact, ritual-compliance reading across the repo boundary).
  *
  * Exit 0 = at or under ceiling. Exit 1 = over. --ceiling <n> for bite tests.
  */
@@ -75,7 +74,16 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // match-checked; one more jest.mock retargeted off a deleted path. The GATED
 // pair (DomainThrottleManager + limiter) is now the LAST politeness holdout,
 // by design.
-const CEILING = 329;
+// 329 → 322 (cycle 179 — the GATED slice): DomainThrottleManager + limiter
+// moved under the full protocol (gate config repointed same-commit, both
+// err429Streak patterns verified in the moved file, escalation byte-intact),
+// with ErrorTracker, HubFreshnessController and CrawlerState riding as clean
+// leaves. The coordinator-owned concurrency-default gate test was excised
+// from the travelling suite and re-homed (it file-reads NewsCrawler.js).
+// QueueManager deliberately did NOT ride: its priorityConfig edge is
+// coordinator config with observatory consumers — it waits for the
+// NewsCrawler-internals batch.
+const CEILING = 322;
 
 function main() {
   const argv = process.argv.slice(2);

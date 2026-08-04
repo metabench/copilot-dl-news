@@ -114,8 +114,10 @@ describe('ritual-compliance', () => {
     });
 
     it('reports a required politeness pattern that is not in the real file', () => {
+      // Path follows the cycle-179 extraction — and now doubles as proof the
+      // gate check reads ACROSS the repo boundary (path.join handles ..).
       const s = gatherSurfaces({
-        politeness: { file: 'src/core/crawler/DomainThrottleManager.js', requiredPatterns: ['err429Streak >= 2', 'NOT_A_REAL_TOKEN'] }
+        politeness: { file: '../news-crawler-itself/src/politeness/DomainThrottleManager.js', requiredPatterns: ['err429Streak >= 2', 'NOT_A_REAL_TOKEN'] }
       });
       expect(s.politeness).toEqual(['NOT_A_REAL_TOKEN']); // the real one matched; the fake did not
     });
