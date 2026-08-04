@@ -269,6 +269,16 @@
       ],
       "needsServer": false,
       "timeoutMs": 30000
+    },
+    {
+      "id": "config-fallbacks",
+      "description": "components with file-config fallbacks actually loaded their REAL config (c188 lesson: CategoryClassifier served its 35-keyword ENOENT fallback in production for months, warning into unwatched logs — a fallback that degrades quietly is a defect with a delay timer). Constructs each registered component at orient and asserts real-config markers (classifier: phrases>=10, keywords>=100)",
+      "cmd": "node",
+      "args": [
+        "tools/dev/checks/config-fallbacks.check.js"
+      ],
+      "needsServer": false,
+      "timeoutMs": 30000
     }
   ]
 }

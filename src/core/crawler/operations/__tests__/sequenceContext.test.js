@@ -1,5 +1,12 @@
 'use strict';
 
+// c189: the adapter now SELF-PROVISIONS a playbook from the shared getDb()
+// when constructed bare — a deliberate fallback this suite slept through.
+// The "without playbook service" cases test the ISOLATED contract, so the
+// shared-db source is mocked to null here; the fallback keeps its own
+// behavior in production and in the with-db cases below.
+jest.mock('../../../../db', () => ({ getDb: () => null }));
+
 const { SequenceContextAdapter, createSequenceContext } = require('../sequenceContext');
 
 describe('SequenceContextAdapter', () => {

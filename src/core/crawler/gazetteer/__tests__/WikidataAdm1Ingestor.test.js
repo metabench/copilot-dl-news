@@ -4,7 +4,12 @@ const { openNewsCrawlerDb } = require('../../../../db/openNewsCrawlerDb');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { initSqliteV1GazetteerTables: initGazetteerTables } = require('news-crawler-db');
+// c189: this suite exercises the legacy-gazetteer INGEST lineage
+// (createIngestionStatements writes place_type), so it must init the schema
+// from the SAME lineage — initializeGazetteerSchema, whose places table has
+// place_type. The V1 init used before comes from a different legacy schema
+// without that column, which is why every ingest INSERT failed.
+const { initializeGazetteerSchema: initGazetteerTables } = require('news-crawler-db');
 const WikidataAdm1Ingestor = require('../ingestors/WikidataAdm1Ingestor');
 
 function createSnapshot(entries) {

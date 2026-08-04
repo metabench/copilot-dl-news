@@ -1,7 +1,7 @@
 {
-  "_comment": "The pinned set of KNOWN-failing crawler suites (DEBT plan item 2, cycle 184). Set-shrink-only: a failing suite NOT in this list is a NEW regression and fails the check; a listed suite that passes is banked by removing it here in the same commit. Baseline measured 2026-08-04 after batch 10: 17 suites / 49 tests; Crawler.test banked cycle 185 (26/26 after the c179 mock-path fix) leaving 16; c186 banked StagedGazetteerCoordinator.planner + OsmBoundaryIngestor (schema resolution fixed, both green) leaving 14; c188 banked runLegacyCommand (23/23 after MockNewsCrawler modernized to the event API) leaving 13 (was 51 until the placeHubs.data real-defect fix). Triage classes: phantom = cannot load (resolution fix first); env = needs missing dep/service; untriaged = not yet diagnosed. MEASURED c186 close: 14 suites / 50 tests — failing-test count ROSE as suites resolved (a suite that cannot load contributes zero test-failures; resurrection converts hidden brokenness into counted brokenness).",
+  "_comment": "The pinned set of KNOWN-failing crawler suites (DEBT plan item 2, cycle 184). Set-shrink-only: a failing suite NOT in this list is a NEW regression and fails the check; a listed suite that passes is banked by removing it here in the same commit. Baseline measured 2026-08-04 after batch 10: 17 suites / 49 tests; Crawler.test banked cycle 185 (26/26 after the c179 mock-path fix) leaving 16; c186 banked StagedGazetteerCoordinator.planner + OsmBoundaryIngestor (schema resolution fixed, both green) leaving 14; c188 banked runLegacyCommand (23/23 after MockNewsCrawler modernized to the event API) leaving 13; c189 banked configArgs (16/16 — the merge contract is deliberate, 2026-07-26 incident-backed; stale short-circuit test modernized + merge pin added) and sequenceContext (18/18 — adapter self-provisions from shared getDb, isolated cases now mock it null) leaving 11 (was 51 until the placeHubs.data real-defect fix). Triage classes: phantom = cannot load (resolution fix first); env = needs missing dep/service; untriaged = not yet diagnosed. MEASURED c186 close: 14 suites / 50 tests — failing-test count ROSE as suites resolved (a suite that cannot load contributes zero test-failures; resurrection converts hidden brokenness into counted brokenness).",
   "scope": "src/core/crawler",
-  "totalFailingTests": 50,
+  "totalFailingTests": 45,
   "suites": {
     "src/core/crawler/__tests__/HierarchicalPlanner.pattern-discovery.test.js": "untriaged",
     "src/core/crawler/__tests__/IntelligentPlanRunner.placeHubVerification.contract.test.js": "untriaged",
@@ -9,12 +9,10 @@
     "src/core/crawler/__tests__/ProblemResolutionService.test.js": "untriaged",
     "src/core/crawler/__tests__/deepUrlAnalysis.test.js": "untriaged",
     "src/core/crawler/__tests__/queue.behaviour.test.js": "untriaged",
-    "src/core/crawler/cli/__tests__/configArgs.test.js": "untriaged",
-    "src/core/crawler/gazetteer/__tests__/WikidataAdm1Ingestor.test.js": "real: places.place_type schema drift between ingestor and legacy init (3/4 pass since c186 resolution fix)",
+    "src/core/crawler/gazetteer/__tests__/WikidataAdm1Ingestor.test.js": "real: ncdb legacy gazetteer lineages diverged — places.place_type layer fixed c189 by matching init (initializeGazetteerSchema), next layer place_attribute_values.attr mismatches createAttributeStatements; ncdb-source alignment needed (chip class)",
     "src/core/crawler/gazetteer/__tests__/concurrency.behavior.test.js": "untriaged",
     "src/core/crawler/gazetteer/__tests__/geography.depth.test.js": "untriaged",
     "src/core/crawler/gazetteer/ingestors/__tests__/WikidataAdm1Ingestor.adm1Code.test.js": "untriaged",
-    "src/core/crawler/gazetteer/ingestors/__tests__/WikidataAdm1Ingestor.dynamic.test.js": "untriaged",
-    "src/core/crawler/operations/__tests__/sequenceContext.test.js": "untriaged"
+    "src/core/crawler/gazetteer/ingestors/__tests__/WikidataAdm1Ingestor.dynamic.test.js": "untriaged"
   }
 }

@@ -56,9 +56,14 @@ describe('configArgs', () => {
     ]);
   });
 
-  it('returns direct argv when provided', async () => {
+  it('returns direct argv when provided and no config resolves', async () => {
+    // c189: when a configPath IS supplied alongside direct argv, the modern
+    // contract MERGES them (origin 'merged', direct flags win — a deliberate
+    // 2026-07-26 fix after a benchmark crawled the config's guardian URL
+    // instead of the command line's fixture). The pure-direct short-circuit
+    // this test pins only holds when the config is absent.
     const fsModule = {
-      readFile: jest.fn()
+      readFile: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
     };
     const directArgv = ['https://direct.example', '--depth=1'];
 
@@ -72,7 +77,23 @@ describe('configArgs', () => {
       argv: directArgv,
       origin: 'direct'
     });
-    expect(fsModule.readFile).not.toHaveBeenCalled();
+  });
+
+  it('merges config with direct argv when both resolve (direct flags win)', async () => {
+    const fsModule = {
+      readFile: jest.fn().mockResolvedValue(serializedSample)
+    };
+    const directArgv = ['--depth=1'];
+
+    const result = await resolveCliArguments({
+      directArgv,
+      fsModule,
+      configPath: fakePath
+    });
+
+    expect(result.origin).toBe('merged');
+    expect(result.argv[result.argv.length - 1]).toBe('--depth=1');
+    expect(fsModule.readFile).toHaveBeenCalled();
   });
 
   it('returns metadata when loading from config file', async () => {
