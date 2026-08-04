@@ -76,6 +76,20 @@ lanes. Pave-the-road (idea 3) is not queued — it joins the settled recipe
 as a standing pre-move step. The continuation prompt carries this cadence
 forward each turn; this doc is its anchor.
 
+## The 88-suite census (cycle 198 — owner decisions requested)
+
+Full-run 2026-08-05: 86 failed suites / 169 failed tests / 6017 passing.
+Classified; each class has a different right treatment — rulings requested:
+
+| Class | Count | Recommended treatment |
+|---|---|---|
+| LEGACY-TESTS-TREE (the old parallel tests/ root) | 43 | census-then-burn like the phantom playbook, or bulk-retire the tree if superseded by src/__tests__ — RULING NEEDED |
+| E2E/BROWSER (puppeteer, guardian runs) | 13 | separate jest project + servers-up lane (npm run test:e2e), excluded from the unit denominator — RULING NEEDED |
+| SRC-ADJACENT (in-tree fixable classes) | 11 | normal debt-work territory; schedulable now without a ruling |
+| SERVER-BOUND (spawns/expects services) | 10 | join the e2e lane or gain spawn-own-server harnesses per suite |
+| SCRATCH-TREE (tmp/, wip/ — incl. a VENDORED ncdb helper collected as a test) | 6 | jest testPathIgnorePatterns for tmp/ + wip/ — config hygiene, changes the measured denominator so ratification requested |
+| ENV-DEP + tools + other | ~3 | the standing better-sqlite3 / @playwright/test rulings |
+
 **Stopping condition per instrument:** an instrument retires when its class
 is structurally impossible (phantom edges once probed), its count reaches
 its floor (engine-debt at shell-state), or the owner parks it with a

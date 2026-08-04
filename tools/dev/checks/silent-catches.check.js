@@ -82,7 +82,7 @@ function main() {
 // Baseline measured cycle 197 after loud-ening the Cities ingestor's three.
 // Lower by converting bare swallows to loud warns or commented decisions;
 // never by deleting the catch without reading what it guards.
-const CEILING = Number(process.argv.includes('--ceiling') ? process.argv[process.argv.indexOf('--ceiling') + 1] : 378);
+const CEILING = Number(process.argv.includes('--ceiling') ? process.argv[process.argv.indexOf('--ceiling') + 1] : 335);
 
 const bare = main();
 console.log(`silent-catches: ${bare.length} BARE (uncommented) silent catches, both repos (ceiling ${CEILING}); commented swallows are reviewed decisions and not counted`);
