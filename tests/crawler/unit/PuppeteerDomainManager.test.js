@@ -7,7 +7,7 @@
  * based on ECONNRESET failure patterns.
  */
 
-const { PuppeteerDomainManager } = require('../../../src/core/crawler/PuppeteerDomainManager');
+const { PuppeteerDomainManager } = require('news-crawler-itself/fetch-pipeline');
 
 describe('PuppeteerDomainManager', () => {
   let manager;

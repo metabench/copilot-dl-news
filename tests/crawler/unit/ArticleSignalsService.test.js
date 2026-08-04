@@ -1,6 +1,6 @@
 "use strict";
 
-const ArticleSignalsService = require("../../../src/core/crawler/ArticleSignalsService");
+const { ArticleSignalsService } = require("news-crawler-itself/signals");
 
 describe("ArticleSignalsService (config-driven patterns)", () => {
   test("uses defaults when no config provided", () => {

@@ -16,7 +16,7 @@ describe('bucketCache', () => {
     db = openNewsCrawlerDb(':memory:');
     
     // Create schema
-    const { initCompressionTables } = require('../../../data/db/sqlite/schema');
+    const { initSqliteV1CompressionTables: initCompressionTables } = require('news-crawler-db');
     initCompressionTables(db, { verbose: false, logger: console });
   });
   

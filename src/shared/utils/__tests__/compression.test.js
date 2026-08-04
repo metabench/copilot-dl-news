@@ -22,7 +22,7 @@ describe('compression', () => {
     db = openNewsCrawlerDb(':memory:');
     
     // Create schema
-    const { initializeSchema } = require('../../../data/db/sqlite/schema');
+    const { initializeSqliteV1Schema: initializeSchema } = require('news-crawler-db');
     initializeSchema(db, { verbose: false, logger: console });
   });
   

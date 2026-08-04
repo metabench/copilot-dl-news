@@ -1,3 +1,4 @@
+// phantom-sweep: runtime-fixtures — this suite writes fixture modules before requiring them (42/42 green c187).
 #!/usr/bin/env node
 'use strict';
 

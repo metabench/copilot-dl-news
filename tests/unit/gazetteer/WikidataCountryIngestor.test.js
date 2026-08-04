@@ -2,7 +2,9 @@
 
 const mockGetFreshness = jest.fn();
 
-jest.mock('../../../src/data/db/sqlite/v1/queries/gazetteer.ingest', () => ({
+// Retargeted (c187): the ingestor imports these from news-crawler-db now.
+jest.mock('news-crawler-db', () => ({
+  ...jest.requireActual('news-crawler-db'),
   createIngestionStatements: jest.fn(() => ({
     getPlaceFreshnessByWikidata: { get: mockGetFreshness }
   })),

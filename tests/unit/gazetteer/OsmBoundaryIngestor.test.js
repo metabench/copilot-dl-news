@@ -3,7 +3,10 @@
 const mockListBoundaryCandidates = jest.fn();
 const mockSaveBoundaryData = jest.fn();
 
-jest.mock('../../../src/data/db/sqlite/v1/queries/gazetteer.osm', () => ({
+// Retargeted (c187): the ingestor imports these from news-crawler-db now;
+// requireActual keeps the rest of the package intact.
+jest.mock('news-crawler-db', () => ({
+  ...jest.requireActual('news-crawler-db'),
   createOsmBoundaryStatements: jest.fn(() => ({})),
   listBoundaryCandidates: mockListBoundaryCandidates,
   saveBoundaryData: mockSaveBoundaryData

@@ -30,9 +30,10 @@ jest.mock('../../NewsCrawler', () => {
   return MockNewsCrawler;
 });
 
-// Mock database module
-jest.mock('../../../db/sqlite', () => ({
-  ensureDatabase: jest.fn(() => ({
+// Mock database module — retargeted (c187): the subject opens its db via
+// openNewsCrawlerDb now; the old ../../../db/sqlite path never resolved.
+jest.mock('../../../../db/openNewsCrawlerDb', () => ({
+  openNewsCrawlerDb: jest.fn(() => ({
     db: {
       prepare: jest.fn(() => ({
         get: jest.fn(() => ({ city_count: 100 }))

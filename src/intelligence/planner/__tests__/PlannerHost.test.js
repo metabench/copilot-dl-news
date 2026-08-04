@@ -1,7 +1,7 @@
 'use strict';
 
 const { PlannerHost } = require('../PlannerHost');
-const { GraphReasonerPlugin } = require('../../../plugins/GraphReasonerPlugin');
+const { GraphReasonerPlugin } = require('../plugins/GraphReasonerPlugin');
 
 describe('PlannerHost', () => {
   it('should run a single plugin successfully', async () => {

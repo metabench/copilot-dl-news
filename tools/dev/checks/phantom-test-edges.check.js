@@ -115,7 +115,19 @@ function resolves(spec, fromDir) {
 // fixture files the suite writes before requiring (js-edit same: edit-tool
 // input strings are DATA, not edges). The instrument over-counting was
 // itself a finding.
-const CEILING = 49;
+// 49 → 29 (cycle 187): twelve more suites resolved — IUrlQueue (src/queue →
+// src/core/queue), createSequenceResolvers + runLegacyCommand + the
+// gazetteer mock pair (MOCKS retargeted to the subjects' real imports, with
+// requireActual spreads where the subject needs the rest of ncdb),
+// PlannerHost (wrong depth), the engine trio (ArticleSignalsService,
+// PuppeteerDomainManager, HubFreshnessController → package subpaths; note
+// hub-freshness exports the CLASS itself, default-import preserved), and
+// the schema trio via the ncdb rename pattern's 3rd/4th instances
+// (initializeSqliteV1Schema, initSqliteV1CompressionTables). 191 tests pass
+// where zero ran; runLegacyCommand runs-and-fails honestly (drift class).
+// StructureMiner.test + art-playground e2e ×2 deleted (subjects retired).
+// js-scan/operations/relationships pragma'd (42/42 fixture class).
+const CEILING = 29;
 
 function main() {
   const phantoms = [];

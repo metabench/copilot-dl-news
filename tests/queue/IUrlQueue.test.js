@@ -1,10 +1,10 @@
 'use strict';
 
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
-const { IUrlQueue } = require('../../src/queue/IUrlQueue');
-const { SqliteUrlQueueAdapter } = require('../../src/queue/SqliteUrlQueueAdapter');
-const { PostgresUrlQueueAdapter } = require('../../src/queue/PostgresUrlQueueAdapter');
-const { QueueFactory } = require('../../src/queue/QueueFactory');
+const { IUrlQueue } = require('../../src/core/queue/IUrlQueue');
+const { SqliteUrlQueueAdapter } = require('../../src/core/queue/SqliteUrlQueueAdapter');
+const { PostgresUrlQueueAdapter } = require('../../src/core/queue/PostgresUrlQueueAdapter');
+const { QueueFactory } = require('../../src/core/queue/QueueFactory');
 
 /**
  * URL Queue System Tests

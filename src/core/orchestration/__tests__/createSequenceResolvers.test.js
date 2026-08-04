@@ -4,7 +4,7 @@ const path = require('path');
 
 const mockDbClose = jest.fn();
 
-jest.mock('../../db/sqlite/ensureDb', () => ({
+jest.mock('../../../data/db/sqlite/ensureDb', () => ({
   ensureDb: jest.fn(() => ({ close: mockDbClose }))
 }));
 
@@ -41,7 +41,7 @@ const mockGetFeatureFlags = jest.fn(() => ({
   plannerKnowledgeReuse: false
 }));
 
-jest.mock('../../config/ConfigManager', () => ({
+jest.mock('../../../shared/config/ConfigManager', () => ({
   ConfigManager: jest.fn(() => ({
     getConfig: mockGetConfig,
     getFeatureFlags: mockGetFeatureFlags,

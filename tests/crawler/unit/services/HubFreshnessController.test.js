@@ -1,6 +1,6 @@
 'use strict';
 
-const HubFreshnessController = require('../../../../src/core/crawler/HubFreshnessController');
+const HubFreshnessController = require('news-crawler-itself/hub-freshness');
 
 describe('HubFreshnessController', () => {
   describe('constructor', () => {
