@@ -15,6 +15,7 @@
 
 const { analyzeSentiment } = require('news-db-pure-analysis');
 const { EntitySentiment } = require('./EntitySentiment');
+const { Lexicon } = require('./Lexicon');
 
 // Default configuration
 const DEFAULT_CONFIG = {
@@ -45,6 +46,11 @@ class SentimentAnalyzer {
     this.tagAdapter = options.tagAdapter || null;
     this.logger = options.logger || console;
     this.config = { ...DEFAULT_CONFIG, ...options.config };
+    // Restored (c188): the pure-lib rewrite dropped options.lexicon — the
+    // pure signature accepts a plain score map, and Lexicon's default map is
+    // score-identical to the pure default (measured). Custom lexicons work
+    // again, and .lexicon is a real collaborator, not decoration.
+    this.lexicon = options.lexicon || new Lexicon();
 
     // Initialize entity sentiment analyzer (stays local — uses DB lookups)
     this.entitySentiment = new EntitySentiment({
@@ -70,8 +76,9 @@ class SentimentAnalyzer {
 
     // Delegate to pure function
     // Signature: analyzeSentiment(text, lexicon?, config?)
-    // Pass undefined for lexicon to use the default AFINN lexicon
-    const pure = analyzeSentiment(text, undefined, {
+    // The lexicon's plain score map goes through (measured score-identical
+    // to the pure default when unmodified; carries custom scores when not).
+    const pure = analyzeSentiment(text, this.lexicon.scores, {
       negationWindow: this.config.negationWindow,
       butWeight: this.config.butClauseWeightAfter
     });
@@ -86,7 +93,33 @@ class SentimentAnalyzer {
       method: 'lexicon'
     };
 
+    if (includeDetails) {
+      // Restored (c188): the pure lib returns aggregate counts only — the
+      // word-level detail contract lives here, built from this.lexicon.
+      result.sentenceDetails = this._buildSentenceDetails(text);
+    }
+
     return result;
+  }
+
+  /**
+   * Per-sentence word-level sentiment details (the includeDetails contract).
+   * @private
+   */
+  _buildSentenceDetails(text) {
+    const sentences = String(text).split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 0);
+    return sentences.map((sentence) => {
+      const words = [];
+      for (const raw of sentence.split(/\s+/)) {
+        const word = raw.toLowerCase().replace(/[^a-z']/g, '');
+        if (!word) continue;
+        const score = this.lexicon.getScore(word);
+        if (score !== null && score !== 0) {
+          words.push({ word, score });
+        }
+      }
+      return { text: sentence, words };
+    });
   }
 
   /**

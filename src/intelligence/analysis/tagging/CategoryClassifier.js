@@ -27,7 +27,10 @@ const { tokenize } = require('./KeywordExtractor');
 const UNCATEGORIZED = 'Uncategorized';
 
 // Default config path
-const DEFAULT_CONFIG_PATH = path.join(__dirname, '../../../config/category-keywords.json');
+// Repo-root config/ — the old '../../../config' resolved to src/config (one
+// level short), so the ENOENT fallback served 0 phrases silently for as long
+// as the suite slept (found c188 when the resurrected tests hit it).
+const DEFAULT_CONFIG_PATH = path.join(__dirname, '../../../../config/category-keywords.json');
 
 /**
  * Load category keywords configuration

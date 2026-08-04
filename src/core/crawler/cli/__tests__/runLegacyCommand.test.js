@@ -22,6 +22,11 @@ jest.mock('../../NewsCrawler', () => {
       this.options = options;
       this.dbPath = options?.dbPath || 'data/news.db';
       this.crawl = mockCrawl;
+      // Modernized (c188): the subject now subscribes to crawler events
+      // (crawler.on('progress', ...)) and reads jobId — the mock slept
+      // through that API's arrival and every test died on crawler.on.
+      this.on = jest.fn();
+      this.jobId = null;
       // Track constructor calls for test assertions
       mockCreateCrawler({ startUrl, ...options });
     }
