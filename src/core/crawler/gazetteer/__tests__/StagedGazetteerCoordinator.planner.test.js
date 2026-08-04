@@ -3,7 +3,7 @@ const { openNewsCrawlerDb } = require('../../../../db/openNewsCrawlerDb');
 const { initGazetteerTables } = require('../../../../data/db/sqlite/schema');
 const { StagedGazetteerCoordinator } = require('../StagedGazetteerCoordinator');
 const { PlannerTelemetryBridge } = require('../../planner/PlannerTelemetryBridge');
-const { PlannerOrchestrator } = require('../../planner/PlannerOrchestrator');
+const { PlannerOrchestrator } = require('news-crawler-itself/planner');
 
 describe('StagedGazetteerCoordinator with planner orchestrator', () => {
   let db;

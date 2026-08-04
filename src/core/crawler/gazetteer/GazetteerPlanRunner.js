@@ -1,6 +1,6 @@
 'use strict';
 
-const { PlannerOrchestrator } = require('../planner/PlannerOrchestrator');
+const { PlannerOrchestrator } = require('news-crawler-itself/planner');
 const { PlannerTelemetryBridge } = require('../planner/PlannerTelemetryBridge');
 const { PlannerHost } = require('../../../intelligence/planner/PlannerHost');
 const { GazetteerReasonerPlugin } = require('../../../intelligence/planner/plugins/GazetteerReasonerPlugin');

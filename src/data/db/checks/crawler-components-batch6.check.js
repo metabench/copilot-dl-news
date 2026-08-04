@@ -1,6 +1,6 @@
 const { PredictionStrategyManager } = require('../../../services/shared/PredictionStrategyManager');
 const { UrlClassificationService } = require('../../../services/UrlClassificationService');
-const { CountryHubPlanner } = require('../../../core/crawler/planner/CountryHubPlanner');
+const { CountryHubPlanner } = require('news-crawler-itself/planner');
 const { SequenceContextAdapter } = require('../../../core/crawler/operations/sequenceContext');
 const { checkEnhancedDatabaseHealth } = require('news-crawler-db');
 

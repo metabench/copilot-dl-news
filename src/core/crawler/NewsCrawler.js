@@ -143,34 +143,34 @@ const {
 } = require('news-crawler-itself/utils');
 const {
   AdaptiveSeedPlanner
-} = require('./planner/AdaptiveSeedPlanner');
+} = require('news-crawler-itself/planner');
 const {
   PlannerBootstrap
-} = require('./planner/PlannerBootstrap');
+} = require('news-crawler-itself/planner');
 const {
   PatternInference
-} = require('./planner/PatternInference');
+} = require('news-crawler-itself/planner');
 const {
   CountryHubPlanner
-} = require('./planner/CountryHubPlanner');
+} = require('news-crawler-itself/planner');
 const {
   HubSeeder
 } = require('./planner/HubSeeder');
 const {
   PlannerTelemetryBridge
-} = require('./planner/PlannerTelemetryBridge');
+} = require('news-crawler-itself/planner');
 const {
   PlannerOrchestrator
-} = require('./planner/PlannerOrchestrator');
+} = require('news-crawler-itself/planner');
 const {
   TargetedAnalysisRunner
 } = require('./planner/TargetedAnalysisRunner');
 const {
   NavigationDiscoveryRunner
-} = require('./planner/navigation/NavigationDiscoveryRunner');
+} = require('news-crawler-itself/planner');
 const {
   MilestoneTracker
-} = require('./MilestoneTracker');
+} = require('news-crawler-itself/planner');
 const {
   PageExecutionService
 } = require('./PageExecutionService');

@@ -91,7 +91,17 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // ContentAcquisition — both dependency-clean). PriorityScorer (ConfigManager
 // tendril), CrawlerEvents (CliFormatter tendril) and MilestoneTracker
 // (planner tendril) each wait for their own slice with an injection design.
-const CEILING = 312;
+// 312 → 297 (cycle 181, batch 7 — the planner family): orchestrator,
+// bootstrap, telemetry bridge, adaptive seeding, CountryHubPlanner (its
+// getDb() fallback DISCHARGED to injected-db-or-null — _getDbInstance already
+// guards null), pattern inference, blueprints, navigation runner,
+// CompletionReporter, milestones and MilestoneTracker — whose test suite RAN
+// FOR THE FIRST TIME IN ITS EXISTENCE after the move (its jest.mock targeted
+// '../intelligence/planner/CompletionReporter', a path that never existed —
+// the utils.safeCall pattern's second instance). HubSeeder, StructureMiner
+// and TargetedAnalysisRunner stayed: place-hub data-layer and intelligence
+// tendrils wait for their own slices.
+const CEILING = 297;
 
 function main() {
   const argv = process.argv.slice(2);
