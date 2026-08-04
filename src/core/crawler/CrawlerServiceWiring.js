@@ -10,24 +10,24 @@ const { DeepUrlAnalyzer } = require('./deepUrlAnalysis');
 const { UrlDecisionService } = require('./UrlDecisionService');
 const { LinkExtractor } = require('news-crawler-itself/link-extraction');
 const { CrawlerEvents } = require('./CrawlerEvents');
-const { CrawlerTelemetry } = require('./CrawlerTelemetry');
+const { CrawlerTelemetry } = require('news-crawler-itself/crawler-telemetry');
 const ProblemResolutionHandler = require('./ProblemResolutionHandler');
 const ExitManager = require('./ExitManager');
 const { MilestoneTracker } = require('./MilestoneTracker');
 const { ErrorTracker } = require('news-crawler-itself/error-tracker');
 const { DomainThrottleManager } = require('news-crawler-itself/politeness');
 const { ArticleProcessor } = require('news-crawler-itself/processing');
-const { NavigationDiscoveryService } = require('./NavigationDiscoveryService');
-const { ContentAcquisitionService } = require('./ContentAcquisitionService');
+const { NavigationDiscoveryService } = require('news-crawler-itself/navigation-discovery');
+const { ContentAcquisitionService } = require('news-crawler-itself/content-acquisition');
 const { FetchPipeline } = require('news-crawler-itself/fetch-pipeline');
 const { PageExecutionService } = require('./PageExecutionService');
 const { UrlEligibilityService } = require('./UrlEligibilityService');
-const QueueManager = require('./QueueManager');
+const QueueManager = require('news-crawler-itself/queue-manager');
 const { RobotsAndSitemapCoordinator } = require('./RobotsAndSitemapCoordinator');
 const { AdaptiveSeedPlanner } = require('./planner/AdaptiveSeedPlanner');
 const robotsParser = require('robots-parser');
 const { loadSitemaps } = require('./sitemap');
-const PriorityCalculator = require('./PriorityCalculator');
+const PriorityCalculator = require('news-crawler-itself/priority-calculator');
 const { GazetteerManager } = require('./components/GazetteerManager');
 const { ConfigManager } = require('../../shared/config/ConfigManager');
 const { setPriorityConfigProfile, resolvePriorityProfileFromCrawlType } = require('../../shared/utils/priorityConfig');
@@ -328,6 +328,9 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     urlDecisionOrchestrator: crawler.urlDecisionOrchestrator || null
   });
   crawler.queue = new QueueManager({
+    // Injected (cycle 180): the engine's QueueManager no longer reads
+    // coordinator config from disk — the coordinator passes the predicate.
+    isTotalPrioritisationEnabled: () => require('../../shared/utils/priorityConfig').isTotalPrioritisationEnabled(),
     usePriorityQueue: crawler.usePriorityQueue,
     maxQueue: crawler.maxQueue,
     maxDepth: crawler.maxDepth,

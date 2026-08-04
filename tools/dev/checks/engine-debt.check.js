@@ -83,7 +83,15 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // QueueManager deliberately did NOT ride: its priorityConfig edge is
 // coordinator config with observatory consumers — it waits for the
 // NewsCrawler-internals batch.
-const CEILING = 322;
+// 322 → 312 (cycle 180, batch 6 — queue/telemetry/priority): QueueManager
+// (its priorityConfig upward arrow DISCHARGED — the coordinator now injects
+// isTotalPrioritisationEnabled at construction; engine default false),
+// CrawlerTelemetry, PriorityCalculator, and the e2e collaborators the
+// per-file-at-join-time rule surfaced one hop at a time (NavigationDiscovery,
+// ContentAcquisition — both dependency-clean). PriorityScorer (ConfigManager
+// tendril), CrawlerEvents (CliFormatter tendril) and MilestoneTracker
+// (planner tendril) each wait for their own slice with an injection design.
+const CEILING = 312;
 
 function main() {
   const argv = process.argv.slice(2);

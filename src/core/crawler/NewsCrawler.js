@@ -115,7 +115,7 @@ const {
   setPriorityConfigProfile
 } = require('../../shared/utils/priorityConfig');
 
-const QueueManager = require('./QueueManager');
+const QueueManager = require('news-crawler-itself/queue-manager');
 const {
   UrlEligibilityService
 } = require('./UrlEligibilityService');
@@ -125,15 +125,15 @@ const {
 } = require('./CrawlerEvents');
 const {
   CrawlerTelemetry
-} = require('./CrawlerTelemetry');
+} = require('news-crawler-itself/crawler-telemetry');
 const { LinkExtractor } = require('news-crawler-itself/link-extraction');
 const { ArticleProcessor } = require('news-crawler-itself/processing');
 const {
   NavigationDiscoveryService
-} = require('./NavigationDiscoveryService');
+} = require('news-crawler-itself/navigation-discovery');
 const {
   ContentAcquisitionService
-} = require('./ContentAcquisitionService');
+} = require('news-crawler-itself/content-acquisition');
 const { ArticleSignalsService } = require('news-crawler-itself/signals');
 const {
   sleep,

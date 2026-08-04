@@ -1,6 +1,6 @@
 const { ConfigManager } = require('../../shared/config/ConfigManager');
 const { fp } = require('lang-tools');
-const PriorityCalculator = require('./PriorityCalculator');
+const PriorityCalculator = require('news-crawler-itself/priority-calculator');
 
 /**
  * Polymorphic numeric coercion with recursive object unwrapping.
