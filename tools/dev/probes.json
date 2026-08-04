@@ -279,6 +279,16 @@
       ],
       "needsServer": false,
       "timeoutMs": 30000
+    },
+    {
+      "id": "entry-loads",
+      "description": "key entry modules require() cleanly under raw Node, each in a child process (c191 lesson: the c181 extraction left ONE dangling require in IntelligentPlanRunner and NewsCrawler + the legacy CLI were unloadable for FIVE cycles — invisible because the v1 API builds crawls from engine parts and the phantom sweep scans only test files). NewsCrawler, IntelligentPlanRunner, CrawlOperations, crawlService, CrawlerServiceWiring",
+      "cmd": "node",
+      "args": [
+        "tools/dev/checks/entry-loads.check.js"
+      ],
+      "needsServer": false,
+      "timeoutMs": 60000
     }
   ]
 }

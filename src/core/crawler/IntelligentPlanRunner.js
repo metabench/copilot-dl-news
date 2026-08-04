@@ -1,4 +1,9 @@
-const { PlanBlueprintBuilder } = require('./planner/PlanBlueprintBuilder');
+// c191: the c181 planner extraction missed this repoint — the ONLY dangling
+// require of the whole extraction, invisible for five cycles because the v1
+// API path builds crawls from engine parts and never loads this module.
+// NewsCrawler (line-161 eager require of this file) and the legacy CLI path
+// were unloadable the entire time; the phantom sweep scans only test files.
+const { PlanBlueprintBuilder } = require('news-crawler-itself/planner');
 const { IntelligentPlanningFacade } = require('./IntelligentPlanningFacade');
 const { QueryCostEstimatorPlugin } = require('../../intelligence/planner/plugins/QueryCostEstimatorPlugin');
 

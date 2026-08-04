@@ -170,22 +170,28 @@ describe('ProblemResolutionService', () => {
         return candidateHost === 'example.com' ? fallbackRows : [];
       })
     };
-    const prepare = jest
-      .fn()
-      .mockImplementationOnce(() => {
+    // c191: ncdb's listKnownHubSeeds retries the VIEW per host-variant now,
+    // so a throw-once mock accidentally hands the second variant a working
+    // "view" (a mock artifact, not subject behavior). Shape the mock by SQL
+    // instead — the view is missing for EVERY prepare — and assert behavior,
+    // not internal prepare counts across the package boundary.
+    const prepare = jest.fn((sql) => {
+      if (String(sql).includes('place_hubs_with_urls')) {
         throw new Error('no such table: place_hubs_with_urls');
-      })
-      .mockReturnValue(fallbackStmt);
+      }
+      return fallbackStmt;
+    });
 
     const service = new ProblemResolutionService({ db: { prepare } });
     const seeds = service.getKnownHubSeeds({ host: 'example.com', limit: 5 });
 
-    expect(prepare).toHaveBeenCalledTimes(2);
     expect(prepare.mock.calls[0][0]).toContain('place_hubs_with_urls');
-    expect(prepare.mock.calls[1][0]).toContain('FROM place_hubs');
-    expect(fallbackStmt.all).toHaveBeenCalledTimes(2);
-    expect(fallbackStmt.all.mock.calls[0][0]).toBe('example.com');
-    expect(fallbackStmt.all.mock.calls[1][0]).toBe('www.example.com');
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes('FROM place_hubs'))).toBe(true);
+    // ncdb normalizes hosts internally now (www-variants collapse before the
+    // statement binds), so the variant sweep is invisible at the stmt layer —
+    // assert the normalized query happened and the seeds came through.
+    const queriedHosts = fallbackStmt.all.mock.calls.map(([h]) => h);
+    expect(queriedHosts).toContain('example.com');
     expect(seeds).toHaveLength(1);
     expect(seeds[0].url).toBe('https://example.com/world/');
     expect(seeds[0].confidence).toBe(0.42);
