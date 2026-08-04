@@ -101,7 +101,9 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // the utils.safeCall pattern's second instance). HubSeeder, StructureMiner
 // and TargetedAnalysisRunner stayed: place-hub data-layer and intelligence
 // tendrils wait for their own slices.
-const CEILING = 297;
+// 297 → 296 (cycle 181 close): NavigationDiscoveryRunner.test travelled AFTER
+// the first bank — the post-delete scan caught it dangling and it counted too.
+const CEILING = 296;
 
 function main() {
   const argv = process.argv.slice(2);
