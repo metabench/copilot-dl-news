@@ -83,6 +83,11 @@ with the owner rather than trusting either.
 5. **The ncdb-debt ratchet generalizes.** Direction of travel for ALL logic: out of the
    coordinator, into the owning module. Retirements from copilot-dl-news are
    improvements (they also answer the BLOATING verdict honestly).
+   *Live instances (2026-08-04):* `ncdb-debt` 269→241 · `ui-debt` 643→488 ·
+   `engine-debt` founded at 365 (probe `engine-debt-ratchet`, board node
+   `TECH-ENGINESPLIT`) — every extraction now has its instrument, which the
+   2026-08-03 audit measured as the difference between the one extraction that
+   advanced and the six that froze.
 
 ## 3. First migration: the remote crawler → `news-crawler-itself` — DONE (cycle 73)
 

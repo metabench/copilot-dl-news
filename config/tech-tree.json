@@ -628,14 +628,35 @@
         "CR-ENGINE",
         "TR-PAGE"
       ],
-      "state": "available",
+      "state": "done",
+      "researchedOn": "2026-08-04",
       "detail": [
+        "DELIVERED cycle 173 (2026-08-04, the supervised session; owner: 'I give you permission to do what is needed'): the launcher POST went through its own click path in a real browser — job e3ba45dc accepted by the v1 API, 1,002 pages downloaded at up to 3.57/s with zero errors, the console ACTIVE-with-evidence throughout — and BOTH monorepo pages (crawlStatus, crawlerMonitor) were deleted at runtime-proven parity, the unified app rebooting clean without them. The old page's own MB/s meters read 0.00 during that very crawl under plain-node boot. (Record note: cycle 173's promotion edit was a silent no-op — an unverified string replace — caught by cycle 174's live-board recheck and corrected here; the lesson is banked in that cycle's ledger row.)",
         "Owner-founded 2026-08-03: 'news-crawler-ui please' — the scope change recorded in docs/plans/2026-07-22-module-ecosystem.md (operational UIs move out of copilot-dl-news; projectStatus stays as the loop's own instrument; the ~40 stale UI dirs retire in place rather than move). The repo exists, is private on GitHub (metabench/news-crawler-ui), and carries the contract (AGENTS.md), the target design (design/crawl-console.html + .png), and the validated design tokens (design/tokens.js) as its founding commit.",
         "The target design is measured, not aspirational: every panel answers a question this crawler has actually made someone ask. The liveness bar shows state WITH its throughput evidence (the 6.8-day zombie-state incident); the yield funnel makes the ~4x fetched-vs-stored ambiguity explicit (measured 417 fetches -> 101 stored, 2026-08-03); host rows carry policy labels (BROWSER = TLS-fingerprint -> puppeteer ~40x slower, the measured 60x per-host spread) so nobody debugs a working crawler; politeness is surfaced as a gate with deliberately NO loosening controls.",
         "DONE means (per the c161 rule that a migration is done when the old thing is deleted): the console lives in news-crawler-ui, is consumed by copilot-dl-news via file: dep from a real code path, covers crawlerMonitor's feature list (workers, queue depth, throughput, errors), and BOTH src/ui/server/crawlStatus AND src/ui/server/crawlerMonitor are deleted from the monorepo — which moves the ui-debt ratchet (probe ui-debt-ratchet, baseline 643) down by their file count.",
         "The rebuild retires a known defect class with the old page: crawl-status-client.js emits its whole client from one ~40KB backtick template literal that eats regex backslashes — the trap that has bitten four distinct ways (banked in the crawl-status-client-template-trap memory). jsgui3 Server({Ctrl}) SSR + activation with one control per file is the projectStatus-proven idiom that dissolves it.",
         "TECH-CSLIVE's live-check goal transfers to the rebuilt console rather than being obsoleted: the c135-style five-point live browser check (activation, on-load fetch, DOM-vs-live-API, console errors, resources) should be born WITH the new page, not retrofitted — take the two techs together.",
         "Anti-freezer gate carried from the 2026-08-03 module-ecosystem audit: news-crawler-ui does not grow beyond design/ until copilot-dl-news wires the dependency from a real code path, and every extraction cycle must move ui-debt down — the ncdb ratchet (269->241, the one extraction that stayed alive) is the working precedent."
+      ]
+    },
+    {
+      "id": "TECH-ENGINESPLIT",
+      "branch": "crawler",
+      "title": "Engine Extraction (news-crawler-itself)",
+      "research": "move the local crawler engine into news-crawler-itself behind the engine-debt ratchet — delegation slices with monorepo copies deleted, politeness gates preserved",
+      "prereqs": [
+        "CR-ENGINE",
+        "CR-POLITE"
+      ],
+      "state": "available",
+      "detail": [
+        "Instrumented at founding (cycle 174, 2026-08-04, owner-picked): the engine-debt ratchet (tools/dev/checks/engine-debt.check.js, probe engine-debt-ratchet) counts tracked files under src/core/crawler — baseline 365 (252 source + 113 tests; tests move with their modules) — green at baseline and bite-proven at --ceiling 300 before its first commit. The instrument exists BEFORE the first extraction slice, the exact inversion of the May-2026 scaffolds, and the pattern's third instance: ncdb-debt 269→241, ui-debt 643→488, both alive; the six prose-only extractions froze in days.",
+        "The premise is the owner's 2026-07-22 directive verbatim: news-crawler-itself is 'to be made very important' — THE crawler engine. Cycle 73 moved the remote gen2 worker runtime there (37 files today, live file: dep). What remains in the monorepo is the LOCAL engine mass this node moves: NewsCrawler, the fetch pipeline, politeness, article signals, planners, gazetteer ingestion — 365 files.",
+        "Moves are DELEGATIONS, not copies (module-ecosystem rule 3): implement + test in news-crawler-itself against its own API, diff return shapes first, leave a thin call-through in the monorepo, DELETE the copied logic — a migration is done when the old thing is gone (c161). Every slice must move the ratchet down; a slice that grows news-crawler-itself without shrinking src/core/crawler is the freezer pattern restarting.",
+        "First-slice candidates, chosen for clean seams rather than size: ArticleSignalsService (pure URL/content predicates with one dependency-free sibling import, consumed by the unified app, the frontier tools and the console adapter), then the url-signal helpers. The politeness/throttle cluster moves LATE and deliberately: config/gated-surfaces.json's requiredPatterns point at src/core/crawler/DomainThrottleManager.js, so that slice must move the gate config in the same owner-visible commit — the 429 escalation is never weakened and never left unwatched.",
+        "Reference discipline carried from the paid-for lessons: every deletion is preceded by a scan that matches the REQUIRE FORM (../X, ./X), not just path-style tokens — c171's grep missed relative requires and c173's first unified-app boot failed on exactly that; and a dir named like a page can be a load-bearing library (hubGuessing), so verdicts come from the graph, not the name.",
+        "DONE means: the monorepo's crawl paths (src/crawl.js, the v1 crawl API, the frontier tools) consume the engine from news-crawler-itself via its declared API; src/core/crawler is reduced to thin adapters or gone; engine-debt is a small fraction of 365 with every drop banked in the ceiling; and a real crawl through the console verifies the delegated engine end-to-end — the c173 supervised-session recipe rerun against the extracted engine."
       ]
     },
     {
