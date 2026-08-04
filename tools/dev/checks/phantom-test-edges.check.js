@@ -42,7 +42,11 @@ const { builtinModules } = require('module');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const REPOS = [
-  { name: 'copilot-dl-news', root: ROOT, dirs: ['src', 'tools'] },
+  // 'tests' joined cycle 185 (scope widening = deliberate ceiling edit): the
+  // ProxyManager/RateLimitTracker phantoms lived there unseen and turned out
+  // to be suites that had NEVER RUN (41/41 and 39/39 on first execution once
+  // repointed). tmp/ and wip/ stay excluded — scratch trees, not suites.
+  { name: 'copilot-dl-news', root: ROOT, dirs: ['src', 'tools', 'tests'] },
   { name: 'news-crawler-itself', root: path.join(ROOT, '..', 'news-crawler-itself'), dirs: ['src'] }
 ];
 
@@ -86,7 +90,18 @@ function resolves(spec, fromDir) {
 // option now, so there is no module path to mistarget. (A new phantom
 // appeared and died the same cycle: deleting hubIdentifier.js orphaned its
 // test, caught here, travelled to the engine 10/10.)
-const CEILING = 15;
+// 15 → 124 (cycle 185, DELIBERATE SCOPE RAISE): 'tests/' joined the sweep
+// after ProxyManager.test and RateLimitTracker.test were found there via
+// the src/crawler phantom pattern — both passed (41/41, 39/39) on their
+// FIRST EXECUTION EVER once repointed. The wider light shows whole families
+// (tests/analysis/** → a src/analysis tree that does not exist) — these are
+// a large slice of the repo-wide 460 "failing" tests that in truth cannot
+// LOAD. The number rose because the instrument sees more, not because debt
+// grew; burn it down by resurrect-or-delete, never by narrowing the light.
+// 124 → 123 (cycle 185): Crawler.test's jest.mock retargeted to the package
+// subpath — the c179 extraction had repointed the require but not the mock,
+// and the suite failed from that day; 26/26 the moment both edges resolved.
+const CEILING = 123;
 
 function main() {
   const phantoms = [];

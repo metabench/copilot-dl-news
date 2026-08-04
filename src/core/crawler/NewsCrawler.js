@@ -101,7 +101,7 @@ const {
 const { CrawlerState } = require('news-crawler-itself/crawler-state');
 const {
   RobotsAndSitemapCoordinator
-} = require('./RobotsAndSitemapCoordinator');
+} = require('news-crawler-itself/robots-sitemap');
 const {
   setPriorityConfigProfile
 } = require('../../shared/utils/priorityConfig');

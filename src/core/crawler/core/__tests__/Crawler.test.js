@@ -4,7 +4,10 @@ const Crawler = require('../Crawler');
 const { CrawlerState } = require('news-crawler-itself/crawler-state');
 const { StartupProgressTracker } = require('../../StartupProgressTracker');
 
-jest.mock('../../CrawlerState');
+// Mock the PACKAGE subpath: the c179 extraction repointed the require but
+// left this mock on the deleted local path, so the automock never attached
+// and the suite failed from that day (phantom-edge triage, cycle 185).
+jest.mock('news-crawler-itself/crawler-state');
 jest.mock('../../StartupProgressTracker');
 
 describe('Crawler base class', () => {

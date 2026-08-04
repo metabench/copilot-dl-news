@@ -1,7 +1,7 @@
 "use strict";
 
 const { ArticleSignalsService } = require('news-crawler-itself/signals');
-const { createStoredRateLimitProvider } = require('./storedRateLimitProvider');
+const { createStoredRateLimitProvider } = require('news-crawler-itself/crawl-infra');
 const { EnhancedFeaturesManager } = require('./EnhancedFeaturesManager');
 const { ArticleCache } = require('../../cache');
 const HubFreshnessController = require('news-crawler-itself/hub-freshness');
@@ -23,7 +23,7 @@ const { FetchPipeline } = require('news-crawler-itself/fetch-pipeline');
 const { PageExecutionService } = require('news-crawler-itself/page-execution');
 const { UrlEligibilityService } = require('news-crawler-itself/url-services');
 const QueueManager = require('news-crawler-itself/queue-manager');
-const { RobotsAndSitemapCoordinator } = require('./RobotsAndSitemapCoordinator');
+const { RobotsAndSitemapCoordinator } = require('news-crawler-itself/robots-sitemap');
 const { AdaptiveSeedPlanner } = require('news-crawler-itself/planner');
 const robotsParser = require('robots-parser');
 const { loadSitemaps } = require('./sitemap');
@@ -59,7 +59,7 @@ const { ArchiveDiscoveryStrategy } = require('./services/ArchiveDiscoveryStrateg
 const { PaginationPredictorService } = require('./services/PaginationPredictorService');
 
 // Phase 5: Proxy rotation
-const { ProxyManager } = require('./ProxyManager');
+const { ProxyManager } = require('news-crawler-itself/crawl-infra');
 
 // Place Hub Pattern Learning
 let PlaceHubPatternLearningService;

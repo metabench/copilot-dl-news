@@ -5,7 +5,7 @@
  * @module tests/crawler/unit/ProxyManager.test
  */
 
-const { ProxyManager } = require('../../../src/crawler/ProxyManager');
+const { ProxyManager } = require('news-crawler-itself/crawl-infra');
 
 describe('ProxyManager', () => {
   /** @type {ProxyManager} */

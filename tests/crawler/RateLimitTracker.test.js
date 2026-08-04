@@ -7,7 +7,7 @@
  * Run with: npm run test:by-path tests/crawler/RateLimitTracker.test.js
  */
 
-const { RateLimitTracker } = require('../../src/crawler/RateLimitTracker');
+const { RateLimitTracker } = require('news-crawler-itself/crawl-infra');
 
 describe('RateLimitTracker', () => {
   let tracker;

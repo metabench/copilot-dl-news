@@ -22,7 +22,7 @@ const path = require('path');
 const jsgui = require('jsgui3-html');
 
 const { createRateLimitAdapter } = require('news-crawler-db');
-const { RateLimitTracker } = require('../../../core/crawler/RateLimitTracker');
+const { RateLimitTracker } = require('news-crawler-itself/crawl-infra');
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
 const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
 

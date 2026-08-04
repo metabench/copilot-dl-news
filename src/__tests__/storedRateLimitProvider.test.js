@@ -14,9 +14,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { resolveSqliteHandle, createStoredRateLimitProvider } = require('../storedRateLimitProvider');
+const { resolveSqliteHandle, createStoredRateLimitProvider } = require('news-crawler-itself/crawl-infra');
 const { DomainThrottleManager } = require('news-crawler-itself/politeness');
-const { createCrawlerDb } = require('../dbClient');
+const { createCrawlerDb } = require('../core/crawler/dbClient');
 
 describe('resolveSqliteHandle', () => {
   const fakeHandle = { prepare: () => ({ get: () => null }) };

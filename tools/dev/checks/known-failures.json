@@ -1,5 +1,5 @@
 {
-  "_comment": "The pinned set of KNOWN-failing crawler suites (DEBT plan item 2, cycle 184). Set-shrink-only: a failing suite NOT in this list is a NEW regression and fails the check; a listed suite that passes is banked by removing it here in the same commit. Baseline measured 2026-08-04 after batch 10: 17 suites / 49 tests (was 51 until the placeHubs.data real-defect fix). Triage classes: phantom = cannot load (resolution fix first); env = needs missing dep/service; untriaged = not yet diagnosed.",
+  "_comment": "The pinned set of KNOWN-failing crawler suites (DEBT plan item 2, cycle 184). Set-shrink-only: a failing suite NOT in this list is a NEW regression and fails the check; a listed suite that passes is banked by removing it here in the same commit. Baseline measured 2026-08-04 after batch 10: 17 suites / 49 tests; Crawler.test banked cycle 185 (26/26 after the c179 mock-path fix) leaving 16 (was 51 until the placeHubs.data real-defect fix). Triage classes: phantom = cannot load (resolution fix first); env = needs missing dep/service; untriaged = not yet diagnosed.",
   "scope": "src/core/crawler",
   "totalFailingTests": 49,
   "suites": {
@@ -12,7 +12,6 @@
     "src/core/crawler/__tests__/queue.behaviour.test.js": "untriaged",
     "src/core/crawler/cli/__tests__/configArgs.test.js": "untriaged",
     "src/core/crawler/cli/__tests__/runLegacyCommand.test.js": "phantom: ../../../db/sqlite",
-    "src/core/crawler/core/__tests__/Crawler.test.js": "phantom: ../../CrawlerState (moved to engine c179)",
     "src/core/crawler/gazetteer/__tests__/StagedGazetteerCoordinator.planner.test.js": "phantom: schema + ../../planner/PlannerTelemetryBridge (moved c181)",
     "src/core/crawler/gazetteer/__tests__/WikidataAdm1Ingestor.test.js": "phantom: ../../../../data/db/sqlite/schema",
     "src/core/crawler/gazetteer/__tests__/concurrency.behavior.test.js": "untriaged",
