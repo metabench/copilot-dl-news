@@ -47,7 +47,14 @@ class DeepUrlAnalyzer {
             notes: decision.notes || null
           }
         });
-      } catch (_) { /* ignore */ }
+      } catch (error) {
+        // Loud (c190): this swallow hid a REAL production defect for months —
+        // ncdb's legacy recordUrlAlias lost its _ensureUrlId helper in a
+        // refactor and throws on EVERY call (chip task_c1b404b5 family).
+        // Best-effort stays best-effort, but never silently.
+        console.warn('[deepUrlAnalysis] recordUrlAlias failed:', error && error.message ? error.message : error);
+        return { recorded: false, exists };
+      }
     }
 
     return { recorded: !!db, exists };
