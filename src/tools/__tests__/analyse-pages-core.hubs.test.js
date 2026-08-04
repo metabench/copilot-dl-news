@@ -71,6 +71,13 @@ function seedSampleData(dbPath, { url, host, placeName, section }) {
       word_count: 150,
       article_xpath: null
     });
+
+    // The cascade hardcodes classification 'article' with null link counts —
+    // model the real scenario (a v1 NAV analysis pending re-analysis) by
+    // stamping the prior-analysis state the hub detector reads.
+    db.prepare(
+      `UPDATE content_analysis SET classification='nav', nav_links_count=18, article_links_count=6`
+    ).run();
   } finally {
     try { ndb.close(); } catch (_) { /* temp db teardown */ }
   }
@@ -140,7 +147,9 @@ describe('analysePages hub assignment', () => {
     expect(summary.hubAssignments).toBeUndefined();
 
     const db = ensureDb(temp.dbPath);
-    const hubRows = db.prepare('SELECT place_slug, topic_slug, url FROM place_hubs').all();
+    // place_hubs keys pages by url_id (c196 modernization, the placeHubs
+    // precedent).
+    const hubRows = db.prepare('SELECT ph.place_slug, ph.topic_slug, u.url AS url FROM place_hubs ph JOIN urls u ON u.id = ph.url_id').all();
     expect(hubRows).toHaveLength(1);
     expect(hubRows[0]).toMatchObject({
       place_slug: 'canada',

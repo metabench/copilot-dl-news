@@ -413,7 +413,11 @@ function detectPlaceHub({
 
   let isWorldOverride = false;
 
-  if (segments.includes('world') && db) {
+  // The Earth override serves BARE /world/ index pages. It must never beat a
+  // concrete place found elsewhere in the URL — /world/canada/ is a CANADA
+  // hub (c196: the unguarded override was stealing every /world/<place>/
+  // assignment and stamping it planet Earth).
+  if (segments.includes('world') && db && !placeId) {
     try {
       const planet = getPlaceHubDetectorDbQueries().getEarthPlaceHubOverride(db);
       if (planet) {

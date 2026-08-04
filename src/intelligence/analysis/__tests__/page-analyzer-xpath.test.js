@@ -85,7 +85,9 @@ describe('Page Analyzer XPath Integration', () => {
       xpathService.extractTextWithXPath = jest.fn()
         .mockReturnValueOnce(Promise.resolve(null)) // First call (no pattern) returns null
         .mockReturnValueOnce(Promise.resolve('Test Article This is the main article content about London and Paris.')); // Second call (after learning) returns text
-      xpathService.learnXPathFromHtml = jest.fn(() => Promise.resolve({
+      // c196: the subject learns from a pre-built DOCUMENT now (the linkedom
+      // speed optimization) — learnXPathFromHtml is no longer called.
+      xpathService.learnXPathFromDocument = jest.fn(() => Promise.resolve({
         xpath: '/html/body/main/article',
         confidence: 0.85
       }));
@@ -108,7 +110,10 @@ describe('Page Analyzer XPath Integration', () => {
 
       expect(result.meta.articleXPath).toBe('/html/body/main/article');
       expect(result.meta.method).toBe('xpath-learned+heuristics@v1');
-      expect(xpathService.learnXPathFromHtml).toHaveBeenCalledWith('https://www.bbc.co.uk/test', sampleHtml);
+      expect(xpathService.learnXPathFromDocument).toHaveBeenCalledWith(
+        'https://www.bbc.co.uk/test',
+        expect.anything()
+      );
     });
 
     test('falls back to Readability when XPath fails', async () => {
@@ -213,7 +218,8 @@ describe('Page Analyzer XPath Integration', () => {
       xpathService.extractTextWithXPath = jest.fn()
         .mockReturnValueOnce(Promise.resolve(null)) // First call returns null
         .mockReturnValueOnce(Promise.resolve('Extracted article text')); // Second call returns text
-      xpathService.learnXPathFromHtml = jest.fn(() => Promise.resolve({
+      // c196: learning takes a pre-built DOCUMENT now (linkedom optimization).
+      xpathService.learnXPathFromDocument = jest.fn(() => Promise.resolve({
         xpath: '/html/body/div[1]/article',
         confidence: 0.92
       }));
