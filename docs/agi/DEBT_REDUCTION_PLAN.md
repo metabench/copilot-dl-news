@@ -69,7 +69,7 @@ not as prose intent.
 ## Cadence (the actual integration)
 
 Each cycle = **primary engine batch + ONE secondary debt item, sized ≤~20%
-of the turn**, taken in order from the queue: (1) phantom sweep+check,
+of the turn**, taken in order from the queue: (1) phantom sweep+check — DONE cycle 183: built, measured 18, fixed 2 same-cycle self-names, probe ratchets from 16 toward the zero floor (six of the 16 ARE known-51 crawler suites — they cannot even load, so item 2 starts there),
 (2) known-51 named-set check, then per-cycle triage pairs, (3) silent-catch
 survey, (4) stalled-ratchet unfreeze-or-park prep (owner rules), (5) debt
 lanes. Pave-the-road (idea 3) is not queued — it joins the settled recipe

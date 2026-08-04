@@ -1,5 +1,5 @@
 // Test URL normalization with trailing slashes
-const { UrlPolicy } = require('../../src/core/crawler/urlPolicy');
+const { UrlPolicy } = require('news-crawler-itself/url-services');
 
 const testCases = [
   { raw: '/world/', base: 'https://www.theguardian.com' },

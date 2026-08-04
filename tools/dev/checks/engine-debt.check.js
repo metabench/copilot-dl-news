@@ -115,7 +115,18 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // ('../../src/crawler/PriorityScorer' never existed); 13/13 on first run —
 // its null-config expectation only holds BECAUSE of the inert-default
 // discharge. Two dead organ-imports deleted from NewsCrawler in passing.
-const CEILING = 292;
+// 292 → 281 (cycle 183, batch 9 — url services + page execution): UrlPolicy,
+// UrlEligibilityService (its news-crawler-db edge travels verbatim — the
+// engine already declares that module), UrlDecisionService (require-free) and
+// PageExecutionService with SEVEN test suites (41 tests, all green
+// pre-transit under the new pave-the-road step). PES discharges: the
+// priorityConfig disk-read became an injected predicate (default false, the
+// c180 QueueManager pattern), near-dead chalk went plain (one debug line),
+// and its output-verbosity require went relative. FOUR dead organ-imports
+// pruned from NewsCrawler (all four were constructed only in wiring).
+// Mixed-line-ending lesson: one file can be CRLF in the head and LF in the
+// tail — measure bytes with node before building match needles.
+const CEILING = 281;
 
 function main() {
   const argv = process.argv.slice(2);

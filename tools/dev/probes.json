@@ -249,6 +249,16 @@
       ],
       "needsServer": false,
       "timeoutMs": 15000
+    },
+    {
+      "id": "phantom-test-edges",
+      "description": "no test file carries an unresolvable require()/jest.mock() target (the never-ran-suite class that bit three times: utils.safeCall c177, milestoneTracker c181, enhanced-features c182). Sweeps EVERY *.test.js in BOTH repos and resolves every string-literal edge against the real tree; ratchets down from the measured 16 (cycle 183) toward zero. Caught its own builder on first run: the two cycle-183 travelled tests carried self-name requires jest resolves but raw Node rejects",
+      "cmd": "node",
+      "args": [
+        "tools/dev/checks/phantom-test-edges.check.js"
+      ],
+      "needsServer": false,
+      "timeoutMs": 30000
     }
   ]
 }

@@ -28,14 +28,8 @@ const {
   ArticleCache
 } = require('../../cache');
 const {
-  UrlPolicy
-} = require('./urlPolicy');
-const {
   DeepUrlAnalyzer
 } = require('./deepUrlAnalysis');
-const {
-  UrlDecisionService
-} = require('./UrlDecisionService');
 const { ErrorTracker } = require('news-crawler-itself/error-tracker');
 const { DomainThrottleManager } = require('news-crawler-itself/politeness');
 const http = require('http');
@@ -113,9 +107,6 @@ const {
 } = require('../../shared/utils/priorityConfig');
 
 const QueueManager = require('news-crawler-itself/queue-manager');
-const {
-  UrlEligibilityService
-} = require('./UrlEligibilityService');
 const { FetchPipeline } = require('news-crawler-itself/fetch-pipeline');
 const {
   CrawlerTelemetry
@@ -165,9 +156,6 @@ const {
 const {
   MilestoneTracker
 } = require('news-crawler-itself/planner');
-const {
-  PageExecutionService
-} = require('./PageExecutionService');
 const {
   IntelligentPlanRunner
 } = require('./IntelligentPlanRunner');

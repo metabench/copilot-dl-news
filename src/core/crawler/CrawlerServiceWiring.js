@@ -5,9 +5,9 @@ const { createStoredRateLimitProvider } = require('./storedRateLimitProvider');
 const { EnhancedFeaturesManager } = require('./EnhancedFeaturesManager');
 const { ArticleCache } = require('../../cache');
 const HubFreshnessController = require('news-crawler-itself/hub-freshness');
-const { UrlPolicy } = require('./urlPolicy');
+const { UrlPolicy } = require('news-crawler-itself/url-services');
 const { DeepUrlAnalyzer } = require('./deepUrlAnalysis');
-const { UrlDecisionService } = require('./UrlDecisionService');
+const { UrlDecisionService } = require('news-crawler-itself/url-services');
 const { LinkExtractor } = require('news-crawler-itself/link-extraction');
 const { CrawlerEvents } = require('news-crawler-itself/crawler-events');
 const { CrawlerTelemetry } = require('news-crawler-itself/crawler-telemetry');
@@ -20,8 +20,8 @@ const { ArticleProcessor } = require('news-crawler-itself/processing');
 const { NavigationDiscoveryService } = require('news-crawler-itself/navigation-discovery');
 const { ContentAcquisitionService } = require('news-crawler-itself/content-acquisition');
 const { FetchPipeline } = require('news-crawler-itself/fetch-pipeline');
-const { PageExecutionService } = require('./PageExecutionService');
-const { UrlEligibilityService } = require('./UrlEligibilityService');
+const { PageExecutionService } = require('news-crawler-itself/page-execution');
+const { UrlEligibilityService } = require('news-crawler-itself/url-services');
 const QueueManager = require('news-crawler-itself/queue-manager');
 const { RobotsAndSitemapCoordinator } = require('./RobotsAndSitemapCoordinator');
 const { AdaptiveSeedPlanner } = require('news-crawler-itself/planner');
@@ -555,6 +555,9 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     }
   });
   crawler.pageExecutionService = new PageExecutionService({
+    // Injected (cycle 183): the engine's PageExecutionService no longer reads
+    // coordinator config from disk — the coordinator passes the predicate.
+    isTotalPrioritisationEnabled: () => require('../../shared/utils/priorityConfig').isTotalPrioritisationEnabled(),
     maxDepth: crawler.maxDepth,
     maxDownloads: crawler.maxDownloads,
     outputVerbosity: crawler.outputVerbosity,
