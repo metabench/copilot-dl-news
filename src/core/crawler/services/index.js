@@ -23,8 +23,8 @@ const { registerTelemetryServices } = require('./groups/TelemetryServices');
 const { registerStorageServices } = require('./groups/StorageServices');
 
 // Phase 1: Resilience services
-const { ResilienceService, CircuitState } = require('./ResilienceService');
-const { ContentValidationService } = require('./ContentValidationService');
+const { ResilienceService, CircuitState } = require('news-crawler-itself/fetch-pipeline');
+const { ContentValidationService } = require('news-crawler-itself/fetch-pipeline');
 
 // Phase 1: Discovery services
 const { ArchiveDiscoveryStrategy } = require('./ArchiveDiscoveryStrategy');

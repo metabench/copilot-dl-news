@@ -9,7 +9,9 @@ const ncdb = require('news-crawler-db');
 
 // Mock PuppeteerFetcher so no real browser launches in the test.
 const mockPuppeteerFetch = jest.fn();
-jest.mock('../../../core/crawler/PuppeteerFetcher', () => ({
+// Mock target follows the cycle-178 fetch-cluster extraction (a mock on the
+// old deleted path would silently stop intercepting — the c177 lesson).
+jest.mock('news-crawler-itself/fetch-pipeline', () => ({
   PuppeteerFetcher: class {
     constructor() {}
     async fetch(url, opts) { return mockPuppeteerFetch(url, opts); }

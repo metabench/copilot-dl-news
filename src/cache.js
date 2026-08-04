@@ -50,16 +50,7 @@ class ArticleCache {
   }
 }
 
-function shouldUseCache({ preferCache = false, maxAgeMs, crawledAt }) {
-  const ts = crawledAt ? new Date(crawledAt).getTime() : 0;
-  const ageMs = ts ? (Date.now() - ts) : Number.POSITIVE_INFINITY;
-  // Respect maxAgeMs (>=0) over preferCache; 0 => always refetch
-  if (typeof maxAgeMs === 'number' && maxAgeMs >= 0) {
-    const ok = ageMs <= maxAgeMs;
-    return { use: ok, ageSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null };
-  }
-  if (preferCache) return { use: true, ageSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null };
-  return { use: false, ageSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null };
-}
+// shouldUseCache moved to news-crawler-itself/fetch-pipeline (cycle 178) —
+// the pure predicate belongs to the engine; ArticleCache (DB-coupled) stays.
 
-module.exports = { ArticleCache, shouldUseCache };
+module.exports = { ArticleCache };

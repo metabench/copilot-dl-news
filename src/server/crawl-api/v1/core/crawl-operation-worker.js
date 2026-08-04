@@ -25,7 +25,7 @@
  */
 
 const { createCrawlService } = require('../../core/crawlService');
-const { getGlobalBandwidthLimiter } = require('../../../../core/crawler/GlobalBandwidthLimiter');
+const { getGlobalBandwidthLimiter } = require('news-crawler-itself/fetch-pipeline');
 
 // Keep in sync with CrawlTelemetryBridge.connectCrawler's event mappings.
 const FORWARDED_EVENTS = [

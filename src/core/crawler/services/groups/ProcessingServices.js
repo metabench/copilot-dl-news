@@ -82,7 +82,7 @@ function registerProcessingServices(container, config) {
   // Fetch pipeline
   container.register('fetchPipeline', (c) => {
     try {
-      const FetchPipeline = require('../../FetchPipeline');
+      const FetchPipeline = require('news-crawler-itself/fetch-pipeline');
       // Optional remote fetch: local coordination, remote page downloads.
       // See src/core/crawler/adapters/remoteFetch.js.
       let remoteFetchFn = null;

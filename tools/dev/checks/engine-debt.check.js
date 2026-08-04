@@ -66,7 +66,16 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // 23 repoints match-checked; a jest.mock on the deleted path retargeted; the
 // linkExtractor container entry had the same new-on-module silent-shim bug
 // as c176's articleProcessor — fixed loud.
-const CEILING = 349;
+// 349 → 329 (cycle 178, slice 4 — the fetch cluster): FetchPipeline + seven
+// satellites (retry policy, host retry budgets, freshness, puppeteer domain
+// manager + fetcher, global bandwidth limiter, the pure shouldUseCache
+// predicate) + ContentValidationService + ResilienceService, with eleven test
+// suites travelling (sibling 202/202). ArticleCache stayed — DB-coupled, with
+// a coordinator-global fallback the engine must not inherit. 15 repoints
+// match-checked; one more jest.mock retargeted off a deleted path. The GATED
+// pair (DomainThrottleManager + limiter) is now the LAST politeness holdout,
+// by design.
+const CEILING = 329;
 
 function main() {
   const argv = process.argv.slice(2);

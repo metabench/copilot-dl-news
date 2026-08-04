@@ -125,9 +125,7 @@ const QueueManager = require('./QueueManager');
 const {
   UrlEligibilityService
 } = require('./UrlEligibilityService');
-const {
-  FetchPipeline
-} = require('./FetchPipeline');
+const { FetchPipeline } = require('news-crawler-itself/fetch-pipeline');
 const {
   CrawlerEvents
 } = require('./CrawlerEvents');

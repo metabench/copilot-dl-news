@@ -19,7 +19,7 @@ const { DomainThrottleManager } = require('./DomainThrottleManager');
 const { ArticleProcessor } = require('news-crawler-itself/processing');
 const { NavigationDiscoveryService } = require('./NavigationDiscoveryService');
 const { ContentAcquisitionService } = require('./ContentAcquisitionService');
-const { FetchPipeline } = require('./FetchPipeline');
+const { FetchPipeline } = require('news-crawler-itself/fetch-pipeline');
 const { PageExecutionService } = require('./PageExecutionService');
 const { UrlEligibilityService } = require('./UrlEligibilityService');
 const QueueManager = require('./QueueManager');
@@ -51,8 +51,8 @@ async function timeoutFetch(url, options = {}) {
 }
 
 // Phase 1: Resilience services
-const { ResilienceService } = require('./services/ResilienceService');
-const { ContentValidationService } = require('./services/ContentValidationService');
+const { ResilienceService } = require('news-crawler-itself/fetch-pipeline');
+const { ContentValidationService } = require('news-crawler-itself/fetch-pipeline');
 
 // Phase 1: Discovery services
 const { ArchiveDiscoveryStrategy } = require('./services/ArchiveDiscoveryStrategy');

@@ -42,10 +42,10 @@
         ],
         [
           "2026-08-04",
-          4
+          5
         ]
       ],
-      "total": 73
+      "total": 74
     },
     {
       "name": "news-crawler-itself",
@@ -65,10 +65,10 @@
         ],
         [
           "2026-08-04",
-          3
+          4
         ]
       ],
-      "total": 7
+      "total": 8
     },
     {
       "name": "news-crawler-db",

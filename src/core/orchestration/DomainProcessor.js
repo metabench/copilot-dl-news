@@ -2366,7 +2366,7 @@ class DomainProcessor {
       // pipeline learns to enqueue remote batches.
       try {
         if (!this._puppeteerFetcher) {
-          const { PuppeteerFetcher } = require('../crawler/PuppeteerFetcher');
+          const { PuppeteerFetcher } = require('news-crawler-itself/fetch-pipeline');
           this._puppeteerFetcher = new PuppeteerFetcher({ logger: deps.logger || console });
         }
         const started = Date.now();

@@ -1399,7 +1399,7 @@ load(); setInterval(load, 60000);
     return next;
   }
   function applyBandwidthCap(mbps) {
-    const { getGlobalBandwidthLimiter } = require('../../../core/crawler/GlobalBandwidthLimiter');
+    const { getGlobalBandwidthLimiter } = require('news-crawler-itself/fetch-pipeline');
     const limiter = getGlobalBandwidthLimiter();
     const n = Number(mbps);
     limiter.setRateBytesPerSec(Number.isFinite(n) && n > 0 ? n * 1048576 : 0);
@@ -1414,7 +1414,7 @@ load(); setInterval(load, 60000);
 
   unifiedApp.get('/api/v1/crawl/bandwidth-cap', (req, res) => {
     try {
-      const { getGlobalBandwidthLimiter } = require('../../../core/crawler/GlobalBandwidthLimiter');
+      const { getGlobalBandwidthLimiter } = require('news-crawler-itself/fetch-pipeline');
       res.json(getGlobalBandwidthLimiter().getSnapshot());
     } catch (err) {
       res.status(500).json({ error: err.message });

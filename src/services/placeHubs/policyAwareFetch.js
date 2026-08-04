@@ -53,7 +53,7 @@ function createPolicyAwareFetchFn({ db, baseFetchFn, logger = console } = {}) {
   let puppeteerFetcher = null;
   const getPuppeteer = () => {
     if (puppeteerFetcher) return puppeteerFetcher;
-    const { PuppeteerFetcher } = require('../../core/crawler/PuppeteerFetcher');
+    const { PuppeteerFetcher } = require('news-crawler-itself/fetch-pipeline');
     puppeteerFetcher = new PuppeteerFetcher({ logger });
     return puppeteerFetcher;
   };

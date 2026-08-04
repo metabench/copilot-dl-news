@@ -10,7 +10,7 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
  */
 
 const path = require('path');
-const { PuppeteerFetcher } = require('../../src/crawler/PuppeteerFetcher');
+const { PuppeteerFetcher } = require('news-crawler-itself/fetch-pipeline');
 const { TaskEventWriter } = require('../../src/db/TaskEventWriter');
 
 // ─────────────────────────────────────────────────────────────

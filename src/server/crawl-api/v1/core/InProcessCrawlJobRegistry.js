@@ -79,7 +79,7 @@ class InProcessCrawlJobRegistry {
     // (cap / active worker jobs) and pushed over IPC. Rebalanced whenever a
     // job starts, a job settles, or the cap is changed at runtime.
     try {
-      const bw = require('../../../../core/crawler/GlobalBandwidthLimiter');
+      const bw = require('news-crawler-itself/fetch-pipeline');
       this._bandwidthLimiter = bw.getGlobalBandwidthLimiter();
       this._computeDemandSlices = bw.computeDemandSlices;
       this._bandwidthLimiter.onRateChange(() => this._rebalanceBandwidth());
