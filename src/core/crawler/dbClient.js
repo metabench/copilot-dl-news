@@ -1,5 +1,5 @@
 const fs = require('fs').promises;
-const { recordPlaceHubSeed } = require('./data/placeHubs');
+const { recordPlaceHubSeed } = require('news-crawler-itself/place-hubs');
 const NewsWebsiteService = require('../../services/NewsWebsiteService');
 const { safeCall } = require('news-crawler-itself/utils');
 const { getDb } = require('../../db');

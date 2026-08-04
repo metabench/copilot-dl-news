@@ -259,6 +259,16 @@
       ],
       "needsServer": false,
       "timeoutMs": 30000
+    },
+    {
+      "id": "known-failures",
+      "description": "the crawler suite failing-set is PINNED BY NAME (set-shrink-only, tools/dev/checks/known-failures.json) — quick mode validates registry hygiene at orient; --verify (cycle-close, whenever src/core/crawler changes) runs the scoped suite and fails on any failing suite not in the registry. Replaces the memorized known-51; baseline 17 suites / 49 tests after the c184 placeHubs real-defect fix",
+      "cmd": "node",
+      "args": [
+        "tools/dev/checks/known-failures.check.js"
+      ],
+      "needsServer": false,
+      "timeoutMs": 30000
     }
   ]
 }

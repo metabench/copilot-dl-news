@@ -126,7 +126,21 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // pruned from NewsCrawler (all four were constructed only in wiring).
 // Mixed-line-ending lesson: one file can be CRLF in the head and LF in the
 // tail — measure bytes with node before building match needles.
-const CEILING = 281;
+// 281 → 271 (cycle 184, batch 10 — data-layer/intelligence): HubSeeder
+// (priority predicate INJECTED — third instance of the c180 pattern; its
+// test's PHANTOM jest.mock dissolved with it), TargetedAnalysisRunner,
+// placeHubs + hubIdentifier + slugLexicon (whole pure/db-module closure,
+// with continents and deep-analyzer riding from outside the count), and
+// StructureMiner RETIRED IN PLACE — zero live requires, an old commit-plan
+// already called it "long-ghosted"; dead code needs no extraction. En
+// route: the placeHubs REAL DEFECT fixed (legacy adapter INSERT hit a
+// nonexistent url column and the delegation preferred it; dedup was
+// unenforced — no unique index — so an app-level guard now dedups, and the
+// schema migration is owner-gated). placeHubs.data.test re-homed to
+// src/__tests__ as a cross-boundary integration test after months in the
+// known set. hubIdentifier's own test was found ONLY by the post-delete
+// scan (relative require, the c171 blind spot) and travelled green 10/10.
+const CEILING = 271;
 
 function main() {
   const argv = process.argv.slice(2);

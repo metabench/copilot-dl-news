@@ -4,8 +4,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const NewsDatabase = require('../../../db');
-const { recordPlaceHubSeed, resolveHandle } = require('../data/placeHubs');
+const NewsDatabase = require('../db');
+const { recordPlaceHubSeed, resolveHandle } = require('news-crawler-itself/place-hubs');
 
 describe('placeHubs data helper', () => {
   let tmpDir;
@@ -43,7 +43,9 @@ describe('placeHubs data helper', () => {
     });
     expect(inserted).toBe(true);
 
-    const row = handle.prepare('SELECT host, url, evidence FROM place_hubs WHERE host = ? AND url = ?').get('example.com', 'https://example.com/world/');
+    // place_hubs keys pages by url_id — the old url-column SELECT here failed
+    // on every run (this suite spent months in the known-51 because of it).
+    const row = handle.prepare('SELECT ph.host, u.url, ph.evidence FROM place_hubs ph JOIN urls u ON u.id = ph.url_id WHERE ph.host = ? AND u.url = ?').get('example.com', 'https://example.com/world/');
     expect(row).toBeTruthy();
     expect(row.host).toBe('example.com');
     expect(row.url).toBe('https://example.com/world/');
@@ -68,7 +70,7 @@ describe('placeHubs data helper', () => {
     });
     expect(second).toBe(false);
 
-    const count = handle.prepare('SELECT COUNT(*) AS c FROM place_hubs WHERE host = ? AND url = ?').get('example.com', 'https://example.com/world/').c;
+    const count = handle.prepare('SELECT COUNT(*) AS c FROM place_hubs ph JOIN urls u ON u.id = ph.url_id WHERE ph.host = ? AND u.url = ?').get('example.com', 'https://example.com/world/').c;
     expect(count).toBe(1);
   });
 });

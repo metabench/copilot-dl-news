@@ -81,7 +81,12 @@ function resolves(spec, fromDir) {
   try { require.resolve(spec, { paths: [fromDir] }); return true; } catch { return false; }
 }
 
-const CEILING = 16; // measured 2026-08-04 (cycle 183) after fixing the two same-cycle self-names
+// 16 → 15 (cycle 184): HubSeeder.test's phantom priorityConfig mock
+// dissolved by the injection discharge — the predicate is a constructor
+// option now, so there is no module path to mistarget. (A new phantom
+// appeared and died the same cycle: deleting hubIdentifier.js orphaned its
+// test, caught here, travelled to the engine 10/10.)
+const CEILING = 15;
 
 function main() {
   const phantoms = [];

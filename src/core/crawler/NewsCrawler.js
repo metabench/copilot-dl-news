@@ -140,7 +140,7 @@ const {
 } = require('news-crawler-itself/planner');
 const {
   HubSeeder
-} = require('./planner/HubSeeder');
+} = require('news-crawler-itself/planner');
 const {
   PlannerTelemetryBridge
 } = require('news-crawler-itself/planner');
@@ -149,7 +149,7 @@ const {
 } = require('news-crawler-itself/planner');
 const {
   TargetedAnalysisRunner
-} = require('./planner/TargetedAnalysisRunner');
+} = require('news-crawler-itself/planner');
 const {
   NavigationDiscoveryRunner
 } = require('news-crawler-itself/planner');

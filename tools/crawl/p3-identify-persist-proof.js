@@ -9,7 +9,7 @@ const args = process.argv.slice(2);
 function argOf(f, d){ const i=args.indexOf(f); return i>=0&&args[i+1]?args[i+1]:d; }
 const dbRel = argOf('--db', 'data/news.db');
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
-const { identifyAndPersistHub } = require('../../src/core/crawler/hubs/hubIdentifier');
+const { identifyAndPersistHub } = require('news-crawler-itself/hub-identifier');
 
 const URLS = [
   'https://www.theguardian.com/world/zimbabwe',

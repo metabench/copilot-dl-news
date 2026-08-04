@@ -70,7 +70,7 @@ not as prose intent.
 
 Each cycle = **primary engine batch + ONE secondary debt item, sized ≤~20%
 of the turn**, taken in order from the queue: (1) phantom sweep+check — DONE cycle 183: built, measured 18, fixed 2 same-cycle self-names, probe ratchets from 16 toward the zero floor (six of the 16 ARE known-51 crawler suites — they cannot even load, so item 2 starts there),
-(2) known-51 named-set check, then per-cycle triage pairs, (3) silent-catch
+(2) known-51 named-set check — DONE cycle 184 (known-failures.json pins 17 suites / 49 tests by NAME, quick mode probed, --verify at cycle close; the set already shrank: placeHubs.data left it via a REAL-DEFECT fix — broken legacy INSERT preferred by delegation + dedup unenforced by any unique index, app-level guard added, schema migration owner-gated) — then per-cycle triage pairs (11 untriaged remain; NEW MEASUREMENT: the FULL repo shows 169 failed suites / 460 failed tests beyond the crawler scope — instrumenting that surface is an owner-scale decision, recorded here, not unilaterally scoped), (3) silent-catch
 survey, (4) stalled-ratchet unfreeze-or-park prep (owner rules), (5) debt
 lanes. Pave-the-road (idea 3) is not queued — it joins the settled recipe
 as a standing pre-move step. The continuation prompt carries this cadence

@@ -6,7 +6,7 @@
 // into the sample if the sample lacks it. Never writes production news.db.
 const fs = require('fs');
 const path = require('path');
-const { segmentSlugAsync } = require('../../src/core/crawler/hubs/slugLexicon');
+const { segmentSlugAsync } = require('news-crawler-itself/hub-identifier');
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
 
 // Use a copy of PRODUCTION news.db opened READONLY for lexicon lookups (the

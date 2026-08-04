@@ -1,7 +1,7 @@
 'use strict';
 
 const { slugify } = require('../../tools/placeHubDetector');
-const { recordPlaceHubSeed, resolveHandle } = require('./data/placeHubs');
+const { recordPlaceHubSeed, resolveHandle } = require('news-crawler-itself/place-hubs');
 const { listKnownHubSeeds } = require('news-crawler-db');
 
 function uniqueByKey(items, keyFn) {

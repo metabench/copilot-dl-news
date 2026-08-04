@@ -9,7 +9,7 @@ const args = process.argv.slice(2);
 function argOf(f, d){ const i=args.indexOf(f); return i>=0&&args[i+1]?args[i+1]:d; }
 const dbRel = argOf('--db', 'data/samples/hub-p1-sample.db');
 const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
-const { segmentSlugAsync } = require('../../src/core/crawler/hubs/slugLexicon');
+const { segmentSlugAsync } = require('news-crawler-itself/hub-identifier');
 
 const TOPICS = [
   'war','trade','crisis','election','protest','floods','earthquake','wildfire',
