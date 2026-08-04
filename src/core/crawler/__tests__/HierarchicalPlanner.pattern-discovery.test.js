@@ -17,7 +17,7 @@ describe('HierarchicalPlanner - Pattern Discovery', () => {
     db = openNewsCrawlerDb(':memory:');
     
     // Create required tables from migration
-    const migrationPath = path.join(__dirname, '../../db/migrations/006-hierarchical-planning.sql');
+    const migrationPath = path.join(__dirname, '../../../data/db/migrations/006-hierarchical-planning.sql');
     const migrationSql = fs.readFileSync(migrationPath, 'utf8');
     db.exec(migrationSql);
 

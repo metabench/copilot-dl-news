@@ -3,7 +3,7 @@
   "scope": "src/core/crawler",
   "totalFailingTests": 44,
   "suites": {
-    "src/core/crawler/__tests__/HierarchicalPlanner.pattern-discovery.test.js": "untriaged",
+    "src/core/crawler/__tests__/HierarchicalPlanner.pattern-discovery.test.js": "env/lineage: migration path fixed c192 (moved-house), layer 2 = planning_heuristics has NO exported creator anywhere (ncdb hubGapAnalysis INSERTs it; table exists in live db via historical migration) — fix: test setup creates it via DDL mirrored from the LIVE schema (next cycle) or ncdb exports a creator",
     "src/core/crawler/__tests__/deepUrlAnalysis.test.js": "real: ncdb legacy recordUrlAlias lost _ensureUrlId — throws on EVERY call, was swallowed by deepUrlAnalysis silent catch (now loud, c190); test SELECT also stale (url_aliases keys by url_id). Chip task_21762870",
     "src/core/crawler/__tests__/queue.behaviour.test.js": "env: ESM parse failure via news-crawler-itself/node_modules/jsdom/parse5 — the c176-measured class (three fix attempts reverted); chip task_3a4fe4e0",
     "src/core/crawler/gazetteer/__tests__/WikidataAdm1Ingestor.test.js": "real: PRODUCTION Wikidata ingestion broken — ncdb ingest SQL (upsertPlace) writes place_type, absent from the LIVE places schema (live: kind, no place_type; live place_attribute_values IS attr-shaped). No exported init satisfies the ingest module: V1 init lacks place_type, gazetteer init has attribute_id-shaped attributes. ncdb-source alignment chip task_d275befe; test mirrors production failure honestly",
