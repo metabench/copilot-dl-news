@@ -304,14 +304,26 @@ describe('Quality Dashboard API', () => {
     expect(res.body.data.length).toBe(10);
   });
 
-  test('GET / renders SSR dashboard page', async () => {
-    const res = await request(testEnv.app).get('/');
+  test('GET / serves the dashboard, computing-placeholder first', async () => {
+    // c209: GET / is snapshot-cached now (cycle 208) — the page build runs
+    // in a child process because it used to block the whole server event
+    // loop for 14-39s. Until the first snapshot lands the route answers 200
+    // with an auto-refreshing placeholder, THEN the real dashboard. Both
+    // states are the contract, so pin both rather than only the old one.
+    const first = await request(testEnv.app).get('/');
+    expect(first.status).toBe(200);
+    expect(first.text).toContain('Quality Dashboard');
 
-    expect(res.status).toBe(200);
-    expect(res.text).toContain('Quality Dashboard');
-    expect(res.text).toContain('Average Confidence');
-    expect(res.text).toContain('Confidence Distribution');
-  });
+    const deadline = Date.now() + 60_000;
+    let body = first.text;
+    while (Date.now() < deadline && !body.includes('Average Confidence')) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      body = (await request(testEnv.app).get('/')).text;
+    }
+
+    expect(body).toContain('Average Confidence');
+    expect(body).toContain('Confidence Distribution');
+  }, 90_000);
 
   test('GET /domains renders domains page', async () => {
     const res = await request(testEnv.app).get('/domains');

@@ -3,6 +3,13 @@
 const request = require('supertest');
 
 describe('unifiedApp basic HTTP contracts', () => {
+  // c209: requiring the unified-app server measures ~3.3s on its own (it
+  // mounts every sub-app router at require time), and the first GET / then
+  // renders the shell. The 10s default leaves almost no headroom and flakes
+  // whenever the machine is busy — same cause as the c205 registry-suite
+  // fix. 30s is headroom over a measured baseline, not a hidden hang.
+  jest.setTimeout(30_000);
+
   test('GET / returns shell HTML', async () => {
     const { app } = require('../../src/ui/server/unifiedApp/server');
     const response = await request(app).get('/');
