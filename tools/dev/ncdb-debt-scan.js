@@ -95,12 +95,15 @@ function countSqlSignatures(text) {
 // evidence, so a future reader can re-check it rather than trust it.
 const NOT_A_CANDIDATE = [
   {
-    match: /^src[/\\]tools[/\\]normalize-urls[/\\]normalize-(article-places|place-hubs|place-hub-unknown-terms)\.js$/,
-    reason: 'SPENT migration — c216 measured its legacy source column GONE from the schema; it can only no-op. See docs/decisions/2026-08-05-spent-url-normalization-migrations.md'
-  },
-  {
+    // c218: the three SPENT migrations here (article-places, place-hubs,
+    // place-hub-unknown-terms) were RETIRED by owner ruling, so they no
+    // longer appear in the scan at all. The two below are different: they
+    // have never run. Measured on 2026-08-05 against a fresh ensureDb schema
+    // AND the live news.db, which agree — fetches has 54,485 rows and no
+    // url_id column, place_hub_candidates 673 rows and no candidate_url_id.
+    // Delegating a migration's SQL buys nothing: it runs once and is done.
     match: /^src[/\\]tools[/\\]normalize-urls[/\\]normalize-(fetches|place-hub-candidates)\.js$/,
-    reason: 'one-off migration, NOT yet applied (c216: its legacy column is still present). Delegating a migration buys nothing — it runs once.'
+    reason: 'one-off migration, NOT yet applied (c218 measured it against the live db: the legacy column is still present and the target column absent). Delegating a migration buys nothing — it runs once.'
   },
   {
     match: /^src[/\\]intelligence[/\\]matching[/\\]populate-place-names\.js$/,
@@ -111,6 +114,17 @@ const NOT_A_CANDIDATE = [
 function exclusionReason(file) {
   const hit = NOT_A_CANDIDATE.find((e) => e.match.test(file));
   return hit ? hit.reason : null;
+}
+
+// An exclusion whose file has since been deleted is dead weight, and a table
+// of dead weight is how the previous "these are migration one-offs, skip"
+// ruling rotted into uselessness. Report entries that match nothing so the
+// table is pruned by the tool's own output rather than by memory.
+function staleExclusions(files) {
+  const list = Array.isArray(files) ? files : [];
+  return NOT_A_CANDIDATE
+    .filter((e) => !list.some((f) => e.match.test(String(f))))
+    .map((e) => e.reason);
 }
 
 // Classify how a file can be ENTERED. `refs` is the number of other files
@@ -250,15 +264,33 @@ function main() {
       for (const e of excluded) console.log(`    ${String(e.counts.total).padStart(4)}  ${e.file}\n          ${e.excluded}`);
     }
 
+    const stale = staleExclusions(ranked.map((e) => e.file));
+    if (stale.length) {
+      console.log(`\n  STALE EXCLUSIONS — these entries match no file any more; prune them:`);
+      for (const r of stale) console.log(`    ${r}`);
+    }
+
     console.log('\nDelegation candidates: highest-signature REACHABLE files with query logic that could become ncdb exports (differential-e2e recipe).');
   }
 
-  if (max != null && total > max) {
-    console.error(`\nRATCHET FAILED: ${total} raw-SQL signatures > ceiling ${max}. New DB-shaped logic leaked into core layers — delegate it to ncdb or raise the ceiling deliberately.`);
+  // The ratchet guards DELEGATABLE signatures, not the raw total.
+  //
+  // Changed 2026-08-05 (cycle 218), deliberately. Against the raw total the
+  // guard could be satisfied by DELETING things: c217 retired one unreachable
+  // file and the total fell 195 -> 182 without a single query moving into
+  // ncdb, and c218's owner-directed retirement of three spent migrations took
+  // another 30. Both are fine changes, neither is progress toward "all
+  // DB-shaped logic in ncdb", and a ratchet that rewards them measures
+  // tidiness. Delegatable = reachable, non-excluded files — the SQL that
+  // could actually move. It is the number a real delegation lowers, and the
+  // number new leakage raises.
+  const guarded = candidates.reduce((s, e) => s + e.counts.total, 0);
+  if (max != null && guarded > max) {
+    console.error(`\nRATCHET FAILED: ${guarded} DELEGATABLE raw-SQL signatures > ceiling ${max} (raw total ${total}). New DB-shaped logic leaked into core layers — delegate it to ncdb or raise the ceiling deliberately.`);
     process.exit(1);
   }
 }
 
 if (require.main === module) main();
 
-module.exports = { countSqlSignatures, rankFiles, classifyReachability, exclusionReason };
+module.exports = { countSqlSignatures, rankFiles, classifyReachability, exclusionReason, staleExclusions };

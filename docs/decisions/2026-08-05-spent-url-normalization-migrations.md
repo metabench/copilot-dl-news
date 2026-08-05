@@ -1,8 +1,38 @@
 # Three URL-normalization migrations are spent — retire them?
 
 **Date:** 2026-08-05 (cycle 216)
-**Status:** OWNER DECISION REQUESTED — nothing deleted
+**Status:** ✅ **RESOLVED in cycle 218** — owner ruled "I don't need to keep
+migration one-offs". The three SPENT migrations were retired (option 1), along
+with the c216 behaviour-pin test. Git history keeps them.
 **Affects:** `src/tools/normalize-urls/`
+
+## Cycle 218 outcome — including one correction
+
+Before deleting, the verdicts were re-measured rather than trusted, and the
+probe was widened from a fresh `ensureDb` schema to the **live** `data/news.db`
+(read-only). The two agree on all five tables, which is what made the deletion
+safe.
+
+Widening the probe caught something c216 missed. This document said `fetches`
+and `place_hub_candidates` were "not applied / by design" and left the question
+open. They are not by design — they were **never run**, and the directory
+README claimed the opposite: "Phase 2 Complete ✅ … 100% of Phase 2 targets",
+listing `fetches` as "✅ 479 rows migrated". The live database has 54,485
+`fetches` rows and **no `url_id` column at all**; `place_hub_candidates` has
+673 rows and no `candidate_url_id`. The README has been corrected.
+
+Both pending tools **were kept**, deliberately. The owner's ruling is about
+one-offs that are *done*; deleting a migration that has never run would
+silently decide those two tables will never be normalized, which is a schema
+decision rather than a cleanup. Both add their own column via `ALTER TABLE …
+ADD COLUMN`, so they are genuinely runnable pending work.
+
+The separable `ensureDb()` hazard below is now moot for the retired three. For
+the two survivors it does not apply: both already accept `[db-path]`.
+
+---
+
+*Original cycle-216 write-up follows.*
 
 ## What was found
 

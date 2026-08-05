@@ -1,6 +1,6 @@
 'use strict';
 
-const { countSqlSignatures, rankFiles, classifyReachability, exclusionReason } = require('../ncdb-debt-scan');
+const { countSqlSignatures, rankFiles, classifyReachability, exclusionReason, staleExclusions } = require('../ncdb-debt-scan');
 
 describe('ncdb-debt-scan countSqlSignatures', () => {
   test('counts prepare/exec/better-sqlite3 and flags connection ownership', () => {
@@ -100,22 +100,51 @@ describe('ncdb-debt-scan classifyReachability', () => {
 });
 
 describe('ncdb-debt-scan exclusionReason', () => {
-  test('the three SPENT normalize-* migrations carry their measurement', () => {
-    for (const f of [
-      'src/tools/normalize-urls/normalize-article-places.js',
-      'src/tools/normalize-urls/normalize-place-hubs.js',
-      'src/tools/normalize-urls/normalize-place-hub-unknown-terms.js'
-    ]) {
-      expect(exclusionReason(f)).toMatch(/SPENT migration/);
-    }
-  });
-
-  test('the two UNAPPLIED migrations are excluded for a different, stated reason', () => {
+  test('the two UNAPPLIED migrations are excluded for a stated, measured reason', () => {
     expect(exclusionReason('src/tools/normalize-urls/normalize-fetches.js')).toMatch(/NOT yet applied/);
     expect(exclusionReason('src/tools/normalize-urls/normalize-place-hub-candidates.js')).toMatch(/NOT yet applied/);
   });
 
   test('an ordinary file has no exclusion', () => {
     expect(exclusionReason('src/shared/utils/UrlResolver.js')).toBeNull();
+  });
+});
+
+describe('ncdb-debt-scan staleExclusions', () => {
+  // An exclusion for a file that no longer exists is dead weight, and a table
+  // of dead weight is exactly how the 2026-07-20 "these are migration
+  // one-offs, skip" ruling rotted into uselessness. The tool prunes itself.
+  test('an exclusion matching no file is reported as stale', () => {
+    expect(staleExclusions(['src/shared/utils/UrlResolver.js'])).not.toHaveLength(0);
+  });
+
+  test('an exclusion whose file is still present is not stale', () => {
+    const live = staleExclusions([
+      'src/tools/normalize-urls/normalize-fetches.js',
+      'src/tools/normalize-urls/normalize-place-hub-candidates.js',
+      'src/intelligence/matching/populate-place-names.js'
+    ]);
+    expect(live).toEqual([]);
+  });
+
+  test('the CURRENT table has no stale entries — c218 retired three files and pruned their entry', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const root = path.resolve(__dirname, '..', '..', '..');
+    const present = [];
+    const walk = (dir) => {
+      for (const name of fs.readdirSync(dir)) {
+        if (name === 'node_modules' || name === '.git') continue;
+        const full = path.join(dir, name);
+        if (fs.statSync(full).isDirectory()) walk(full);
+        else if (name.endsWith('.js')) present.push(path.relative(root, full).replace(/\\/g, '/'));
+      }
+    };
+    walk(path.join(root, 'src'));
+    expect(staleExclusions(present)).toEqual([]);
+  });
+
+  test('non-array input never throws', () => {
+    expect(() => staleExclusions(null)).not.toThrow();
   });
 });
