@@ -10,7 +10,35 @@ const {
   encodeHash
 } = require('../shared/hashConfig');
 
+const TS_FILE_PATTERN = /\.(?:ts|tsx|mts|cts)$/;
+
+function parseTypescriptModule(source, fileName = 'anonymous.ts') {
+  const normalizedName = typeof fileName === 'string' && fileName.length > 0
+    ? fileName
+    : 'anonymous.ts';
+  const lowerName = normalizedName.toLowerCase();
+
+  return parseSync(source, {
+    syntax: 'typescript',
+    tsx: lowerName.endsWith('.tsx'),
+    decorators: true,
+    dynamicImport: true,
+    importAssertions: true,
+    target: 'es2022',
+    comments: true,
+    preserveAllComments: true,
+    script: false,
+    isModule: true,
+    dts: lowerName.endsWith('.d.ts'),
+    noEarlyErrors: false,
+    fileName: normalizedName
+  });
+}
+
 function parseModule(source, fileName = 'anonymous.js') {
+  if (typeof fileName === 'string' && TS_FILE_PATTERN.test(fileName.toLowerCase())) {
+    return parseTypescriptModule(source, fileName);
+  }
   return parseSync(source, {
     syntax: 'ecmascript',
     jsx: true,
@@ -2269,6 +2297,7 @@ function replaceSpan(source, span, replacement, mappingContext = null) {
 
 module.exports = {
   parseModule,
+  parseTypescriptModule,
   collectFunctions,
   collectVariables,
   collectTypes,

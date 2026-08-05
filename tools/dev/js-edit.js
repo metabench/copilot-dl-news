@@ -840,6 +840,7 @@ function normalizeOptions(raw) {
     ['--function-summary', functionSummary],
     ['--extract-hashes', extractHashes.length > 0],
     ['--list-variables', Boolean(resolved.listVariables)],
+    ['--list-types', Boolean(resolved.listTypes)],
     ['--outline', Boolean(resolved.outline)],
     ['--context-function', resolved.contextFunction !== undefined && resolved.contextFunction !== null],
     ['--context-variable', resolved.contextVariable !== undefined && resolved.contextVariable !== null],
@@ -854,7 +855,9 @@ function normalizeOptions(raw) {
     ['--replace', resolved.replace !== undefined && resolved.replace !== null],
     ['--locate', resolved.locate !== undefined && resolved.locate !== null],
     ['--locate-variable', resolved.locateVariable !== undefined && resolved.locateVariable !== null],
+    ['--locate-type', resolved.locateType !== undefined && resolved.locateType !== null],
     ['--extract-variable', resolved.extractVariable !== undefined && resolved.extractVariable !== null],
+    ['--extract-type', resolved.extractType !== undefined && resolved.extractType !== null],
     ['--replace-variable', resolved.replaceVariable !== undefined && resolved.replaceVariable !== null],
     ['--dry-run', Boolean(resolved.dryRun)],
     ['--recalculate-offsets', Boolean(resolved.recalculateOffsets)],
@@ -871,7 +874,7 @@ function normalizeOptions(raw) {
 
   const enabledOperations = operationMatrix.filter(([, flag]) => Boolean(flag));
   if (enabledOperations.length === 0) {
-    throw new Error('Provide one of --list-functions, --list-constructors, --function-summary, --extract-hashes <hashes>, --list-variables, --outline, --context-function <selector>, --context-variable <selector>, --preview <selector>, --preview-variable <selector>, --snipe <position>, --search-text <substring>, --scan-targets <selector>, --extract <selector>, --replace <selector>, --locate <selector>, --locate-variable <selector>, --extract-variable <selector>, --replace-variable <selector>, --dry-run, --recalculate-offsets, --from-plan, --match-snapshot <path>, --from-token <ref>, or --recipe <path>.');
+    throw new Error('Provide one of --list-functions, --list-constructors, --function-summary, --extract-hashes <hashes>, --list-variables, --list-types, --outline, --context-function <selector>, --context-variable <selector>, --preview <selector>, --preview-variable <selector>, --snipe <position>, --search-text <substring>, --scan-targets <selector>, --extract <selector>, --replace <selector>, --locate <selector>, --locate-variable <selector>, --locate-type <selector>, --extract-variable <selector>, --extract-type <selector>, --replace-variable <selector>, --dry-run, --recalculate-offsets, --from-plan, --match-snapshot <path>, --from-token <ref>, or --recipe <path>.');
   }
   if (enabledOperations.length > 1) {
     const flags = enabledOperations.map(([flag]) => flag).join(', ');
@@ -880,20 +883,20 @@ function normalizeOptions(raw) {
   // Store param array
   resolved.param = Array.isArray(resolved.param) ? resolved.param : [];
 
-  if (filterText !== null && !resolved.listFunctions && !resolved.listVariables && !resolved.listConstructors) {
-    throw new Error('--filter-text can only be used with --list-functions, --list-constructors, or --list-variables.');
+  if (filterText !== null && !resolved.listFunctions && !resolved.listVariables && !resolved.listConstructors && !resolved.listTypes) {
+    throw new Error('--filter-text can only be used with --list-functions, --list-constructors, --list-variables, or --list-types.');
   }
 
-  if (matchPattern !== null && !resolved.listFunctions && !resolved.listVariables && !resolved.listConstructors) {
-    throw new Error('--match can only be used with --list-functions, --list-constructors, or --list-variables.');
+  if (matchPattern !== null && !resolved.listFunctions && !resolved.listVariables && !resolved.listConstructors && !resolved.listTypes) {
+    throw new Error('--match can only be used with --list-functions, --list-constructors, --list-variables, or --list-types.');
   }
 
-  if (excludePattern !== null && !resolved.listFunctions && !resolved.listVariables && !resolved.listConstructors) {
-    throw new Error('--exclude can only be used with --list-functions, --list-constructors, or --list-variables.');
+  if (excludePattern !== null && !resolved.listFunctions && !resolved.listVariables && !resolved.listConstructors && !resolved.listTypes) {
+    throw new Error('--exclude can only be used with --list-functions, --list-constructors, --list-variables, or --list-types.');
   }
 
-  if (listOutputProvided && !resolved.listFunctions && !resolved.listConstructors && !resolved.listVariables) {
-    throw new Error('--list-output can only be used with --list-functions, --list-constructors, or --list-variables.');
+  if (listOutputProvided && !resolved.listFunctions && !resolved.listConstructors && !resolved.listVariables && !resolved.listTypes) {
+    throw new Error('--list-output can only be used with --list-functions, --list-constructors, --list-variables, or --list-types.');
   }
 
   const includeInternals = Boolean(resolved.includeInternals);
@@ -1421,6 +1424,7 @@ function parseCliArgs(argv) {
     .add('--list-functions', 'List all functions, methods, and arrow functions', false, 'boolean')
     .add('--list-constructors', 'List all class constructors', false, 'boolean')
     .add('--list-variables', 'List all variable declarations (const, let, var)', false, 'boolean')
+    .add('--list-types', 'List all type declarations (interfaces, type aliases, enums)', false, 'boolean')
     .add('--outline', 'Quick symbol outline: top-level declarations with positions', false, 'boolean')
     .add('--function-summary', 'Display a summary table of function types and counts', false, 'boolean')
     .add('--filter-text <substring>', 'Filter list results by text (case-insensitive)')
@@ -1445,8 +1449,10 @@ function parseCliArgs(argv) {
     .add('--scan-target-kind <kind>', 'Kind of target to scan for: function, variable (default: function)')
     .add('--locate <selector>', 'Find and report metadata for a function match')
     .add('--locate-variable <selector>', 'Find and report metadata for a variable match')
+    .add('--locate-type <selector>', 'Find and report metadata for a type declaration match')
     .add('--extract <selector>', 'Extract a function and print its source')
     .add('--extract-variable <selector>', 'Extract a variable declaration and print its source')
+    .add('--extract-type <selector>', 'Extract a type declaration and print its source')
     .add('--extract-hashes <hashes...>', 'Extract functions by one or more hashes (comma or space-separated)')
     .add('--replace <selector>', 'Replace a function with a new implementation')
     .add('--replace-variable <selector>', 'Replace a variable declarator with a new snippet')
