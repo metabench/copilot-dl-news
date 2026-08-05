@@ -8,14 +8,14 @@
 
 const { CoverageMap } = require('../../src/aggregation/CoverageMap');
 
-// c203: PARKED with diagnosis — the subject's generateCoverageMap(storyId)
-// is ASYNC and db-backed (requires a TopicAdapter; loads the cluster from
-// storage), while this suite calls it synchronously with an in-memory
-// cluster object — a designed offline API that was never built. Worse than
-// failing, the unawaited rejection ('TopicAdapter required') escaped jest
-// and KILLED whole batch runs. Skipped until the study lands: either build
-// the in-memory path or modernize these to mock adapters.
-describe.skip('CoverageMap', () => {
+// c204: UNPARKED — the designed in-memory path now exists (FactExtractor
+// precedent). generateCoverageMap / getFullCoverageAnalysis accept an inline
+// {storyId, articles} cluster object (bypassing adapters) alongside the
+// db-backed storyId form, and the whole family is now genuinely synchronous
+// (the adapters always were) — the c203 batch-killer, an unawaited rejection
+// escaping jest from a gratuitously async method, has nothing left to
+// escape from. The sync contract is pinned explicitly below.
+describe('CoverageMap', () => {
   let coverageMap;
   
   beforeEach(() => {
@@ -30,6 +30,21 @@ describe.skip('CoverageMap', () => {
   });
   
   describe('generateCoverageMap', () => {
+    it('returns a plain object for inline clusters, not a promise (c204 sync contract)', () => {
+      const map = coverageMap.generateCoverageMap({
+        storyId: 'story-sync',
+        articles: [
+          { id: 1, title: 'A', body: 'Content', host: 'a.com', publishedAt: '2025-12-26T10:00:00Z' }
+        ]
+      });
+
+      // The c203 batch-killer was an unawaited rejection from a gratuitously
+      // async method; pin the sync design so re-asyncing fails loudly here
+      // instead of resurrecting escaped rejections in sync-style callers.
+      expect(typeof map.then).toBe('undefined');
+      expect(map.storyId).toBe('story-sync');
+    });
+
     it('should generate coverage map for story cluster', () => {
       const storyCluster = {
         storyId: 'story-001',

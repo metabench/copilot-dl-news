@@ -25,8 +25,9 @@ const PATTERNS = {
   // Single quotes (for British style)
   singleQuotes: /'([^']{20,})'/g,
   
-  // Statistics: numbers with units
-  statistics: /(\d+(?:,\d{3})*(?:\.\d+)?)\s*(percent|%|million|billion|thousand|trillion|dollars|euros|pounds|people|deaths|cases|votes|points|hours|days|weeks|months|years)/gi,
+  // Statistics: numbers with units (c204: countable news quantities added —
+  // "500 flights", "300 jobs" — the coverage-map contract pins them)
+  statistics: /(\d+(?:,\d{3})*(?:\.\d+)?)\s*(percent|%|million|billion|thousand|trillion|dollars|euros|pounds|people|deaths|cases|votes|points|hours|days|weeks|months|years|flights|passengers|workers|employees|jobs|homes|schools|vehicles|troops)/gi,
   
   // Percentages specifically
   percentages: /(\d+(?:\.\d+)?)\s*(?:percent|%)/gi,

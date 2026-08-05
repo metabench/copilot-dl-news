@@ -8,13 +8,15 @@
 
 const { PerspectiveAnalyzer, TONE_THRESHOLDS } = require('../../src/aggregation/PerspectiveAnalyzer');
 
-// c203: PARKED with diagnosis — same class as CoverageMap.test.js: the
-// subject's analyzeCluster({articleIds}) is ASYNC and db-backed, while
-// this suite calls analyzeCluster(articlesArray) synchronously — an
-// in-memory API that was never built. The unawaited rejection
-// ('articleIds is not iterable') escaped jest and killed batch runs.
-// Skipped until the aggregation-family study lands.
-describe.skip('PerspectiveAnalyzer', () => {
+// c204: UNPARKED — the designed in-memory API now exists (FactExtractor
+// precedent): analyzeCluster is synchronous and takes inline article arrays
+// (or {articleIds} for the db-backed path the CoverageMap uses),
+// toneThresholds / _getToneFromScore / _extractKeywords /
+// _findProminentEntities are real, and comparePerspectives takes perspective
+// objects and returns the flat comparison shape. The c203 batch-killer, an
+// unawaited rejection escaping jest from a gratuitously async method, has
+// nothing left to escape from. The sync contract is pinned explicitly below.
+describe('PerspectiveAnalyzer', () => {
   let analyzer;
   
   beforeEach(() => {
@@ -183,6 +185,17 @@ describe.skip('PerspectiveAnalyzer', () => {
   });
   
   describe('analyzeCluster', () => {
+    it('returns a plain object for inline articles, not a promise (c204 sync contract)', () => {
+      const result = analyzer.analyzeCluster([
+        { id: 1, title: 'A', body: 'Content', host: 'a.com' }
+      ]);
+
+      // The c203 batch-killer was an unawaited rejection from a gratuitously
+      // async method; pin the sync design so re-asyncing fails loudly here.
+      expect(typeof result.then).toBe('undefined');
+      expect(result.perspectives).toHaveLength(1);
+    });
+
     it('should analyze multiple articles', () => {
       const articles = [
         { id: 1, title: 'Good news', body: 'Positive content', host: 'a.com' },

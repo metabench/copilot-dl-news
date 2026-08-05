@@ -30,11 +30,12 @@ const TONE_THRESHOLDS = {
 class PerspectiveAnalyzer {
   /**
    * Create a PerspectiveAnalyzer instance
-   * 
+   *
    * @param {Object} [options] - Configuration
    * @param {Object} options.sentimentAnalyzer - SentimentAnalyzer instance
    * @param {Object} options.tagAdapter - Tag adapter for entities/keywords
    * @param {Object} options.articlesAdapter - Articles adapter for content
+   * @param {Object} [options.toneThresholds] - Custom critical/supportive cutoffs
    * @param {Object} [options.logger] - Logger instance
    */
   constructor(options = {}) {
@@ -42,6 +43,9 @@ class PerspectiveAnalyzer {
     this.tagAdapter = options.tagAdapter;
     this.articlesAdapter = options.articlesAdapter;
     this.logger = options.logger || console;
+    // c204: instance-level thresholds (the designed API the suite pins) so
+    // callers can tune where critical/supportive cut over.
+    this.toneThresholds = options.toneThresholds || { ...TONE_THRESHOLDS };
   }
   
   /**
@@ -50,13 +54,17 @@ class PerspectiveAnalyzer {
    * @param {Object} article - Article to analyze
    * @param {number} article.id - Content ID
    * @param {string} article.title - Article title
-   * @param {string} article.text - Article body text
+   * @param {string} [article.text] - Article body (body/bodyText/body_text/content accepted too)
    * @param {string} [article.host] - Source host/domain
    * @returns {Object} Perspective analysis
    */
   analyzeArticle(article) {
-    const { id: contentId, title, text, host } = article;
-    
+    const { id: contentId, title, host } = article;
+    // c204: accept the same body-field family FactExtractor.extract() takes —
+    // in-memory callers pass body, db flows pass text/body_text.
+    const text = article.text || article.body || article.bodyText ||
+      article.body_text || article.content || '';
+
     // Analyze tone using sentiment
     const tone = this._analyzeTone(title, text);
     
@@ -79,46 +87,63 @@ class PerspectiveAnalyzer {
   }
   
   /**
-   * Analyze perspectives for all articles in a story cluster
-   * 
-   * @param {Object} options - Options
-   * @param {number[]} options.articleIds - Article IDs in the cluster
+   * Analyze perspectives for all articles in a story cluster.
+   *
+   * Synchronous by design (c204): the adapters are synchronous and the old
+   * gratuitous `async` let unawaited rejections escape jest and kill whole
+   * batch runs. `await analyzeCluster(...)` at existing call sites still
+   * works — awaiting a plain value is a no-op.
+   *
+   * @param {Object|Array<Object>} input - Either an array of in-memory
+   *   article objects ({id, title, body|text, host}), or an options object
+   *   with {articles} (same in-memory shape) or {articleIds} (loaded via
+   *   the articles adapter — the db-backed path CoverageMap uses).
    * @returns {Object} Cluster perspective analysis
    */
-  async analyzeCluster(options) {
+  analyzeCluster(input) {
+    // c204: designed in-memory path — accept inline article arrays,
+    // bypassing adapters (FactExtractor precedent).
+    const options = Array.isArray(input) ? { articles: input } : (input || {});
     const { articleIds } = options;
-    
+
+    const articles = [];
+    if (Array.isArray(options.articles)) {
+      articles.push(...options.articles.filter(Boolean));
+    } else if (Array.isArray(articleIds)) {
+      for (const contentId of articleIds) {
+        let article = null;
+        if (this.articlesAdapter) {
+          article = this.articlesAdapter.getArticle
+            ? this.articlesAdapter.getArticle(contentId)
+            : this.articlesAdapter.getArticleById(contentId);
+        }
+
+        if (!article) continue;
+
+        articles.push({
+          id: contentId,
+          title: article.title,
+          text: article.body_text || article.bodyText || article.content || '',
+          host: article.domain || article.host
+        });
+      }
+    }
+
     const perspectives = [];
     const allFocusKeywords = new Map();
     const allEntities = new Map();
-    const tonesBySource = new Map();
-    
-    for (const contentId of articleIds) {
-      // Get article content
-      let article = null;
-      if (this.articlesAdapter) {
-        article = this.articlesAdapter.getArticle 
-          ? this.articlesAdapter.getArticle(contentId)
-          : this.articlesAdapter.getArticleById(contentId);
-      }
-      
-      if (!article) continue;
-      
-      const perspective = this.analyzeArticle({
-        id: contentId,
-        title: article.title,
-        text: article.body_text || article.bodyText || article.content || '',
-        host: article.domain || article.host
-      });
-      
+
+    for (const article of articles) {
+      const perspective = this.analyzeArticle(article);
+
       perspectives.push(perspective);
-      
+
       // Aggregate focus keywords
       for (const kw of perspective.focusKeywords) {
         const count = allFocusKeywords.get(kw) || 0;
         allFocusKeywords.set(kw, count + 1);
       }
-      
+
       // Aggregate entities
       for (const entity of perspective.prominentEntities) {
         const key = entity.text.toLowerCase();
@@ -132,15 +157,8 @@ class PerspectiveAnalyzer {
           }
         }
       }
-      
-      // Track tones by source
-      if (perspective.host) {
-        const existing = tonesBySource.get(perspective.host) || [];
-        existing.push(perspective.toneScore);
-        tonesBySource.set(perspective.host, existing);
-      }
     }
-    
+
     // Calculate tone distribution
     const toneDistribution = this._calculateToneDistribution(perspectives);
     
@@ -150,7 +168,12 @@ class PerspectiveAnalyzer {
     
     // Identify unique focus areas per source
     const uniqueFocus = this._identifyUniqueFocus(perspectives, allFocusKeywords);
-    
+
+    const toneScores = perspectives.map(p => p.toneScore);
+    const averageToneScore = toneScores.length > 0
+      ? toneScores.reduce((a, b) => a + b, 0) / toneScores.length
+      : 0;
+
     return {
       articleCount: perspectives.length,
       perspectives,
@@ -161,58 +184,70 @@ class PerspectiveAnalyzer {
       sharedKeywords: this._getSharedKeywords(allFocusKeywords),
       sharedEntities: Array.from(allEntities.values())
         .filter(e => e.count >= 2)
-        .sort((a, b) => b.count - a.count)
+        .sort((a, b) => b.count - a.count),
+      // c204: designed roll-up block (pinned by the suite); additive, so the
+      // CoverageMap consumers of the flat fields above are unaffected.
+      summary: {
+        totalArticles: perspectives.length,
+        uniqueHosts: new Set(perspectives.map(p => p.host).filter(Boolean)).size,
+        averageToneScore: Math.round(averageToneScore * 1000) / 1000,
+        toneDistribution
+      }
     };
   }
   
   /**
-   * Compare perspectives between two specific articles
-   * 
-   * @param {Object} article1 - First article
-   * @param {Object} article2 - Second article
-   * @returns {Object} Comparison result
+   * Compare two perspectives.
+   *
+   * c204: the designed contract (pinned by the suite) — inputs are the
+   * OUTPUT of analyzeArticle ({tone, toneScore, focusKeywords,
+   * prominentEntities, ...}) and the result is flat. Article-shaped inputs
+   * are analyzed first, so callers holding raw articles can pass those too.
+   *
+   * @param {Object} first - Perspective (or article to analyze)
+   * @param {Object} second - Perspective (or article to analyze)
+   * @returns {Object} Flat comparison result
    */
-  comparePerspectives(article1, article2) {
-    const p1 = this.analyzeArticle(article1);
-    const p2 = this.analyzeArticle(article2);
-    
+  comparePerspectives(first, second) {
+    const p1 = this._toPerspective(first);
+    const p2 = this._toPerspective(second);
+
     // Calculate keyword overlap
-    const keywords1 = new Set(p1.focusKeywords);
-    const keywords2 = new Set(p2.focusKeywords);
+    const keywords1 = new Set(p1.focusKeywords || []);
+    const keywords2 = new Set(p2.focusKeywords || []);
     const sharedKeywords = [...keywords1].filter(k => keywords2.has(k));
-    const uniqueToSource1 = [...keywords1].filter(k => !keywords2.has(k));
-    const uniqueToSource2 = [...keywords2].filter(k => !keywords1.has(k));
-    
+
     // Calculate entity overlap
-    const entities1 = new Set(p1.prominentEntities.map(e => e.text.toLowerCase()));
-    const entities2 = new Set(p2.prominentEntities.map(e => e.text.toLowerCase()));
+    const entities1 = new Set((p1.prominentEntities || []).map(e => e.text.toLowerCase()));
+    const entities2 = new Set((p2.prominentEntities || []).map(e => e.text.toLowerCase()));
     const sharedEntities = [...entities1].filter(e => entities2.has(e));
-    
-    // Tone difference
-    const toneDifference = Math.abs(p1.toneScore - p2.toneScore);
-    const toneAgreement = toneDifference < 0.2 ? 'high' : toneDifference < 0.5 ? 'moderate' : 'low';
-    
+
     return {
-      source1: {
-        host: p1.host,
-        tone: p1.tone,
-        toneScore: p1.toneScore
+      article1: { articleId: p1.articleId, host: p1.host, tone: p1.tone, toneScore: p1.toneScore },
+      article2: { articleId: p2.articleId, host: p2.host, tone: p2.tone, toneScore: p2.toneScore },
+      toneAgreement: p1.tone === p2.tone,
+      toneDifference: Math.abs((p1.toneScore || 0) - (p2.toneScore || 0)),
+      sharedKeywords,
+      uniqueKeywords: {
+        article1: [...keywords1].filter(k => !keywords2.has(k)),
+        article2: [...keywords2].filter(k => !keywords1.has(k))
       },
-      source2: {
-        host: p2.host,
-        tone: p2.tone,
-        toneScore: p2.toneScore
-      },
-      comparison: {
-        toneAgreement,
-        toneDifference,
-        sharedKeywords,
-        uniqueToSource1,
-        uniqueToSource2,
-        sharedEntities,
-        keywordOverlap: sharedKeywords.length / Math.max(keywords1.size, keywords2.size, 1)
-      }
+      sharedEntities,
+      keywordOverlap: sharedKeywords.length / Math.max(keywords1.size, keywords2.size, 1)
     };
+  }
+
+  /**
+   * Coerce an input into a perspective: pass analyzeArticle output through,
+   * analyze anything article-shaped.
+   * @private
+   */
+  _toPerspective(input) {
+    if (input && typeof input === 'object' &&
+        typeof input.toneScore === 'number' && Array.isArray(input.focusKeywords)) {
+      return input;
+    }
+    return this.analyzeArticle(input || {});
   }
   
   /**
@@ -222,19 +257,29 @@ class PerspectiveAnalyzer {
   _analyzeTone(title, text) {
     const fullText = `${title || ''}\n\n${text || ''}`;
     const sentiment = this.sentimentAnalyzer.analyze(fullText);
-    
-    let label = 'neutral';
-    if (sentiment.overallScore < TONE_THRESHOLDS.critical) {
-      label = 'critical';
-    } else if (sentiment.overallScore > TONE_THRESHOLDS.supportive) {
-      label = 'supportive';
-    }
-    
+
     return {
-      label,
+      label: this._getToneFromScore(sentiment.overallScore),
       score: sentiment.overallScore,
       confidence: sentiment.confidence
     };
+  }
+
+  /**
+   * Classify a sentiment score into a tone label using this analyzer's
+   * thresholds. Boundary values are neutral (strict comparison).
+   *
+   * @param {number} score - Sentiment score in [-1, 1]
+   * @returns {string} 'critical' | 'neutral' | 'supportive'
+   */
+  _getToneFromScore(score) {
+    if (score < this.toneThresholds.critical) {
+      return 'critical';
+    }
+    if (score > this.toneThresholds.supportive) {
+      return 'supportive';
+    }
+    return 'neutral';
   }
   
   /**
@@ -260,41 +305,50 @@ class PerspectiveAnalyzer {
     }
     
     // Simple keyword extraction from text
-    return this._simpleKeywordExtraction(text).slice(0, 5);
+    return this._extractKeywords(text, 5);
   }
-  
+
   /**
-   * Simple keyword extraction (TF-based)
-   * @private
+   * TF-based keyword extraction from raw text (c204: promoted from the old
+   * _simpleKeywordExtraction to the designed name, with a limit parameter).
+   *
+   * @param {string} text - Text to extract from
+   * @param {number} [limit=10] - Max keywords to return
+   * @returns {string[]} Keywords, most frequent first
    */
-  _simpleKeywordExtraction(text) {
+  _extractKeywords(text, limit = 10) {
     if (!text) return [];
-    
+
     const STOPWORDS = new Set([
       'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
       'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
       'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
       'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'this',
       'that', 'these', 'those', 'it', 'its', 'they', 'their', 'he', 'she',
-      'him', 'her', 'we', 'our', 'you', 'your', 'said', 'says', 'told'
+      'him', 'her', 'we', 'our', 'you', 'your', 'said', 'says', 'told',
+      // c204: function words the >3-char filter let through
+      'over', 'under', 'into', 'onto', 'upon', 'about', 'above', 'below',
+      'between', 'through', 'during', 'while', 'than', 'then', 'them',
+      'when', 'where', 'which', 'what', 'there', 'here', 'also', 'more',
+      'most', 'some', 'such', 'very', 'just'
     ]);
-    
+
     // Tokenize and count
     const words = text
       .toLowerCase()
       .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
       .filter(w => w.length > 3 && !STOPWORDS.has(w));
-    
+
     const counts = new Map();
     for (const word of words) {
       counts.set(word, (counts.get(word) || 0) + 1);
     }
-    
+
     // Sort by frequency
     return [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
+      .slice(0, limit)
       .map(([word]) => word);
   }
   
@@ -323,7 +377,43 @@ class PerspectiveAnalyzer {
     
     return [];
   }
-  
+
+  /**
+   * Rank an in-memory entity list by prominence (c204: the designed offline
+   * companion to _getProminentEntities, which needs the tag adapter).
+   * Prominence = mention count first, then earliest position.
+   *
+   * @param {Array<{text: string, type: string, start: number}>} entities
+   * @param {number} [limit=10] - Max entities to return
+   * @returns {Array<{text, type, count, firstPosition}>}
+   */
+  _findProminentEntities(entities, limit = 10) {
+    if (!Array.isArray(entities) || entities.length === 0) return [];
+
+    const byText = new Map();
+    for (const entity of entities) {
+      if (!entity || !entity.text) continue;
+      const key = entity.text.toLowerCase();
+      const start = Number.isFinite(entity.start) ? entity.start : Infinity;
+      const existing = byText.get(key);
+      if (existing) {
+        existing.count++;
+        existing.firstPosition = Math.min(existing.firstPosition, start);
+      } else {
+        byText.set(key, {
+          text: entity.text,
+          type: entity.type,
+          count: 1,
+          firstPosition: start
+        });
+      }
+    }
+
+    return [...byText.values()]
+      .sort((a, b) => b.count - a.count || a.firstPosition - b.firstPosition)
+      .slice(0, limit);
+  }
+
   /**
    * Calculate tone distribution across perspectives
    * @private
@@ -476,7 +566,7 @@ class PerspectiveAnalyzer {
    */
   getStats() {
     return {
-      toneThresholds: TONE_THRESHOLDS,
+      toneThresholds: this.toneThresholds,
       hasSentimentAnalyzer: !!this.sentimentAnalyzer,
       hasTagAdapter: !!this.tagAdapter,
       hasArticlesAdapter: !!this.articlesAdapter
