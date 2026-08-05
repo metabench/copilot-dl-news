@@ -244,56 +244,39 @@ describe('FactExtractor', () => {
   });
   
   describe('compareArticles', () => {
+    // c203: modernized to the LIVE signature — compareArticles takes an
+    // ARRAY of {id, text, host} articles (CoverageMap is the production
+    // caller) and returns {quotes, statistics, dates, claims, conflicts,
+    // agreement}, each type as {shared, unique}. The old two-pre-extracted-
+    // results signature these tests pinned never shipped.
     it('should find shared facts between articles', () => {
-      const result1 = {
-        articleId: 1,
-        quotes: [{ text: 'We will succeed', attribution: 'CEO' }],
-        statistics: [{ text: '25%', normalized: '0.25' }],
-        dates: [{ text: '2025-12-26' }],
-        claims: []
-      };
-      
-      const result2 = {
-        articleId: 2,
-        quotes: [{ text: 'We will succeed', attribution: 'Leader' }],
-        statistics: [{ text: '25 percent', normalized: '0.25' }],
-        dates: [{ text: 'December 26, 2025' }],
-        claims: []
-      };
-      
-      const comparison = extractor.compareArticles(result1, result2);
-      
-      expect(comparison).toHaveProperty('sharedQuotes');
-      expect(comparison).toHaveProperty('sharedStatistics');
-      expect(comparison).toHaveProperty('conflictingStatistics');
-      expect(comparison).toHaveProperty('uniqueFacts');
+      const comparison = extractor.compareArticles([
+        { id: 1, host: 'a.example', text: 'Revenue grew 25 percent. "We will succeed together this year," said CEO John Smith.' },
+        { id: 2, host: 'b.example', text: 'Revenue grew 25 percent. "We will succeed together this year," the leader said.' }
+      ]);
+
+      expect(comparison).toHaveProperty('quotes');
+      expect(comparison).toHaveProperty('statistics');
+      expect(comparison).toHaveProperty('conflicts');
+      expect(comparison).toHaveProperty('agreement');
+
+      expect(comparison.quotes.shared).toHaveLength(1);
+      expect(comparison.quotes.shared[0].sources.sort()).toEqual(['a.example', 'b.example']);
+      expect(comparison.statistics.shared.length).toBeGreaterThanOrEqual(1);
+      expect(comparison.agreement.sharedFacts).toBeGreaterThanOrEqual(2);
     });
-    
+
     it('should detect conflicting statistics', () => {
-      const result1 = {
-        articleId: 1,
-        quotes: [],
-        statistics: [
-          { text: 'revenue grew 25%', normalized: '0.25', context: 'revenue' }
-        ],
-        dates: [],
-        claims: []
-      };
-      
-      const result2 = {
-        articleId: 2,
-        quotes: [],
-        statistics: [
-          { text: 'revenue increased 15%', normalized: '0.15', context: 'revenue' }
-        ],
-        dates: [],
-        claims: []
-      };
-      
-      const comparison = extractor.compareArticles(result1, result2);
-      
-      // Should flag the conflicting revenue statistics
-      expect(comparison.conflictingStatistics.length).toBeGreaterThanOrEqual(0);
+      const comparison = extractor.compareArticles([
+        { id: 1, host: 'a.example', text: 'Attendance at the march reached 10,000 people by noon.' },
+        { id: 2, host: 'b.example', text: 'Attendance at the march reached 5,000 people by noon.' }
+      ]);
+
+      expect(comparison.conflicts).toHaveLength(1);
+      expect(comparison.conflicts[0].type).toBe('statistic_conflict');
+      expect(comparison.conflicts[0].metric).toBe('people');
+      expect(comparison.conflicts[0].values.map(v => v.value).sort((a, b) => a - b)).toEqual([5000, 10000]);
+      expect(['moderate', 'high']).toContain(comparison.conflicts[0].severity);
     });
   });
   
@@ -326,15 +309,15 @@ describe('FactExtractor', () => {
       expect(stat1).toBeDefined();
       expect(stat2).toBeDefined();
       
-      // When compared, these should be identified as potential conflicts
-      // (both about crowd numbers but with different values)
-      const comparison = extractor.compareArticles(facts1, facts2);
-      
-      expect(comparison).toHaveProperty('uniqueFacts');
-      // Both have unique statistics that could represent conflicting information
-      expect(
-        comparison.uniqueFacts.article1.length + comparison.uniqueFacts.article2.length
-      ).toBeGreaterThan(0);
+      // When compared via the live array API, each article's differing
+      // statistic lands in the unique bucket (c203: modernized signature).
+      const comparison = extractor.compareArticles([
+        { id: 1, host: 'a.example', text: article1.body },
+        { id: 2, host: 'b.example', text: article2.body }
+      ]);
+
+      expect(comparison).toHaveProperty('statistics');
+      expect(comparison.statistics.unique.length).toBeGreaterThan(0);
     });
   });
 });

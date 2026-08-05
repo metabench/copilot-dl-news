@@ -8,7 +8,13 @@
 
 const { PerspectiveAnalyzer, TONE_THRESHOLDS } = require('../../src/aggregation/PerspectiveAnalyzer');
 
-describe('PerspectiveAnalyzer', () => {
+// c203: PARKED with diagnosis — same class as CoverageMap.test.js: the
+// subject's analyzeCluster({articleIds}) is ASYNC and db-backed, while
+// this suite calls analyzeCluster(articlesArray) synchronously — an
+// in-memory API that was never built. The unawaited rejection
+// ('articleIds is not iterable') escaped jest and killed batch runs.
+// Skipped until the aggregation-family study lands.
+describe.skip('PerspectiveAnalyzer', () => {
   let analyzer;
   
   beforeEach(() => {

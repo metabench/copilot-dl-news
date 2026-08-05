@@ -42,12 +42,24 @@ const PATTERNS = {
   
   // Relative dates
   relativeDates: /(last|next|this)\s+(week|month|year|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/gi,
+
+  // ISO dates (c203: designed in the tests but never wired)
+  datesIso: /\b(\d{4})-(\d{2})-(\d{2})\b/g,
+
+  // Bare day names (c203)
+  dayNames: /\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/g,
+
+  // Simple relative day words (c203)
+  simpleRelativeDates: /\b(yesterday|today|tomorrow)\b/gi,
+
+  // Claims: sentences with attribution (c203: present-tense verbs added —
+  // "Officials say", "The company claims", "Analysts believe")
+  claims: /(?:said|says|say|claimed|claims|claim|stated|states|state|announced|announces|announce|reported|reports|report|according to|told|tells|tell|confirmed|confirms|confirm|denied|denies|deny|argued|argues|argue|suggested|suggests|suggest|believed|believes|believe)\s+(?:that\s+)?([^.!?]+[.!?])/gi,
   
-  // Claims: sentences with attribution
-  claims: /(?:said|claimed|stated|announced|reported|according to|told|confirmed|denied|argued|suggested)\s+(?:that\s+)?([^.!?]+[.!?])/gi,
-  
-  // Named source claims
-  namedClaims: /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:said|claimed|stated|told|announced)\s*(?:that\s+)?["']?([^.!?"']+)/gi
+  // Named source claims (c203: present-tense verbs added and the speaker
+  // may be a common-noun subject — "The company claims", "Officials say",
+  // "Analysts believe" — not only proper names)
+  namedClaims: /([A-Z][a-z]+(?:\s+[A-Za-z][a-z]+)?)\s+(?:said|says|say|claimed|claims|claim|stated|states|state|told|tells|announced|announces|believed|believes|believe|argued|argues|argue|suggested|suggests|suggest|confirmed|confirms|confirm|denied|denies|deny|reported|reports|report)\s*(?:that\s+)?["']?([^.!?"']+)/g
 };
 
 /**
@@ -69,14 +81,24 @@ class FactExtractor {
   }
   
   /**
-   * Extract all facts from text
-   * 
-   * @param {string} text - Article text
+   * Extract all facts from text or an article object.
+   *
+   * @param {string|Object} input - Article text, or an article object with
+   *   body/bodyText/body_text/content/text (title is prepended when present)
    * @param {Object} [options] - Extraction options
    * @param {boolean} [options.includePositions=false] - Include character positions
    * @returns {Object} Extracted facts by type
    */
-  extract(text, options = {}) {
+  extract(input, options = {}) {
+    // c203: callers pass both raw strings (CoverageMap) and article objects
+    // (the aggregation flows and this module's own tests) — normalize here.
+    let text = input;
+    let articleId;
+    if (input && typeof input === 'object') {
+      const body = input.body || input.bodyText || input.body_text || input.content || input.text || '';
+      text = [input.title, body].filter(Boolean).join('\n');
+      articleId = input.id;
+    }
     if (!text || typeof text !== 'string') {
       return this._emptyResult();
     }
@@ -89,6 +111,7 @@ class FactExtractor {
     const claims = this._extractClaims(text, includePositions);
     
     return {
+      ...(articleId !== undefined ? { articleId } : {}),
       quotes,
       statistics,
       dates,
@@ -168,6 +191,7 @@ class FactExtractor {
         const speaker = this._findSpeaker(text, match.index);
         if (speaker) {
           fact.speaker = speaker;
+          fact.attribution = speaker; // c203: the pinned field name
         }
         
         quotes.push(fact);
@@ -198,6 +222,7 @@ class FactExtractor {
         const speaker = this._findSpeaker(text, match.index);
         if (speaker) {
           fact.speaker = speaker;
+          fact.attribution = speaker; // c203: the pinned field name
         }
         
         quotes.push(fact);
@@ -214,15 +239,17 @@ class FactExtractor {
   _findSpeaker(text, quoteIndex) {
     // Look at 100 chars before quote
     const before = text.substring(Math.max(0, quoteIndex - 100), quoteIndex);
-    
-    // Pattern: Name said, Name claimed, etc.
-    const speakerPattern = /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:said|says|told|claimed|stated|added|noted),?\s*$/;
+
+    // c203: capture an optional title/descriptor prefix too — "CEO John
+    // Smith said", "Industry leader Jane Doe said" — the tests pin the
+    // full attribution, not just the bare name.
+    const speakerPattern = /((?:[A-Z][A-Za-z]*\s+)?(?:[a-z]+\s+)?[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:said|says|told|claimed|stated|added|noted|responded),?\s*$/;
     const match = before.match(speakerPattern);
-    
+
     if (match) {
-      return match[1];
+      return match[1].trim();
     }
-    
+
     return null;
   }
   
@@ -249,13 +276,13 @@ class FactExtractor {
           value: parseFloat(value),
           unit,
           text: match[0],
-          type: 'statistic'
+          type: 'statistic',
+          // c203: positions are always attached for statistics — conflict
+          // detection and the pinned contract both want them, and they
+          // cost nothing to record.
+          start: match.index,
+          end: match.index + match[0].length
         };
-        
-        if (includePositions) {
-          fact.start = match.index;
-          fact.end = match.index + match[0].length;
-        }
         
         // Try to find context (what the statistic refers to)
         fact.context = this._findStatContext(text, match.index, match[0].length);
@@ -375,11 +402,53 @@ class FactExtractor {
           fact.start = match.index;
           fact.end = match.index + match[0].length;
         }
-        
+
         dates.push(fact);
       }
     }
-    
+
+    // c203: three designed-but-never-wired passes (the tests pinned them).
+    // ISO dates: 2025-12-26
+    const isoPattern = new RegExp(PATTERNS.datesIso.source, 'g');
+    while ((match = isoPattern.exec(text)) !== null) {
+      const key = match[0];
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const fact = {
+        text: match[0],
+        year: parseInt(match[1], 10),
+        month: parseInt(match[2], 10),
+        day: parseInt(match[3], 10),
+        type: 'date'
+      };
+      if (includePositions) { fact.start = match.index; fact.end = match.index + match[0].length; }
+      dates.push(fact);
+    }
+
+    // Bare day names: "on Monday"
+    const dayPattern = new RegExp(PATTERNS.dayNames.source, 'g');
+    while ((match = dayPattern.exec(text)) !== null) {
+      const key = match[0].toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const fact = { text: match[0], type: 'date', relative: true };
+      if (includePositions) { fact.start = match.index; fact.end = match.index + match[0].length; }
+      dates.push(fact);
+    }
+
+    // Relative dates: "yesterday", "next week"
+    for (const source of [PATTERNS.simpleRelativeDates.source, PATTERNS.relativeDates.source]) {
+      const relPattern = new RegExp(source, 'gi');
+      while ((match = relPattern.exec(text)) !== null) {
+        const key = match[0].toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const fact = { text: match[0], type: 'date', relative: true };
+        if (includePositions) { fact.start = match.index; fact.end = match.index + match[0].length; }
+        dates.push(fact);
+      }
+    }
+
     return dates;
   }
   
@@ -423,12 +492,15 @@ class FactExtractor {
       const source = match[1].trim();
       const claim = match[2].trim();
       const key = claim.toLowerCase().substring(0, 50);
-      
+
       if (claim.length >= 20 && claim.length <= 300 && !seen.has(key)) {
         seen.add(key);
-        
+
         const fact = {
-          text: claim,
+          // c203: the attribution phrase IS part of the claim record — the
+          // pinned contract wants "According to sources, …" preserved.
+          text: match[0].trim(),
+          claim,
           source,
           type: 'claim'
         };

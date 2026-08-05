@@ -109,7 +109,7 @@ function loadPlaceHubs(dbPath, host) {
     const queries = createCrawlPlaceHubsQueries(db);
     return queries.listPlaceHubs({ host });
   } finally {
-    try { db.close(); } catch (_) {}
+    try { db.close(); } catch (_) { /* db close in teardown — reviewed c203 */ }
   }
 }
 
@@ -230,7 +230,7 @@ function createCrawler(placeHubs, options) {
           host,
           queueSize: this.queue.size()
         });
-      } catch (_) {}
+      } catch (_) { /* queue telemetry emit — must not break dequeue — reviewed c203 */ }
 
       const processContext = {
         type: item.type,
@@ -265,7 +265,7 @@ function createCrawler(placeHubs, options) {
       }
       try {
         this.dbAdapter.close();
-      } catch (_) {}
+      } catch (_) { /* db adapter close in teardown — reviewed c203 */ }
     }
 
     this._cleanupEnhancedFeatures();

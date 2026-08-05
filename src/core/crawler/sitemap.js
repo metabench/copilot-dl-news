@@ -153,16 +153,23 @@ async function loadSitemaps(baseUrl, domain, sitemapUrls, opts) {
 
   const pushUrl = (u, meta = {}) => {
     if (maxUrls && enqueued >= maxUrls) return;
+    let abs;
     try {
-      const abs = new URL(u, baseUrl).href;
+      abs = new URL(u, baseUrl).href;
       if (new URL(abs).hostname !== domain) return;
-      if (seen.has(abs)) return;
-      seen.add(abs);
+    } catch { /* junk URL in sitemap — skipping is the point (reviewed c203) */ return; }
+    if (seen.has(abs)) return;
+    seen.add(abs);
+    try {
       if (typeof opts?.push === 'function') {
         opts.push(abs, meta);
       }
       enqueued++;
-    } catch {}
+    } catch (error) {
+      // Loud (c203): a swallowed push silently drops a sitemap URL — the
+      // catch used to cover parse junk AND real enqueue failures alike.
+      console.warn('[sitemap] push failed for', abs + ':', error?.message || error);
+    }
   };
 
   const handleDoc = (doc) => {

@@ -62,7 +62,7 @@ function takeUiScreenshot() {
       '--app', 'crawl-observer', '--smoke', '--screenshot', out,
       '--screenshot-delay-ms', '2500'
     ], { cwd: ROOT, windowsHide: false, shell: true, detached: false, stdio: 'ignore' });
-    setTimeout(() => { try { child.kill(); } catch (_) {} }, 60000);
+    setTimeout(() => { try { child.kill(); } catch (_) { /* best-effort child kill — reviewed c203 */ } }, 60000);
     log('screenshot requested:', path.basename(out));
   } catch (_) { /* best-effort */ }
 }
@@ -85,7 +85,11 @@ const status = {
 // `campaign-status` always shows current downloaded/saved/errors/MB.
 function saveStatus() {
   status.totals = rollupTotals(status.legs);
-  try { fs.writeFileSync(STATUS_FILE, JSON.stringify(status, null, 1)); } catch (_) {}
+  try { fs.writeFileSync(STATUS_FILE, JSON.stringify(status, null, 1)); } catch (error) {
+    // Loud (c203): a swallowed status write means campaign-status shows
+    // stale totals for the rest of the run.
+    log('WARN: status write failed:', error?.message || error);
+  }
 }
 
 function stopRequested() { return fs.existsSync(STOP_FILE); }
@@ -96,12 +100,12 @@ function runChild(script, childArgs, timeoutMs) {
     let out = '';
     child.stdout.on('data', (c) => { out += c.toString(); });
     child.stderr.on('data', (c) => { out += c.toString(); });
-    const timer = setTimeout(() => { try { child.kill(); } catch (_) {} }, timeoutMs);
+    const timer = setTimeout(() => { try { child.kill(); } catch (_) { /* best-effort child kill — reviewed c203 */ } }, timeoutMs);
     child.on('exit', () => { clearTimeout(timer); resolve(out); });
     // Propagate stop quickly: poll the stop file and kill the leg child; the
     // runner then stops the underlying job via the API.
     const stopPoll = setInterval(() => {
-      if (stopRequested()) { clearInterval(stopPoll); try { child.kill(); } catch (_) {} }
+      if (stopRequested()) { clearInterval(stopPoll); try { child.kill(); } catch (_) { /* best-effort child kill on stop — reviewed c203 */ } }
     }, 5000);
     child.on('exit', () => clearInterval(stopPoll));
   });
@@ -115,13 +119,19 @@ async function stopActiveJobs() {
       try {
         await fetch(`http://127.0.0.1:${port}/api/v1/crawl/jobs/${j.id}/stop`, { method: 'POST', signal: AbortSignal.timeout(30000) });
         log('stop sent to running job', j.id.slice(0, 8));
-      } catch (_) {}
+      } catch (error) {
+        // Loud (c203): a job that misses its stop command keeps crawling.
+        log('WARN: stop failed for job', j.id.slice(0, 8) + ':', error?.message || error);
+      }
     }
-  } catch (_) {}
+  } catch (error) {
+    // Loud (c203): if we cannot LIST running jobs we cannot stop them.
+    log('WARN: could not list running jobs to stop:', error?.message || error);
+  }
 }
 
 (async () => {
-  try { fs.unlinkSync(STOP_FILE); } catch (_) {} // stale stop from a prior run
+  try { fs.unlinkSync(STOP_FILE); } catch (_) { /* stale stop-file removal — ENOENT expected — reviewed c203 */ } // stale stop from a prior run
   log(`campaign start: op=${operation}, ${urls.length} target(s), ${Math.round(durationMs / 60000)}min, ${maxDownloads}pp/leg, leg budget ${Math.round(legBudgetMs / 60000)}min, screenshots every ${screenshotEveryMs ? Math.round(screenshotEveryMs / 60000) + 'min' : 'OFF'}`);
   status.operation = operation;
   status.state = 'running'; saveStatus();
@@ -144,7 +154,7 @@ async function stopActiveJobs() {
     const preflightTarget = mode === 'frontier' ? `https://${url.replace(/^https?:\/\//, '').replace(/\/.*$/, '')}/` : url;
     const pfOut = await runChild('tools/crawl/domain-preflight.js', [preflightTarget], 60000);
     let verdict = 'unreachable';
-    try { verdict = JSON.parse(pfOut)[0].verdict; } catch (_) {}
+    try { verdict = JSON.parse(pfOut)[0].verdict; } catch (_) { /* preflight parse fallback — verdict defaults to unreachable — reviewed c203 */ }
     legRec.preflight = verdict;
     if (stopRequested()) break;
 
@@ -183,7 +193,7 @@ async function stopActiveJobs() {
   if (stopRequested()) {
     log('stop requested — stopping any running job');
     await stopActiveJobs();
-    try { fs.unlinkSync(STOP_FILE); } catch (_) {}
+    try { fs.unlinkSync(STOP_FILE); } catch (_) { /* stop-file removal — ENOENT fine — reviewed c203 */ }
     status.state = 'stopped';
   } else {
     status.state = 'completed';

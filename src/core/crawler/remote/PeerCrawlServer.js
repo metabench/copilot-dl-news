@@ -464,11 +464,18 @@ function createPeerServer(options = {}) {
       // Stop all crawlers
       for (const [, entry] of orchestrator.workers) {
         if (entry.state === 'running') {
-          try { entry.adapter.stop(); } catch (_) {}
+          try { entry.adapter.stop(); } catch (error) {
+            // Loud (c203): a worker that misses its stop keeps crawling
+            // past server shutdown.
+            console.warn('[peer-crawl] worker stop failed:', error?.message || error);
+          }
         }
         // Dispose crawler resources
         if (typeof entry.crawler.dispose === 'function') {
-          try { await entry.crawler.dispose(); } catch (_) {}
+          try { await entry.crawler.dispose(); } catch (error) {
+            // Loud (c203): failed dispose leaks browser/db handles.
+            console.warn('[peer-crawl] worker dispose failed:', error?.message || error);
+          }
         }
       }
 

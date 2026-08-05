@@ -604,7 +604,7 @@ class IntelligentPlanRunner {
       if (typeof this.logger?.log === 'function') {
         this.logger.log(message);
       }
-    } catch (_) {}
+    } catch (_) { /* logger guard — logging must never break the run — reviewed c203 */ }
   }
 
   _mapNavigationResult(res) {
@@ -750,7 +750,7 @@ class IntelligentPlanRunner {
         try {
           const candidate = new URL(String(slug).replace(/^[\/]+/, ''), this.baseUrl).toString();
           seeds.add(candidate);
-        } catch (_) {}
+        } catch (_) { /* slug URL parse — invalid candidates skipped — reviewed c203 */ }
         if (seeds.size >= 12) break;
       }
     }

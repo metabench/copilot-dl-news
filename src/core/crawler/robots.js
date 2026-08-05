@@ -38,10 +38,10 @@ async function loadRobots(baseUrl) {
         sm = compact(lines, l => l.split(/:/i).slice(1).join(':').trim());
       }
       const norm = [];
-      for (const u of sm) { try { const abs = new URL(u, baseUrl).href; norm.push(abs); } catch {} }
+      for (const u of sm) { try { const abs = new URL(u, baseUrl).href; norm.push(abs); } catch { /* junk sitemap URL — skipping is the point — reviewed c203 */ } }
       sitemaps = Array.from(new Set(norm));
     }
-  } catch {}
+  } catch { /* robots parse is absence-tolerant — rules/sitemaps stay empty — reviewed c203 */ }
   return { rules, sitemaps, loaded };
 }
 

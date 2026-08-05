@@ -164,7 +164,7 @@ function postJson({ host, port, path: urlPath, body }, timeoutMs = 15000) {
     const settle = (fn, value) => {
       if (settled) return;
       settled = true;
-      try { req.setTimeout(0); } catch (_e) {}
+      try { req.setTimeout(0); } catch (_e) { /* clearing socket timeout during settle — reviewed c203 */ }
       fn(value);
     };
     const req = http.request({
@@ -181,7 +181,7 @@ function postJson({ host, port, path: urlPath, body }, timeoutMs = 15000) {
     });
     req.setTimeout(timeoutMs, () => {
       if (!settled) {
-        try { req.destroy(); } catch (_e) {}
+        try { req.destroy(); } catch (_e) { /* socket teardown on timeout — reviewed c203 */ }
         settle(reject, new Error(`request timeout after ${timeoutMs}ms`));
       }
     });
@@ -196,7 +196,7 @@ function getJson({ host, port, path: urlPath }, timeoutMs = 5000) {
     const settle = (fn, value) => {
       if (settled) return;
       settled = true;
-      try { req.setTimeout(0); } catch (_e) {}
+      try { req.setTimeout(0); } catch (_e) { /* clearing socket timeout during settle — reviewed c203 */ }
       fn(value);
     };
     const req = http.request({ host, port, method: 'GET', path: urlPath }, res => {
@@ -210,7 +210,7 @@ function getJson({ host, port, path: urlPath }, timeoutMs = 5000) {
     });
     req.setTimeout(timeoutMs, () => {
       if (!settled) {
-        try { req.destroy(); } catch (_e) {}
+        try { req.destroy(); } catch (_e) { /* socket teardown on timeout — reviewed c203 */ }
         settle(reject, new Error(`request timeout after ${timeoutMs}ms`));
       }
     });

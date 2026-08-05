@@ -32,7 +32,11 @@ const REPOS = [
 function* walk(dir) {
   let es; try { es = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
   for (const e of es) {
-    if (e.name === 'node_modules' || e.name === '.git' || e.name === '__tests__') continue;
+    // c203: 'archive' excluded — archived files never execute, so their
+    // swallows can't hide live failures; counting them is permanent noise.
+    // (Surfaced when c202's UTF-16→UTF-8 conversion of an archived manual
+    // test made 38 previously-scanner-invisible bare catches countable.)
+    if (e.name === 'node_modules' || e.name === '.git' || e.name === '__tests__' || e.name === 'archive') continue;
     const p = path.join(dir, e.name);
     if (e.isDirectory()) yield* walk(p);
     else if (e.isFile() && e.name.endsWith('.js') && !e.name.endsWith('.test.js')) yield p;
@@ -82,7 +86,7 @@ function main() {
 // Baseline measured cycle 197 after loud-ening the Cities ingestor's three.
 // Lower by converting bare swallows to loud warns or commented decisions;
 // never by deleting the catch without reading what it guards.
-const CEILING = Number(process.argv.includes('--ceiling') ? process.argv[process.argv.indexOf('--ceiling') + 1] : 247);
+const CEILING = Number(process.argv.includes('--ceiling') ? process.argv[process.argv.indexOf('--ceiling') + 1] : 198);
 
 const bare = main();
 console.log(`silent-catches: ${bare.length} BARE (uncommented) silent catches, both repos (ceiling ${CEILING}); commented swallows are reviewed decisions and not counted`);

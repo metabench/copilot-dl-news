@@ -100,7 +100,7 @@ class GazetteerModeController {
           mode: this.mode
         }
       });
-    } catch (_) {}
+    } catch (_) { /* completion telemetry emit — must not break the controller — reviewed c203 */ }
   }
 
   async run({ signal = null, emitProgress = null } = {}) {

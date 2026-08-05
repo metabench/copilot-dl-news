@@ -164,7 +164,7 @@ class Crawler extends EventedCrawlerBase {
     this.emit('paused');
     try {
       this.emitProgress(true);
-    } catch (_) {}
+    } catch (_) { /* progress emit — a listener throw must not break pause — reviewed c203 */ }
   }
 
   /**
@@ -179,7 +179,7 @@ class Crawler extends EventedCrawlerBase {
     this.emit('resumed');
     try {
       this.emitProgress(true);
-    } catch (_) {}
+    } catch (_) { /* progress emit — a listener throw must not break resume — reviewed c203 */ }
   }
 
   /**
@@ -202,7 +202,7 @@ class Crawler extends EventedCrawlerBase {
     this.emit('abort-requested');
     try {
       this.emitProgress(true);
-    } catch (_) {}
+    } catch (_) { /* progress emit — a listener throw must not break abort — reviewed c203 */ }
   }
 
   /**

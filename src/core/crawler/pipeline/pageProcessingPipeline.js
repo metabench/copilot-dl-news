@@ -138,7 +138,7 @@ function createDetectArticleStep(deps) {
     if (deps.looksLikeArticle) {
       try {
         isArticle = deps.looksLikeArticle(url);
-      } catch (_) {}
+      } catch (_) { /* classifier probe — not-article on error is the chosen default — reviewed c203 */ }
     }
     
     return { ok: true, value: { ...ctx, isArticle } };
@@ -190,7 +190,12 @@ function createEnqueueLinksStep(deps) {
           meta: link.meta || null
         });
         enqueued++;
-      } catch (_) {}
+      } catch (error) {
+        // Loud (c203): a swallowed enqueue is a silently lost link — the
+        // frontier starves with no trace.
+        if (deps.logger?.warn) deps.logger.warn(`[pipeline] enqueue failed for ${link.url || link.href}: ${error?.message || error}`);
+        else console.warn(`[pipeline] enqueue failed for ${link.url || link.href}:`, error?.message || error);
+      }
     }
     
     return { ok: true, value: { ...ctx, linksEnqueued: enqueued } };
@@ -239,7 +244,12 @@ function createUpdateStateStep(deps) {
           deps.state.incrementArticlesFound();
         }
       }
-    } catch (_) {}
+    } catch (error) {
+      // Loud (c203): silent counter failure means visited/article stats
+      // drift with no trace.
+      if (deps.logger?.warn) deps.logger.warn(`[pipeline] state tracking failed: ${error?.message || error}`);
+      else console.warn('[pipeline] state tracking failed:', error?.message || error);
+    }
     
     return { ok: true, value: ctx };
   }, { optional: false });
@@ -265,7 +275,7 @@ function createRecordMetricsStep(deps) {
         linksFound: ctx.links?.length || 0,
         linksEnqueued: ctx.linksEnqueued || 0
       });
-    } catch (_) {}
+    } catch (_) { /* page telemetry emit — must not break the pipeline — reviewed c203 */ }
     
     return { ok: true, value: ctx };
   }, { optional: true });

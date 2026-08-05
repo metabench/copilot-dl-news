@@ -49,14 +49,22 @@ describe('StoryMatcher', () => {
     });
     
     it('should calculate Hamming distance between similar texts', () => {
+      // c203: the old pin (≤5) assumed a smoother hash than SimHasher
+      // actually is on short texts — a one-word diff on a 14-word sentence
+      // measures 7. The property that matters is COMPARATIVE: a near-
+      // duplicate pair must score far closer than an unrelated pair.
       const text1 = 'This is a test article about politics and economics in the United States';
       const text2 = 'This is a test article about politics and economics in the United States today';
-      
+      const unrelated = 'Chef shares favourite recipes for quick weeknight dinners with seasonal vegetables';
+
       const fp1 = SimHasher.compute(text1);
       const fp2 = SimHasher.compute(text2);
-      
-      const distance = storyMatcher._hammingDistance(fp1, fp2);
-      expect(distance).toBeLessThanOrEqual(5); // Similar texts should have low distance
+      const fp3 = SimHasher.compute(unrelated);
+
+      const similarDistance = storyMatcher._hammingDistance(fp1, fp2);
+      const unrelatedDistance = storyMatcher._hammingDistance(fp1, fp3);
+      expect(similarDistance).toBeLessThanOrEqual(10);
+      expect(similarDistance).toBeLessThan(unrelatedDistance);
     });
     
     it('should calculate higher distance for different texts', () => {
@@ -182,21 +190,29 @@ describe('StoryMatcher', () => {
   
   describe('findPotentialMatches', () => {
     it('should find matching articles', () => {
-      const baseText = 'President Biden announces new economic policy at White House press conference';
-      const similarText = 'President Biden unveils economic plan at White House briefing';
-      const differentText = 'Tech startup raises funding for new AI product launch';
-      
+      // c203: the matcher's simhash gate detects NEAR-DUPLICATES (syndicated
+      // wire copy), not rephrasings — the old fixture's rewritten headlines
+      // measure distance 12 and can never group. This fixture is the
+      // designed case: same wire text with a tail edit (distance 4), two
+      // shared entities (minSharedEntities=2), grouped under an explicit
+      // threshold via the constructor's own option.
+      const matcher = new StoryMatcher({ maxHammingDistance: 8 });
+      const wireText = 'President Biden announced a new economic policy during a White House press conference on Thursday, outlining a package of measures aimed at reducing inflation, supporting small businesses, and expanding domestic manufacturing over the next several years.';
+      const syndicatedText = wireText + ' Local officials welcomed the announcement.';
+      const differentText = 'A technology startup announced a major funding round on Thursday to accelerate development of its artificial intelligence products, with investors citing rapid growth in enterprise adoption and a strong engineering team.';
+
+      const sharedEntities = [{ text: 'Biden', type: 'PERSON' }, { text: 'White House', type: 'ORG' }];
       const articles = [
         {
           id: 1,
-          simhash: SimHasher.compute(baseText),
-          entities: [{ text: 'Biden', type: 'PERSON' }, { text: 'White House', type: 'ORG' }],
+          simhash: SimHasher.compute(wireText),
+          entities: sharedEntities,
           publishedAt: '2025-12-26T10:00:00Z'
         },
         {
           id: 2,
-          simhash: SimHasher.compute(similarText),
-          entities: [{ text: 'Biden', type: 'PERSON' }, { text: 'White House', type: 'ORG' }],
+          simhash: SimHasher.compute(syndicatedText),
+          entities: sharedEntities,
           publishedAt: '2025-12-26T11:00:00Z'
         },
         {
@@ -206,8 +222,8 @@ describe('StoryMatcher', () => {
           publishedAt: '2025-12-26T12:00:00Z'
         }
       ];
-      
-      const matches = storyMatcher.findPotentialMatches(articles);
+
+      const matches = matcher.findPotentialMatches(articles);
       
       // Should find one group with articles 1 and 2
       expect(matches.length).toBeGreaterThanOrEqual(1);

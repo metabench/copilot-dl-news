@@ -85,7 +85,7 @@ class CheckpointManager extends EventEmitter {
     } catch (error) {
       // Clean up temp file if it exists
       if (fs.existsSync(tempPath)) {
-        try { fs.unlinkSync(tempPath); } catch {}
+        try { fs.unlinkSync(tempPath); } catch { /* temp-file cleanup in error path — ENOENT fine — reviewed c203 */ }
       }
       this.emit('error', { operation: 'save', error });
       throw error;

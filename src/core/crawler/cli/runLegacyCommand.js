@@ -123,7 +123,7 @@ function reportCountryCityCounts(dbPath, countrySpecs, log) {
   } finally {
     try {
       db.close();
-    } catch (_) {}
+    } catch (_) { /* db close in finally — reviewed c203 */ }
   }
 }
 

@@ -13,10 +13,11 @@
  * Output: 0.0 to 1.0 score.
  */
 
+// c203: pure scoreBatch/filterLowConfidence expect {id, result} shapes; the
+// class keeps its own flat {url, score} versions below, so only
+// scoreConfidence is delegated.
 const {
-  scoreConfidence: pureScoreConfidence,
-  scoreBatch: pureScoreBatch,
-  filterLowConfidence: pureFilterLowConfidence
+  scoreConfidence: pureScoreConfidence
 } = require('news-db-pure-analysis');
 
 class ContentConfidenceScorer {
@@ -33,6 +34,12 @@ class ContentConfidenceScorer {
       maxWordCount: options.maxWordCount ?? 10000,
     };
   }
+
+  // c203: the docstring promises the old class API, and the old class
+  // exposed these as flat properties — honored via getters over config.
+  get minWordCount() { return this.config.minWordCount; }
+  get idealWordCount() { return this.config.idealWordCount; }
+  get maxWordCount() { return this.config.maxWordCount; }
 
   /**
    * Map local extraction object to pure ExtractionInput.

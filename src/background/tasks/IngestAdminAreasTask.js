@@ -85,7 +85,7 @@ class IngestAdminAreasTask {
 
   _report(progress) {
     if (typeof this.onProgress === 'function') {
-      try { this.onProgress(progress); } catch (_) {}
+      try { this.onProgress(progress); } catch (_) { /* onProgress listener guard — a throw must not break ingest — reviewed c203 */ }
     }
   }
 }

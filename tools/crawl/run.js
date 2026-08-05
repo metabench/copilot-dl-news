@@ -837,9 +837,9 @@ function runChildProcess({ script, args, label, runFlags, captureOutput = false 
       forcedExitCode = exitCode;
       forcedReason = reason;
       process.stderr.write(`[run] ${label} failed early: ${reason}; killing child pid=${child.pid || 'unknown'}\n`);
-      try { child.kill('SIGTERM'); } catch (_e) {}
+      try { child.kill('SIGTERM'); } catch (_e) { /* best-effort child kill — may already be dead — reviewed c203 */ }
       hardKillTimer = setTimeout(() => {
-        try { child.kill('SIGKILL'); } catch (_e) {}
+        try { child.kill('SIGKILL'); } catch (_e) { /* best-effort child kill — may already be dead — reviewed c203 */ }
       }, 2500);
       forceFinishTimer = setTimeout(() => finish(exitCode, `${reason}; child did not exit after SIGKILL`), 7500);
       if (typeof hardKillTimer.unref === 'function') hardKillTimer.unref();
@@ -1046,7 +1046,7 @@ function probeAvailability(host, port, timeoutMs = 1500) {
       res.resume();
       resolve(res.statusCode === 200);
     });
-    req.setTimeout(timeoutMs, () => { try { req.destroy(); } catch (_e) {} resolve(false); });
+    req.setTimeout(timeoutMs, () => { try { req.destroy(); } catch (_e) { /* socket teardown on timeout — reviewed c203 */ } resolve(false); });
     req.on('error', () => resolve(false));
     req.end();
   });
@@ -1094,9 +1094,9 @@ async function ensureLocalServer({ host, port, runFlags }) {
   // on Windows (where unref() is not sufficient if stdio is still wired to
   // the parent process). The log doubles as a debugging artifact.
   const logPath = path.join(REPO_ROOT, 'tmp', '_unified-ui.log');
-  try { fs.mkdirSync(path.dirname(logPath), { recursive: true }); } catch (_e) {}
+  try { fs.mkdirSync(path.dirname(logPath), { recursive: true }); } catch (_e) { /* optional debug log dir — openSync below fails loud — reviewed c203 */ }
   const logHeader = `\n=== unified UI launch ${new Date().toISOString()} pid=parent:${process.pid} ===\n`;
-  try { fs.appendFileSync(logPath, logHeader); } catch (_e) {}
+  try { fs.appendFileSync(logPath, logHeader); } catch (_e) { /* optional debug log header — openSync below fails loud — reviewed c203 */ }
   const outFd = fs.openSync(logPath, 'a');
   const errFd = fs.openSync(logPath, 'a');
   const child = spawn(process.execPath, [UNIFIED_APP_SCRIPT], {
@@ -1107,8 +1107,8 @@ async function ensureLocalServer({ host, port, runFlags }) {
     windowsHide: true
   });
   // Close our own copy of the file descriptors; the child has its own.
-  try { fs.closeSync(outFd); } catch (_e) {}
-  try { fs.closeSync(errFd); } catch (_e) {}
+  try { fs.closeSync(outFd); } catch (_e) { /* closing our own fd copy — child owns its own — reviewed c203 */ }
+  try { fs.closeSync(errFd); } catch (_e) { /* closing our own fd copy — child owns its own — reviewed c203 */ }
   let exitedEarly = null;
   child.on('exit', (code, signal) => { exitedEarly = { code, signal }; });
 
@@ -1122,7 +1122,7 @@ async function ensureLocalServer({ host, port, runFlags }) {
     await sleep(SERVER_READY_POLL_MS);
   }
   if (!ready) {
-    try { child.kill('SIGTERM'); } catch (_e) {}
+    try { child.kill('SIGTERM'); } catch (_e) { /* best-effort child kill — may already be dead — reviewed c203 */ }
     throw new Error(`auto-spawned unified UI did not become ready within ${Math.round(SERVER_READY_TIMEOUT_MS/1000)}s`);
   }
   if (!runFlags.json) {
@@ -1144,17 +1144,17 @@ async function ensureLocalServer({ host, port, runFlags }) {
           `[run] server kept alive so jobs can finish. Stop with: Stop-Process -Id ${child.pid}\n`
         );
       }
-      try { child.unref(); } catch (_e) {}
+      try { child.unref(); } catch (_e) { /* unref best-effort — reviewed c203 */ }
       return;
     }
-    try { child.kill('SIGTERM'); } catch (_e) {}
+    try { child.kill('SIGTERM'); } catch (_e) { /* best-effort child kill — may already be dead — reviewed c203 */ }
     // Give it a moment for graceful shutdown, then SIGKILL.
     const killDeadline = Date.now() + 3000;
     while (Date.now() < killDeadline && exitedEarly == null) {
       await sleep(100);
     }
     if (exitedEarly == null) {
-      try { child.kill('SIGKILL'); } catch (_e) {}
+      try { child.kill('SIGKILL'); } catch (_e) { /* best-effort child kill — may already be dead — reviewed c203 */ }
     }
     if (!runFlags.json) {
       process.stderr.write(`[run] --auto-stop: auto-spawned unified UI stopped (in-flight crawls aborted)\n`);
@@ -1165,11 +1165,11 @@ async function ensureLocalServer({ host, port, runFlags }) {
     const onSignal = () => { stop().catch(() => {}); };
     process.once('SIGINT', onSignal);
     process.once('SIGTERM', onSignal);
-    process.once('exit', () => { try { if (!stopped) child.kill('SIGTERM'); } catch (_e) {} });
+    process.once('exit', () => { try { if (!stopped) child.kill('SIGTERM'); } catch (_e) { /* best-effort child kill at exit — may already be dead — reviewed c203 */ } });
   } else {
     // Detach now: the child must outlive this process so the crawls keep
     // running after the dispatcher exits.
-    try { child.unref(); } catch (_e) {}
+    try { child.unref(); } catch (_e) { /* unref best-effort — reviewed c203 */ }
   }
   return { owned: true, host: targetHost, port: targetPort, child, stop };
 }

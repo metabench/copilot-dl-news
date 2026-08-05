@@ -326,7 +326,11 @@ async function startDaemon(config) {
           const startedAt = Date.now();
           for (const job of jobRegistry.list()) {
             if (job.status === 'running') {
-              try { jobRegistry.stop(job.id); } catch (_) { }
+              try { jobRegistry.stop(job.id); } catch (error) {
+                // Loud (c203): a job that misses its stop keeps running
+                // past daemon shutdown.
+                console.warn('[daemon] job stop failed for', job.id + ':', error?.message || error);
+              }
             }
           }
           while (Date.now() - startedAt < timeoutMs) {

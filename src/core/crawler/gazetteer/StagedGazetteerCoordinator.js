@@ -340,7 +340,11 @@ class StagedGazetteerCoordinator {
                   stack: ingestorError.stack
                 }
               });
-            } catch (_) {}
+            } catch (telemetryError) {
+              // Loud (c203): this catch was swallowing the failure to
+              // REPORT an ingestor failure — losing the original error.
+              console.warn(`[gazetteer] telemetry.problem failed (${telemetryError?.message || telemetryError}) while reporting ingestor failure:`, ingestorError.message);
+            }
           }
           
           this._emitProgress(onProgress, {
