@@ -26,7 +26,14 @@ const {
   startIngestionRun,
   completeIngestionRun,
   generateCapitalExternalId,
-  addCapitalRelationship
+  addCapitalRelationship,
+  // c215: this file held a THIRD copy of the gazetteer dedup SQL (after
+  // ncdb's own and gazetteer-cleanup's). The table access is shared now;
+  // only the scoring policy stays local — see the comment at the scorer.
+  backfillWikidataQidsFromExternalIds,
+  listDuplicateNameGroups,
+  listPlaceQualityDetails,
+  mergePlacesIntoSurvivor
 } = require('news-crawler-db');
 const { createPopulateGazetteerQueries } = require('news-crawler-db');
 // A7: judgment-call map for admin-area classes (seeded from
@@ -1269,20 +1276,10 @@ function normalizeOptions(rawArgs) {
     
     // 1. Backfill wikidata_qid from place_external_ids
     try {
-      const backfillResult = raw.prepare(`
-        UPDATE places
-        SET wikidata_qid = (
-          SELECT ext_id FROM place_external_ids
-          WHERE source = 'wikidata' AND place_id = places.id
-        )
-        WHERE wikidata_qid IS NULL
-          AND EXISTS (
-            SELECT 1 FROM place_external_ids
-            WHERE source = 'wikidata' AND place_id = places.id
-          )
-      `).run();
-      if (backfillResult.changes > 0) {
-        telemetry.info(`[cleanup] Backfilled wikidata_qid for ${backfillResult.changes} places`);
+      // c215: delegated to news-crawler-db (the c214 primitives).
+      const backfilledCount = backfillWikidataQidsFromExternalIds(raw);
+      if (backfilledCount > 0) {
+        telemetry.info(`[cleanup] Backfilled wikidata_qid for ${backfilledCount} places`);
       }
     } catch (e) {
       telemetry.warn(`[cleanup] Failed to backfill wikidata_qid: ${e.message}`);
@@ -1291,21 +1288,8 @@ function normalizeOptions(rawArgs) {
     // 2. Find and merge duplicates
     try {
       // Find duplicate groups by normalized name + country + kind
-      const duplicateGroups = raw.prepare(`
-        SELECT
-          p.country_code,
-          p.kind,
-          pn.normalized,
-          MIN(pn.name) as example_name,
-          GROUP_CONCAT(DISTINCT p.id) as ids,
-          COUNT(DISTINCT p.id) as count
-        FROM places p
-        JOIN place_names pn ON p.id = pn.place_id
-        WHERE p.kind IS NOT NULL
-        GROUP BY p.country_code, p.kind, pn.normalized
-        HAVING count > 1
-        ORDER BY count DESC
-      `).all();
+      // c215: grouping delegated; the country filter is bound there.
+      const duplicateGroups = listDuplicateNameGroups(raw, {});
       
       let mergedCount = 0;
       let deletedCount = 0;
@@ -1314,13 +1298,10 @@ function normalizeOptions(rawArgs) {
         const ids = group.ids.split(',').map(id => parseInt(id, 10));
         
         // Get place details and score them
-        const places = raw.prepare(`
-          SELECT
-            p.id, p.lat, p.lng, p.wikidata_qid, p.population, p.source,
-            (SELECT COUNT(*) FROM place_names WHERE place_id = p.id) as name_count
-          FROM places p
-          WHERE p.id IN (${ids.join(',')})
-        `).all();
+        // c215: scoring INPUTS delegated; the scoring POLICY below stays
+        // here — it is a drifted subset of gazetteer-cleanup's (no coords,
+        // no ext-id terms) and unifying them would change which place wins.
+        const places = listPlaceQualityDetails(raw, ids);
         
         // Check coordinate proximity (skip if places are far apart)
         const withCoords = places.filter(p => p.lat !== null && p.lng !== null);
@@ -1350,43 +1331,11 @@ function normalizeOptions(rawArgs) {
         if (deleteIds.length === 0) continue;
         
         // Merge in transaction
-        raw.transaction(() => {
-          for (const dupId of deleteIds) {
-            // Transfer unique names
-            const uniqueNames = raw.prepare(`
-              SELECT id FROM place_names n
-              WHERE n.place_id = ?
-              AND NOT EXISTS (
-                SELECT 1 FROM place_names n2
-                WHERE n2.place_id = ? AND n2.normalized = n.normalized AND n2.lang = n.lang AND n2.name_kind = n.name_kind
-              )
-            `).all(dupId, keepId);
-            
-            if (uniqueNames.length > 0) {
-              raw.prepare(`UPDATE place_names SET place_id = ? WHERE id IN (${uniqueNames.map(n => n.id).join(',')})`).run(keepId);
-            }
-            raw.prepare(`DELETE FROM place_names WHERE place_id = ?`).run(dupId);
-          }
-          
-          // Transfer/clean hierarchy
-          raw.prepare(`UPDATE OR IGNORE place_hierarchy SET child_id = ? WHERE child_id IN (${deleteIds.join(',')})`).run(keepId);
-          raw.prepare(`UPDATE OR IGNORE place_hierarchy SET parent_id = ? WHERE parent_id IN (${deleteIds.join(',')})`).run(keepId);
-          raw.prepare(`DELETE FROM place_hierarchy WHERE child_id IN (${deleteIds.join(',')}) OR parent_id IN (${deleteIds.join(',')})`).run();
-          
-          // Transfer/clean attributes
-          raw.prepare(`UPDATE OR IGNORE place_attribute_values SET place_id = ? WHERE place_id IN (${deleteIds.join(',')})`).run(keepId);
-          raw.prepare(`DELETE FROM place_attribute_values WHERE place_id IN (${deleteIds.join(',')})`).run();
-          
-          // Transfer/clean external IDs
-          raw.prepare(`UPDATE OR IGNORE place_external_ids SET place_id = ? WHERE place_id IN (${deleteIds.join(',')})`).run(keepId);
-          raw.prepare(`DELETE FROM place_external_ids WHERE place_id IN (${deleteIds.join(',')})`).run();
-          
-          // Delete duplicate places
-          raw.prepare(`DELETE FROM places WHERE id IN (${deleteIds.join(',')})`).run();
-          
-          mergedCount++;
-          deletedCount += deleteIds.length;
-        })();
+        // c215: the whole merge (names, hierarchy, attribute values,
+        // external ids, then places) is one atomic ncdb call now.
+        const deletedHere = mergePlacesIntoSurvivor(raw, { keepId, deleteIds });
+        mergedCount++;
+        deletedCount += deletedHere;
         
         if (verbose) {
           telemetry.info(`[cleanup] Merged "${group.example_name}" (${group.kind}, ${group.country_code}): kept ID ${keepId}, deleted ${deleteIds.length}`);

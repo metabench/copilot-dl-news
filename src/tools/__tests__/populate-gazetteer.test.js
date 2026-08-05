@@ -52,4 +52,43 @@ describe('populate-gazetteer script', () => {
     expect(json.skipped).toBe('already-populated');
     expect(dur).toBeLessThan(2000);
   });
+
+  // c215: the two tests above run the IMPORT path only — they never pass
+  // --cleanup, so they did not exercise the duplicate-merge code at all.
+  // That code was delegated to news-crawler-db this cycle, and a delegation
+  // is only as good as the proof behind it, so the cleanup path gets its own
+  // seeded end-to-end test.
+  test('--cleanup-only merges a seeded duplicate and backfills its qid', () => {
+    const cleanupDb = path.join(tmpDir, 'gazetteer.cleanup.test.db');
+    try { fs.rmSync(cleanupDb, { force: true }); } catch (_) { /* fresh run */ }
+
+    const db = ensureDb(cleanupDb);
+    const addPlace = (name, source, qid, population) => {
+      const id = db.prepare(
+        'INSERT INTO places (kind, country_code, source, wikidata_qid, population) VALUES (?,?,?,?,?)'
+      ).run('city', 'GB', source, qid, population).lastInsertRowid;
+      db.prepare(
+        "INSERT INTO place_names (place_id, name, normalized, lang, name_kind, source) VALUES (?,?,?,'en','official',?)"
+      ).run(id, name, name.toLowerCase(), source);
+      return id;
+    };
+    // A clear winner (wikidata + population) and a clear loser.
+    const keep = addPlace('Ipswich', 'wikidata', 'Q130447', 144957);
+    const drop = addPlace('Ipswich', 'restcountries@v3.1', null, null);
+    // A place whose qid must be backfilled from its external id.
+    const needsBackfill = addPlace('Norwich', 'wikidata', null, 195000);
+    db.prepare("INSERT INTO place_external_ids (source, ext_id, place_id) VALUES ('wikidata','Q130191',?)").run(needsBackfill);
+    db.close();
+
+    const res = runNode(script, [`--db=${cleanupDb}`, '--cleanup-only', '--offline=1']);
+    expect(res.code).toBe(0);
+
+    const after = ensureDb(cleanupDb);
+    const ids = after.prepare("SELECT id FROM places WHERE kind='city'").all().map((r) => r.id);
+    expect(ids).toContain(keep);      // the higher-scoring place survived
+    expect(ids).not.toContain(drop);  // the duplicate is gone
+    // and the backfill ran through the delegated UPDATE
+    expect(after.prepare('SELECT wikidata_qid FROM places WHERE id = ?').get(needsBackfill).wikidata_qid).toBe('Q130191');
+    after.close();
+  }, 60000);
 });
