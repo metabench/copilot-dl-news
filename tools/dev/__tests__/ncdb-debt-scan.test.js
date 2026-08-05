@@ -1,6 +1,6 @@
 'use strict';
 
-const { countSqlSignatures, rankFiles } = require('../ncdb-debt-scan');
+const { countSqlSignatures, rankFiles, classifyReachability, exclusionReason } = require('../ncdb-debt-scan');
 
 describe('ncdb-debt-scan countSqlSignatures', () => {
   test('counts prepare/exec/better-sqlite3 and flags connection ownership', () => {
@@ -60,5 +60,62 @@ describe('ncdb-debt-scan rankFiles', () => {
       { file: 'big.js', counts: { total: 9 } }
     ];
     expect(rankFiles(entries).map((e) => e.file)).toEqual(['big.js', 'a.js', 'b.js']);
+  });
+});
+
+describe('ncdb-debt-scan classifyReachability', () => {
+  test('a file nothing requires, with no entry guard, is an orphan', () => {
+    // The c217 case: bootstrapDbLoader.js, 13 SQL sites, zero callers —
+    // ncdb's ensureSqliteNewsDatabase took over bootstrap seeding at B10c.
+    expect(classifyReachability({ file: 'src/bootstrap/bootstrapDbLoader.js', refs: 0, hasEntryGuard: false }))
+      .toBe('orphan');
+  });
+
+  test('any file something requires is imported, guard or not', () => {
+    expect(classifyReachability({ file: 'src/shared/utils/UrlResolver.js', refs: 6, hasEntryGuard: false }))
+      .toBe('imported');
+  });
+
+  test('an unreferenced file with require.main === module is an entry point', () => {
+    expect(classifyReachability({ file: 'src/intelligence/matching/match-articles.js', refs: 0, hasEntryGuard: true }))
+      .toBe('entry');
+  });
+
+  test('src/tools is an entry point EVEN WITHOUT a guard — the c213 lesson', () => {
+    // gazetteer-cleanup.js called main() unconditionally at module scope
+    // with no require.main guard at all. Treating "no guard" as "dead"
+    // would have condemned a live, destructive CLI.
+    expect(classifyReachability({ file: 'src/tools/add-planet-hub.js', refs: 0, hasEntryGuard: false }))
+      .toBe('entry');
+  });
+
+  test('windows backslash paths classify the same as posix ones', () => {
+    expect(classifyReachability({ file: 'src\\tools\\add-planet-hub.js', refs: 0, hasEntryGuard: false }))
+      .toBe('entry');
+  });
+
+  test('missing fields never throw and default to orphan', () => {
+    expect(classifyReachability({})).toBe('orphan');
+  });
+});
+
+describe('ncdb-debt-scan exclusionReason', () => {
+  test('the three SPENT normalize-* migrations carry their measurement', () => {
+    for (const f of [
+      'src/tools/normalize-urls/normalize-article-places.js',
+      'src/tools/normalize-urls/normalize-place-hubs.js',
+      'src/tools/normalize-urls/normalize-place-hub-unknown-terms.js'
+    ]) {
+      expect(exclusionReason(f)).toMatch(/SPENT migration/);
+    }
+  });
+
+  test('the two UNAPPLIED migrations are excluded for a different, stated reason', () => {
+    expect(exclusionReason('src/tools/normalize-urls/normalize-fetches.js')).toMatch(/NOT yet applied/);
+    expect(exclusionReason('src/tools/normalize-urls/normalize-place-hub-candidates.js')).toMatch(/NOT yet applied/);
+  });
+
+  test('an ordinary file has no exclusion', () => {
+    expect(exclusionReason('src/shared/utils/UrlResolver.js')).toBeNull();
   });
 });

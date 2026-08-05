@@ -19,8 +19,24 @@
  * --max ratchet's real job is to make NEW leakage a detectable regression
  * (the sql:check-ui pattern, widened past src/ui).
  *
- * Detection core (countSqlSignatures / rankFiles) is pure and unit-tested;
- * the CLI just walks the tree and prints.
+ * Detection core (countSqlSignatures / rankFiles / classifyReachability) is
+ * pure and unit-tested; the CLI just walks the tree and prints.
+ *
+ * REACHABILITY (added 2026-08-05, cycle 217). The ranked list is a debt
+ * PROXY, and for two cycles running it put DEAD CODE at the top:
+ *   c216 — normalize-article-places (15 sites) migrates a column the schema
+ *          no longer has; three of the five normalize-* tools are spent.
+ *   c217 — bootstrapDbLoader (13 sites, 408 lines) has zero callers; ncdb's
+ *          ensureSqliteNewsDatabase took over bootstrap seeding at B10c.
+ * Both cost a cycle to rediscover, and the second rediscovery was avoidable:
+ * a 2026-07-20 ledger row already recorded "all normalize-* and populate-*
+ * are self-described MIGRATION one-offs (skip)". That knowledge lived in
+ * prose 190 cycles back and was lost. It lives in the tool now.
+ *
+ * Deleting an unreachable file lowers the number without delegating
+ * anything, so the report SEPARATES the two rather than blending them: only
+ * reachable files are delegation candidates, and the ratchet ceiling should
+ * be earned by delegation, not by deletion.
  */
 
 const fs = require('fs');
@@ -74,6 +90,46 @@ function countSqlSignatures(text) {
   return counts;
 }
 
+// Files that are NOT delegation candidates for a reason that was MEASURED
+// once and must not be re-derived every cycle. Each entry carries the
+// evidence, so a future reader can re-check it rather than trust it.
+const NOT_A_CANDIDATE = [
+  {
+    match: /^src[/\\]tools[/\\]normalize-urls[/\\]normalize-(article-places|place-hubs|place-hub-unknown-terms)\.js$/,
+    reason: 'SPENT migration — c216 measured its legacy source column GONE from the schema; it can only no-op. See docs/decisions/2026-08-05-spent-url-normalization-migrations.md'
+  },
+  {
+    match: /^src[/\\]tools[/\\]normalize-urls[/\\]normalize-(fetches|place-hub-candidates)\.js$/,
+    reason: 'one-off migration, NOT yet applied (c216: its legacy column is still present). Delegating a migration buys nothing — it runs once.'
+  },
+  {
+    match: /^src[/\\]intelligence[/\\]matching[/\\]populate-place-names\.js$/,
+    reason: 'one-off populate script (the 2026-07-20 "normalize-*/populate-* are migration one-offs" ruling)'
+  }
+];
+
+function exclusionReason(file) {
+  const hit = NOT_A_CANDIDATE.find((e) => e.match.test(file));
+  return hit ? hit.reason : null;
+}
+
+// Classify how a file can be ENTERED. `refs` is the number of other files
+// that require() it; `hasEntryGuard` is whether it has `require.main ===
+// module`.
+//
+// src/tools is deliberately special-cased: those files are a CLI surface
+// invoked BY PATH, and c213 proved the entry guard is not a reliable tell
+// there — gazetteer-cleanup.js called main() unconditionally at module
+// scope with no guard at all. Calling an unguarded tool "orphan" would have
+// condemned a live script, so tools are 'entry' either way.
+function classifyReachability({ file, refs = 0, hasEntryGuard = false }) {
+  const rel = String(file || '').replace(/\\/g, '/');
+  if (/^src\/tools\//.test(rel)) return 'entry';
+  if (refs > 0) return 'imported';
+  if (hasEntryGuard) return 'entry';
+  return 'orphan';
+}
+
 // Rank {file, counts} entries by total desc, then file asc for stability.
 function rankFiles(entries) {
   return entries
@@ -97,6 +153,35 @@ function walk(dir, out = []) {
   return out;
 }
 
+// Count, for every file in the tree, how many OTHER files require() it.
+// Relative specifiers only — a bare specifier is a package, not a local
+// edge. Each specifier is resolved three ways (exact, +.js, /index.js)
+// because we are indexing by path, not running node's resolver.
+const RELATIVE_REQUIRE = /require\(\s*['"](\.[^'"]+)['"]\s*\)/g;
+
+function buildRefIndex(rootDirs) {
+  const files = [];
+  for (const dir of rootDirs) {
+    if (fs.existsSync(dir)) walk(dir, files);
+  }
+  const refs = new Map();
+  for (const from of files) {
+    const text = fs.readFileSync(from, 'utf8');
+    let m;
+    RELATIVE_REQUIRE.lastIndex = 0;
+    while ((m = RELATIVE_REQUIRE.exec(text))) {
+      const base = path.resolve(path.dirname(from), m[1]);
+      for (const cand of [base, base + '.js', path.join(base, 'index.js')]) {
+        const key = path.resolve(cand);
+        if (key === path.resolve(from)) continue; // self-reference is not a caller
+        if (!refs.has(key)) refs.set(key, new Set());
+        refs.get(key).add(path.resolve(from));
+      }
+    }
+  }
+  return refs;
+}
+
 function main() {
   const argv = process.argv.slice(2);
   const asJson = argv.includes('--json');
@@ -105,29 +190,67 @@ function main() {
 
   const srcDir = path.join(ROOT, 'src');
   const files = fs.existsSync(srcDir) ? walk(srcDir) : [];
+  // Callers can live anywhere in the repo, not just under src.
+  const refIndex = buildRefIndex(['src', 'tools', 'tests', 'bin', 'scripts'].map((d) => path.join(ROOT, d)));
   const entries = [];
   for (const full of files) {
     const rel = path.relative(ROOT, full).replace(/\\/g, '/');
     if (DEFAULT_EXCLUDE.some((re) => re.test(rel))) continue;
-    const counts = countSqlSignatures(fs.readFileSync(full, 'utf8'));
-    if (counts.total > 0) entries.push({ file: rel, counts });
+    const text = fs.readFileSync(full, 'utf8');
+    const counts = countSqlSignatures(text);
+    if (counts.total === 0) continue;
+    const refs = (refIndex.get(path.resolve(full)) || new Set()).size;
+    const reachability = classifyReachability({
+      file: rel,
+      refs,
+      hasEntryGuard: /require\.main\s*===\s*module/.test(text)
+    });
+    entries.push({ file: rel, counts, refs, reachability, excluded: exclusionReason(rel) });
   }
   const ranked = rankFiles(entries);
   const total = ranked.reduce((s, e) => s + e.counts.total, 0);
   const connOwners = ranked.filter((e) => e.counts.ownsConnection).length;
+  const orphans = ranked.filter((e) => e.reachability === 'orphan');
+  const orphanSigs = orphans.reduce((s, e) => s + e.counts.total, 0);
+  const candidates = ranked.filter((e) => e.reachability !== 'orphan' && !e.excluded);
 
   if (asJson) {
-    console.log(JSON.stringify({ total, files: ranked.length, connectionOwners: connOwners, max, top: ranked.slice(0, 40) }, null, 2));
+    console.log(JSON.stringify({
+      total,
+      files: ranked.length,
+      connectionOwners: connOwners,
+      max,
+      orphanSignatures: orphanSigs,
+      candidateSignatures: candidates.reduce((s, e) => s + e.counts.total, 0),
+      top: ranked.slice(0, 40),
+      orphans: orphans.map((e) => ({ file: e.file, total: e.counts.total })),
+      excluded: ranked.filter((e) => e.excluded).map((e) => ({ file: e.file, total: e.counts.total, reason: e.excluded }))
+    }, null, 2));
   } else {
     console.log(`\n== ncdb coordination-debt scan (raw SQL outside src/db, src/ui, tests) ==`);
-    console.log(`${ranked.length} files, ${total} raw-SQL signatures, ${connOwners} own a better-sqlite3 connection.\n`);
-    console.log('  total  prep  exec  bs3  file');
-    for (const e of ranked.slice(0, 25)) {
+    console.log(`${ranked.length} files, ${total} raw-SQL signatures, ${connOwners} own a better-sqlite3 connection.`);
+    console.log(`${candidates.reduce((s, e) => s + e.counts.total, 0)} of those are DELEGATABLE; ${orphanSigs} sit in unreachable files.\n`);
+    console.log('  total  refs  prep  exec  bs3  file');
+    for (const e of candidates.slice(0, 20)) {
       const c = e.counts;
-      console.log(`  ${String(c.total).padStart(5)}  ${String(c.prepare).padStart(4)}  ${String(c.exec).padStart(4)}  ${String(c.betterSqlite3).padStart(3)}  ${e.file}`);
+      console.log(`  ${String(c.total).padStart(5)}  ${String(e.refs).padStart(4)}  ${String(c.prepare).padStart(4)}  ${String(c.exec).padStart(4)}  ${String(c.betterSqlite3).padStart(3)}  ${e.file}`);
     }
-    if (ranked.length > 25) console.log(`  … and ${ranked.length - 25} more`);
-    console.log('\nDelegation candidates: highest-signature files with query logic that could become ncdb exports (differential-e2e recipe).');
+    if (candidates.length > 20) console.log(`  … and ${candidates.length - 20} more candidates`);
+
+    if (orphans.length) {
+      console.log(`\n  ORPHANS — nothing requires them and they are not a CLI entry point.`);
+      console.log(`  Deleting these lowers the number WITHOUT delegating anything; do not`);
+      console.log(`  bank a ratchet drop for it. Check each one before acting.`);
+      for (const e of orphans) console.log(`    ${String(e.counts.total).padStart(4)}  ${e.file}`);
+    }
+
+    const excluded = ranked.filter((e) => e.excluded);
+    if (excluded.length) {
+      console.log(`\n  NOT CANDIDATES — measured once, recorded here so it stays measured.`);
+      for (const e of excluded) console.log(`    ${String(e.counts.total).padStart(4)}  ${e.file}\n          ${e.excluded}`);
+    }
+
+    console.log('\nDelegation candidates: highest-signature REACHABLE files with query logic that could become ncdb exports (differential-e2e recipe).');
   }
 
   if (max != null && total > max) {
@@ -138,4 +261,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { countSqlSignatures, rankFiles };
+module.exports = { countSqlSignatures, rankFiles, classifyReachability, exclusionReason };
