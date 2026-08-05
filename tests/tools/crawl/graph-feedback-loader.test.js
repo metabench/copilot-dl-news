@@ -142,6 +142,10 @@ describe('graph-feedback CLI', () => {
 
   function makeGraphFeedbackArtifact(overrides = {}) {
     return makeBaseGraphFeedbackArtifact('bbc.com', {
+      // c202: this suite injects '2026-05-26T12:00' reference clocks and
+      // asserts exact ages (43200s), so the artifact stamp must stay pinned
+      // here now that the shared factory default is relative-to-now.
+      generatedAt: '2026-05-26T00:00:00.000Z',
       domainOverrides: {
         recommendations: [{
           url: 'https://bbc.com/news',

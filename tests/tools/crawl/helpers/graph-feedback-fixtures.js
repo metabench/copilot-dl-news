@@ -9,7 +9,12 @@ function makeGraphFeedbackArtifact(host = 'bbc.com', overrides = {}) {
     schemaVersion: 1,
     source: 'WebsiteGraphAnalysisService',
     mode: 'full',
-    generatedAt: '2026-05-26T00:00:00.000Z',
+    // c202: was a hardcoded '2026-05-26T00:00:00.000Z' — fresh when written,
+    // but the launcher rejects artifacts older than 7 days against the REAL
+    // clock in CLI paths, so every consumer of the default rotted a week
+    // later. Stamp relative to now; tests that need a stale artifact pass an
+    // explicitly old override.
+    generatedAt: new Date(Date.now() - 60 * 1000).toISOString(),
     limits: {
       perHostLimit: 2,
       sampleLimit: 1,

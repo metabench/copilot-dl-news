@@ -2763,7 +2763,12 @@ async function main() {
     ? options.sourceLanguage.trim().toLowerCase()
     : 'auto';
 
-  const langOption = typeof options.lang === 'string' ? options.lang.trim().toLowerCase() : 'auto';
+  // c202: the parser does not register --lang, so options.lang is always
+  // undefined and this block was resetting the mode to 'en' — clobbering the
+  // correct pre-parse hint. Fall back to the raw-token override.
+  const langOption = typeof options.lang === 'string'
+    ? options.lang.trim().toLowerCase()
+    : (typeof langOverride === 'string' && langOverride ? langOverride.trim().toLowerCase() : 'auto');
   let languageMode = 'en';
   if (langOption === 'zh' || langOption === 'cn') {
     languageMode = 'zh';

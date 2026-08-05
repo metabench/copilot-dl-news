@@ -23,6 +23,10 @@ const {
   parseModule,
   collectFunctions,
   collectVariables,
+  // c202: exported by both swc runtimes but never destructured here, so the
+  // `typeof collectTypes === 'function'` guard below was always false and
+  // list-types/locate-type/extract-type silently returned empty.
+  collectTypes,
   extractCode,
   replaceSpan,
   createSpanKey,
@@ -2631,6 +2635,20 @@ async function main() {
     createNewlineGuard,
     prepareNormalizedSnippet,
     createDigest,
+    // c202: discovery destructures these from deps; all were missing here,
+    // so preview, preview-variable, and search-text died with
+    // "not a function" at the CLI.
+    createPreviewSnippet,
+    toReadableScope,
+    DEFAULT_SEARCH_LIMIT,
+    DEFAULT_SEARCH_CONTEXT,
+    buildLineIndex,
+    positionFromIndex,
+    buildSearchSnippet,
+    findFunctionOwner,
+    findVariableOwner,
+    collectTypes,
+    defaultContextPadding: DEFAULT_CONTEXT_PADDING,
     writeOutputFile,
     outputJson,
     extractCode,

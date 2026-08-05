@@ -17,6 +17,7 @@ const {
   saveLedger,
   generateBatchId,
   newerWatermark,
+  LedgerCorruptError,
 } = require('../../../tools/crawl/lib/sync-ledger');
 
 describe('sync-ledger pure operations', () => {
@@ -27,7 +28,7 @@ describe('sync-ledger pure operations', () => {
     expect(l.totalPulled).toBe(0);
   });
 
-  test('appendBatch records urlIds and bumps watermark + totals', () => {
+  test('appendBatch records urlIds and totals; watermark waits for confirm', () => {
     const l = appendBatch(emptyLedger(), {
       batchId: 'b1',
       exportedAt: '2026-05-09T10:00:00Z',
@@ -38,8 +39,13 @@ describe('sync-ledger pure operations', () => {
     expect(l.entries[0].urlIds).toEqual([1, 2, 3]);
     expect(l.entries[0].confirmedAt).toBeNull();
     expect(l.entries[0].prunedAt).toBeNull();
-    expect(l.lastWatermark).toBe('2026-05-09T10:00:00Z');
+    // c202: D3(a) — appendBatch must NOT advance lastWatermark. Advancing at
+    // append meant a crash before confirm skipped this batch's URLs forever
+    // on restart. The watermark moves only in markConfirmed.
+    expect(l.lastWatermark).toBeNull();
     expect(l.totalPulled).toBe(3);
+    const confirmed = markConfirmed(l, 'b1');
+    expect(confirmed.lastWatermark).toBe('2026-05-09T10:00:00Z');
   });
 
   test('appendBatch is immutable on the input', () => {
@@ -49,7 +55,10 @@ describe('sync-ledger pure operations', () => {
     expect(after.entries.length).toBe(1);
   });
 
-  test('appendBatch does not regress watermark during targeted recovery pulls', () => {
+  test('confirming an older recovery batch does not regress the watermark', () => {
+    // c202: re-expressed under D3(a) semantics — append never moves the
+    // watermark, so the no-regress property now lives at markConfirmed:
+    // confirming an out-of-order recovery pull must not pull it backwards.
     let l = appendBatch(emptyLedger(), {
       batchId: 'newer',
       exportedAt: '2026-05-09T10:00:00Z',
@@ -62,7 +71,11 @@ describe('sync-ledger pure operations', () => {
       watermark: '2026-05-09 16:57:16',
       urlIds: [2],
     });
+    expect(l.lastWatermark).toBeNull();
 
+    l = markConfirmed(l, 'newer');
+    expect(l.lastWatermark).toBe('2026-05-09 16:57:58');
+    l = markConfirmed(l, 'older-recovery');
     expect(l.lastWatermark).toBe('2026-05-09 16:57:58');
     expect(newerWatermark('2026-05-09 16:57:58', '2026-05-09 16:57:16')).toBe('2026-05-09 16:57:58');
   });
@@ -109,10 +122,12 @@ describe('sync-ledger pure operations', () => {
     expect(work.unpruned.length).toBe(1);
   });
 
-  test('getLastWatermark returns null when ledger empty', () => {
+  test('getLastWatermark is null until a batch is confirmed', () => {
     expect(getLastWatermark(emptyLedger())).toBeNull();
     const l = appendBatch(emptyLedger(), { batchId: 'b1', watermark: 'ts1', urlIds: [1] });
-    expect(getLastWatermark(l)).toBe('ts1');
+    // c202: D3(a) — unconfirmed batches leave the watermark untouched.
+    expect(getLastWatermark(l)).toBeNull();
+    expect(getLastWatermark(markConfirmed(l, 'b1'))).toBe('ts1');
   });
 
   test('updateEntry throws on unknown batchId', () => {
@@ -166,10 +181,16 @@ describe('sync-ledger persistence', () => {
     expect(ledger.entries).toEqual([]);
   });
 
-  test('treats malformed file as empty ledger', () => {
+  test('quarantines a malformed file and throws LedgerCorruptError', () => {
+    // c202: was "treats malformed file as empty ledger" — silently starting
+    // fresh discarded the record of unconfirmed batches, the exact data-loss
+    // the ledger exists to prevent. The subject now renames the corrupt file
+    // aside (.corrupt-<ts>) and throws so the operator decides.
     const file = path.join(dir, 'ledger.json');
     fs.writeFileSync(file, '{not json');
-    const l = loadLedger(file);
-    expect(l.entries).toEqual([]);
+    expect(() => loadLedger(file)).toThrow(LedgerCorruptError);
+    expect(fs.existsSync(file)).toBe(false);
+    const quarantined = fs.readdirSync(dir).filter((n) => n.startsWith('ledger.json.corrupt-'));
+    expect(quarantined.length).toBe(1);
   });
 });

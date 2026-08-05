@@ -27,8 +27,18 @@ const {
   MAX_ARTIFACT_URL_LENGTH,
 } = require('../../../tools/crawl/graph-feedback');
 const {
-  makeGraphFeedbackArtifact,
+  makeGraphFeedbackArtifact: makeBaseGraphFeedbackArtifact,
 } = require('./helpers/graph-feedback-fixtures');
+
+// c202: this suite injects '2026-05-26T12:00' reference clocks throughout,
+// so the artifact stamp must stay pinned locally now that the shared
+// factory default is relative-to-now. Caller overrides still win.
+function makeGraphFeedbackArtifact(host, overrides = {}) {
+  return makeBaseGraphFeedbackArtifact(host, {
+    generatedAt: '2026-05-26T00:00:00.000Z',
+    ...overrides,
+  });
+}
 
 describe('graph-feedback live seed preparation', () => {
   function withTempArtifact(artifact, callback) {

@@ -86,8 +86,13 @@ const ICONS = {
 
 let lexicon = null;
 try {
-  lexicon = require('../../tools/dev/i18n/lexicon');
+  // c202: was '../../tools/...' which resolves to src/tools (one tree
+  // short) — the require threw, this catch swallowed it, and HAS_LEXICON
+  // stayed false: every CLI tool's --lang zh silently rendered English for
+  // as long as the path was wrong. The lexicon lives at repo-root tools/.
+  lexicon = require('../../../tools/dev/i18n/lexicon');
 } catch (error) {
+  console.warn('[CliFormatter] i18n lexicon unavailable — English-only output:', error?.message || error);
   lexicon = null;
 }
 

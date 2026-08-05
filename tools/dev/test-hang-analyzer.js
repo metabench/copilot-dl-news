@@ -208,7 +208,11 @@ const RULES = [
     severity: 'warn',
     detect(src) {
       const findings = [];
-      const opens = matchAll(src, /new\s+Database\s*\(|require\s*\(\s*['"]better-sqlite3['"]/g);
+      // c202: openNewsCrawlerDb is how 32 of this repo's test files open a
+      // db (the news-crawler-db helper wraps better-sqlite3) — a leak
+      // through the helper hangs Jest identically, so it must count as an
+      // open here.
+      const opens = matchAll(src, /new\s+Database\s*\(|require\s*\(\s*['"]better-sqlite3['"]|openNewsCrawlerDb\s*\(/g);
       if (opens.length === 0) return findings;
       const closes = matchAll(src, /\.close\s*\(\s*\)/g);
       if (closes.length === 0) {

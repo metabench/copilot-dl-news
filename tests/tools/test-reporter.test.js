@@ -81,7 +81,7 @@ describe('TestStudioReporter', () => {
 
     it('should generate runId if not provided', () => {
       const reporter = new TestStudioReporter({}, {});
-      expect(reporter.runId).toMatch(/^run-\d{4}-\d{2}-\d{2}-\d{6}$/);
+      expect(reporter.runId).toMatch(/^run-\d{4}-\d{2}-\d{2}-\d{9}-[0-9a-f]{5}$/);
     });
 
     it('should use default output directory', () => {
@@ -94,7 +94,7 @@ describe('TestStudioReporter', () => {
     it('should generate valid run ID format', () => {
       const reporter = new TestStudioReporter({}, {});
       const runId = reporter.generateRunId();
-      expect(runId).toMatch(/^run-\d{4}-\d{2}-\d{2}-\d{6}$/);
+      expect(runId).toMatch(/^run-\d{4}-\d{2}-\d{2}-\d{9}-[0-9a-f]{5}$/);
     });
 
     it('should generate unique IDs', () => {
@@ -178,7 +178,8 @@ describe('TestStudioReporter', () => {
       };
 
       reporter.onTestResult({}, testResult, {});
-      expect(reporter.testResults[0].duration).toBe(150);
+      // c202: normalized field is durationMs (unit-suffixed), not duration.
+      expect(reporter.testResults[0].durationMs).toBe(150);
     });
 
     it('should capture error messages for failures', () => {

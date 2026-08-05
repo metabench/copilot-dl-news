@@ -13,7 +13,7 @@ describe('swcAst private method support', () => {
     expect(privateMethod).toBeDefined();
     expect(privateMethod.scopeChain).toEqual(['exports', 'SecretBox', '#increment']);
     expect(privateMethod.pathSignature).toBe(
-      'module.body[1].ExportDeclaration.declaration.ClassDeclaration.body[1].PrivateMethod.PrivateMethod'
+      'module.body[2].ExportDeclaration.declaration.ClassDeclaration.body[2].PrivateMethod.PrivateMethod'
     );
   });
 });

@@ -255,7 +255,6 @@ describe('tools/crawl unified launcher', () => {
       const invocation = buildInvocationFromTool('remote', ['bounded', '--domains', 'bbc.com']);
       const explanation = buildRemoteDryRunGraphFeedback(invocation, {
         graphFeedbackArtifactPath: artifactPath,
-        generatedAt: '2026-05-26T12:00:00.000Z',
       });
 
       expect(explanation.mode).toBe('artifact-dry-run');
@@ -641,7 +640,6 @@ describe('tools/crawl unified launcher', () => {
           graphFeedbackPreviewEvidencePath: evidencePath,
           useGraphFeedbackSeeds: true,
           remoteDeploy: 'never',
-          generatedAt: '2026-05-26T12:00:00.000Z',
           spawnSync: spawn,
           err: { write: jest.fn() },
         })).toBe(0);
@@ -689,7 +687,6 @@ describe('tools/crawl unified launcher', () => {
           graphFeedbackPreviewEvidencePath: evidencePath,
           useGraphFeedbackSeeds: true,
           remoteDeploy: 'never',
-          generatedAt: '2026-05-26T12:00:00.000Z',
           spawnSync: spawn,
           err: { write: jest.fn() },
         })).toBe(0);
@@ -733,7 +730,6 @@ describe('tools/crawl unified launcher', () => {
           graphFeedbackPreviewEvidencePath: evidencePath,
           useGraphFeedbackSeeds: true,
           remoteDeploy: 'never',
-          generatedAt: '2026-05-26T12:00:00.000Z',
           spawnSync: spawn,
           err: { write: jest.fn() },
         })).toThrow('fingerprint does not match');
@@ -773,7 +769,6 @@ describe('tools/crawl unified launcher', () => {
           seedAttemptLogPath: logPath,
           useGraphFeedbackSeeds: true,
           remoteDeploy: 'never',
-          generatedAt: '2026-05-26T12:00:00.000Z',
           spawnSync: spawn,
           err: { write: jest.fn() },
         })).toBe(0);
@@ -1111,13 +1106,15 @@ describe('tools/crawl unified launcher', () => {
 
   test('live graph feedback seeding rejects stale, mismatched, oversized, and bad artifacts', () => {
     withTempArtifactObject(makeGraphFeedbackArtifact('bbc.com', {
-      generatedAt: '2026-05-01T00:00:00.000Z',
+      // c202: relative-stale (25 days ago) instead of a hardcoded date, so
+      // the "older than 7 days" rejection is exercised against the real
+      // clock the CLI path actually uses.
+      generatedAt: new Date(Date.now() - 25 * 86400 * 1000).toISOString(),
     }), (artifactPath) => {
       const invocation = buildInvocationFromTool('remote', ['bounded', '--domains', 'bbc.com']);
       expect(() => executeInvocation(invocation, true, {
         graphFeedbackArtifactPath: artifactPath,
         useGraphFeedbackSeeds: true,
-        generatedAt: '2026-05-26T12:00:00.000Z',
       })).toThrow('rejects artifacts older than 7 days');
     });
 
