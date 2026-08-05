@@ -42,7 +42,12 @@ const flags = {
   help: args.includes('--help') || args.includes('-h')
 };
 
-if (flags.help || args.length === 0) {
+// c213: was a bare module-scope `if (...) { …; process.exit(0); }`. With no
+// argv (every require, including a test's) it printed help and EXITED THE
+// PROCESS — requiring this file under jest killed the worker outright. That
+// is why a tool with ten `DELETE FROM places` statements had no tests. It is
+// a function now, called only from the CLI entry point at the bottom.
+function printHelpAndExit() {
   console.log(`
 ${COLORS.bold(COLORS.cyan('🧹 Gazetteer Cleanup Tool'))}
 
@@ -653,4 +658,21 @@ function main() {
   }
 }
 
-main();
+// c213: the pure operations are exported so they can be tested against a
+// temp database. main() and the help path run ONLY when this file is the
+// process entry point — previously both ran on any require, which meant
+// importing this module opened the live 30GB news.db and then exited.
+module.exports = {
+  backfillWikidataQids,
+  findDuplicates,
+  analyzeDuplicates,
+  mergeDuplicates,
+  removeOrphans
+};
+
+if (require.main === module) {
+  if (flags.help || args.length === 0) {
+    printHelpAndExit();
+  }
+  main();
+}
