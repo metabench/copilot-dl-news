@@ -41,10 +41,18 @@ function seedPlaceHub(db, {
   navLinksCount = 20,
   articleLinksCount = 5
 }) {
+  // c199: place_hubs keys pages by url_id — resolve the url row FIRST and
+  // link by id (the placeHubs precedent, class appearance #5).
+  db.prepare(`
+    INSERT OR IGNORE INTO urls (url, created_at, last_seen_at)
+    VALUES (?, datetime('now'), datetime('now'))
+  `).run(url);
+  const urlId = db.prepare('SELECT id FROM urls WHERE url = ?').get(url).id;
+
   db.prepare(`
     INSERT INTO place_hubs (
       host,
-      url,
+      url_id,
       place_slug,
       place_kind,
       title,
@@ -53,17 +61,13 @@ function seedPlaceHub(db, {
       first_seen_at,
       last_seen_at
     ) VALUES (?, ?, ?, 'country', ?, ?, ?, datetime('now'), datetime('now'))
-  `).run(host, url, placeSlug, `Hub for ${placeSlug}`, navLinksCount, articleLinksCount);
+  `).run(host, urlId, placeSlug, `Hub for ${placeSlug}`, navLinksCount, articleLinksCount);
 
+  // c199: latest_fetch is a VIEW now — write the underlying fetches table.
   db.prepare(`
-    INSERT OR IGNORE INTO urls (url, created_at, last_seen_at)
-    VALUES (?, datetime('now'), datetime('now'))
-  `).run(url);
-
-  db.prepare(`
-    INSERT OR REPLACE INTO latest_fetch (url, ts, http_status, classification, word_count)
-    VALUES (?, datetime('now'), 200, 'hub', 0)
-  `).run(url);
+    INSERT INTO fetches (url, host, request_started_at, fetched_at, http_status, classification, word_count)
+    VALUES (?, ?, datetime('now'), datetime('now'), 200, 'hub', 0)
+  `).run(url, host);
 }
 
 describe('CountryHubMatcher', () => {

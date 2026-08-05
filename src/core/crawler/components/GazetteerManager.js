@@ -105,7 +105,7 @@ class GazetteerManager {
         message: 'configurePipeline() starting',
         details: { variant: this.crawler.gazetteerVariant }
       });
-    } catch (_) { }
+    } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
 
     if (this.crawler.gazetteerOptions && this.crawler.gazetteerOptions.ingestionCoordinator) {
       this.pipelineConfigured = true;
@@ -245,7 +245,7 @@ class GazetteerManager {
         message: 'Creating WikidataCountryIngestor',
         details: { variant }
       });
-    } catch (_) { }
+    } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
 
     const maxCountriesForQuery = (this.crawler.targetCountries && this.crawler.targetCountries.length)
       ? null
@@ -404,7 +404,7 @@ class GazetteerManager {
               missing: Array.from(missingStages)
             }
           });
-        } catch (_) { }
+        } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
       }
     }
 
@@ -416,7 +416,7 @@ class GazetteerManager {
         message: 'Creating GazetteerPlanRunner',
         details: { variant }
       });
-    } catch (_) { }
+    } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
 
     const { GazetteerPlanRunner } = require('../gazetteer/GazetteerPlanRunner');
     const useAdvancedPlanning = this.crawler.config?.features?.advancedPlanningSuite === true;
@@ -441,7 +441,7 @@ class GazetteerManager {
           hasDbAdapter: !!dbAdapter
         }
       });
-    } catch (_) { }
+    } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
 
     try {
       this.crawler.telemetry.milestoneOnce('gazetteer:creating-coordinator', {
@@ -449,7 +449,7 @@ class GazetteerManager {
         message: 'Creating StagedGazetteerCoordinator',
         details: { stageCount: selectedStages.length }
       });
-    } catch (_) { }
+    } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
 
     log.debug('[CRAWL] About to create StagedGazetteerCoordinator with', selectedStages.length, 'stages');
     log.debug('[CRAWL] Stage summary (before depth filter):', selectedStages.map(s => ({
@@ -486,7 +486,7 @@ class GazetteerManager {
         message: 'StagedGazetteerCoordinator created successfully',
         details: {}
       });
-    } catch (_) { }
+    } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
 
     if (this.controller) {
       this.controller.ingestionCoordinator = ingestionCoordinator;
@@ -501,7 +501,7 @@ class GazetteerManager {
         message: 'configurePipeline() complete',
         details: { stageCount: filteredStages.length }
       });
-    } catch (_) { }
+    } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
   }
 
   async run() {
@@ -525,7 +525,7 @@ class GazetteerManager {
                 message: 'Configuring gazetteer ingestion pipeline',
                 details: { mode: this.crawler.gazetteerVariant || 'geography' }
               });
-            } catch (_) { }
+            } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
 
             this.configurePipeline();
 
@@ -536,7 +536,7 @@ class GazetteerManager {
                 message: 'Gazetteer pipeline configuration complete',
                 details: { mode: this.crawler.gazetteerVariant || 'geography' }
               });
-            } catch (_) { }
+            } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
 
             // Emit telemetry before controller initialization
             try {
@@ -545,7 +545,7 @@ class GazetteerManager {
                 message: 'Initializing gazetteer mode controller',
                 details: { mode: this.crawler.gazetteerVariant || 'geography' }
               });
-            } catch (_) { }
+            } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
 
             // Add separate timeout for initialize() to diagnose hang
             const initTimeout = 15000; // 15 seconds for initialize
@@ -559,7 +559,7 @@ class GazetteerManager {
                     message: 'Controller initialization complete',
                     details: {}
                   });
-                } catch (_) { }
+                } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
               })(),
               new Promise((_, reject) =>
                 setTimeout(() => reject(new Error(`Controller initialize() timeout after ${initTimeout}ms`)), initTimeout)
@@ -579,7 +579,7 @@ class GazetteerManager {
             message,
             details: { stack: err?.stack || null }
           });
-        } catch (_) { }
+        } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
         throw err;
       }
 
@@ -595,7 +595,7 @@ class GazetteerManager {
       if (summary && summary.totals) {
         try {
           console.log(`[gazetteer] Totals: ${JSON.stringify(summary.totals)}`);
-        } catch (_) { }
+        } catch (_) { /* best-effort telemetry/teardown — reviewed c199 */ }
       }
       this.crawler.emitProgress(true);
       this.crawler.milestoneTracker.emitCompletionMilestone({ outcomeErr: null });

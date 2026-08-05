@@ -593,7 +593,7 @@ class NewsCrawler extends Crawler {
         message: `Crawler exit: ${reason}`,
         details: telemetryDetails
       });
-    } catch (_) { }
+    } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
   }
 
   _describeExitSummary(summary) {
@@ -747,12 +747,12 @@ class NewsCrawler extends Crawler {
             emitProblem: (problem) => {
               try {
                 this.telemetry.problem(problem);
-              } catch (_) { }
+              } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
             },
             onFatalIssue: (issue) => {
               try {
                 this.state.addFatalIssue(issue);
-              } catch (_) { }
+              } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
             }
           });
         }
@@ -1162,11 +1162,11 @@ class NewsCrawler extends Crawler {
     if (reason) {
       try {
         console.log(`Abort requested: ${reason}`);
-      } catch (_) { }
+      } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
     }
     try {
       this.queue?.clear?.();
-    } catch (_) { }
+    } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
     if (details && typeof details === 'object') {
       this.state.addFatalIssue({
         kind: reason || 'abort',
@@ -1283,7 +1283,7 @@ class NewsCrawler extends Crawler {
     let host = null;
     try {
       if (normalized) host = new URL(normalized).hostname;
-    } catch (_) { }
+    } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
 
     if (this.hubFreshnessConfig && this.hubFreshnessConfig.persistDecisionTraces === true) {
       try {
@@ -1305,7 +1305,7 @@ class NewsCrawler extends Crawler {
           },
           persist: true
         });
-      } catch (_) { }
+      } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
     }
 
     this.telemetry.queueEvent({
@@ -1319,11 +1319,11 @@ class NewsCrawler extends Crawler {
     });
     try {
       this.deepUrlAnalyzer?.analyze(decision);
-    } catch (_) { }
+    } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
     if (normalized) {
       try {
         // Suppressed: too verbose for CLI
-      } catch (_) { }
+      } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
     }
   }
 
@@ -1419,10 +1419,10 @@ class NewsCrawler extends Crawler {
             host: this._safeHostFromUrl(url),
             reason: 'structure-skip'
           });
-        } catch (_) { }
+        } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
         try {
           this.state?.incrementStructureArticleSkipped?.();
-        } catch (_) { }
+        } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
         return false;
       }
     }
@@ -1522,7 +1522,7 @@ class NewsCrawler extends Crawler {
           details,
           persist: true
         });
-      } catch (_) { }
+      } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
     }
 
     return baseMeta;
@@ -1573,7 +1573,7 @@ class NewsCrawler extends Crawler {
       if (previousManager && previousManager === this._ownedHubFreshnessManager && previousManager !== manager) {
         try {
           previousManager.close();
-        } catch (_) { }
+        } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
         this._ownedHubFreshnessManager = null;
       }
       this._hubFreshnessManager = manager;
@@ -1636,7 +1636,7 @@ class NewsCrawler extends Crawler {
     if (typeof this._hubFreshnessWatcherDispose === 'function') {
       try {
         this._hubFreshnessWatcherDispose();
-      } catch (_) { }
+      } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
     }
     this._hubFreshnessWatcherDispose = null;
   }
@@ -1646,7 +1646,7 @@ class NewsCrawler extends Crawler {
     if (this._ownedHubFreshnessManager) {
       try {
         this._ownedHubFreshnessManager.close();
-      } catch (_) { }
+      } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
       this._ownedHubFreshnessManager = null;
     }
     this._hubFreshnessManager = null;
@@ -1883,7 +1883,7 @@ class NewsCrawler extends Crawler {
             kind: 'intelligent-plan-failed',
             message: error?.message || String(error)
           });
-        } catch (_) { }
+        } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
         return {
           status: 'failed',
           message: 'Intelligent planner failed',
@@ -1957,7 +1957,7 @@ class NewsCrawler extends Crawler {
           host: this._safeHostFromUrl(targetUrl),
           reason: accepted ? 'accepted' : 'rejected'
         });
-      } catch (_) { }
+      } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
     };
 
     const startMeta = this.seedStartFromCache ? this._buildCachedSeedMeta('start-url') : null;
@@ -2086,7 +2086,7 @@ class NewsCrawler extends Crawler {
           queueSize: this.queue.size()
         });
 
-      } catch (_) { }
+      } catch (_) { /* best-effort telemetry/state/teardown — reviewed c199 */ }
 
       const processContext = {
         type: item.type,

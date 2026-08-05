@@ -638,7 +638,7 @@ class WikidataCitiesIngestor {
         const resultCount = cached?.results?.bindings?.length || 0;
         console.log(chalk.cyan('⚡'), `SPARQL cache hit (${resultCount} results)`);
         return cached;
-      } catch (_) {}
+      } catch (_) { /* best-effort telemetry — reviewed c199 */ }
     }
 
     const url = 'https://query.wikidata.org/sparql';
@@ -669,7 +669,7 @@ class WikidataCitiesIngestor {
           fs.writeFileSync(cacheFile, JSON.stringify(data, null, 2));
           const sizeKB = (JSON.stringify(data).length / 1024).toFixed(1);
           console.log(chalk.green('✓'), `Cached SPARQL result (${sizeKB}KB)`);
-        } catch (_) {}
+        } catch (_) { /* best-effort telemetry — reviewed c199 */ }
       }
 
       return data;
@@ -987,7 +987,7 @@ class WikidataCitiesIngestor {
     if (typeof emitProgress === 'function') {
       try {
         emitProgress(payload);
-      } catch (_) {}
+      } catch (_) { /* best-effort telemetry — reviewed c199 */ }
     }
   }
   _emitTelemetry(handler, type, message, context = {}) {

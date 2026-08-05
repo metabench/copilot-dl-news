@@ -31,7 +31,8 @@
     "_rule": "Deleting a backup is GATED and irreversible. The check asserts the remaining one still EXISTS — a tripwire against deletion, not a size assertion.",
     "_decision": "OWNER 2026-07-27 (cycle 132), per-action approval in chat: DELETE news.db.predup-bak only (28.16 GB freed), KEEP news.db.pre-placenames-bak as the safety net. predup-bak predated the http_responses dedup that was verified lossless (325,614 -> 290,144 rows, 0 unique content lost). The probe correctly went RED on the deletion before this record was updated - that red was the tripwire working, not a fault.",
     "mustExist": [
-      "data/news.db.pre-placenames-bak"
+      "data/news.db.pre-placenames-bak",
+      "data/news.db.pre-debt-fixes-20260805.bak"
     ]
   },
   "politeness": {

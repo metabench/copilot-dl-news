@@ -2,7 +2,7 @@
  * @fileoverview Tests for pipeline utilities
  */
 
-const { compact, pluck, pipeline } = require('../../../core/pipelines');
+const { compact, pluck, pipeline } = require('../pipelines');
 
 // Fast unit tests - use 1-second timeout
 describe('pipelines', fastTest(() => {

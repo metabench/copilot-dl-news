@@ -205,7 +205,9 @@
       "database-helpers.js",
       "/tests/broken/",
       "/src/deprecated-ui/",
-      "/tests/deprecated-ui/"
+      "/tests/deprecated-ui/",
+      "/tmp/",
+      "/wip/"
     ],
     "reporters": [
       "default",

@@ -17,7 +17,13 @@ const { ValidationOrchestrator } = require('./ValidationOrchestrator');
 const { PersistenceManager } = require('./PersistenceManager');
 
 // Legacy exports for backward compatibility
-const { normalizeDomain, assessDomainReadiness, selectPlaces, selectTopics, createBatchSummary, aggregateSummaryInto } = require('./utils/analysisUtils');
+// c199: a utils refactor split analysisUtils — three of the six names this
+// line destructured stopped existing there, so normalizeDomain (and the
+// batch-summary pair) were UNDEFINED in production: checkDomainReadiness and
+// the batch path threw on every call. Imports now follow the real homes.
+const { assessDomainReadiness, selectPlaces, selectTopics } = require('./utils/analysisUtils');
+const { normalizeDomain } = require('./utils/domainUtils');
+const { createBatchSummary, aggregateSummaryInto } = require('./utils/summaryUtils');
 const { getDsplForDomain } = require('../../services/shared/dspl');
 
 // Error class for orchestration failures

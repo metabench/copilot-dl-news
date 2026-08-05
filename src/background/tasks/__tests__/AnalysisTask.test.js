@@ -10,37 +10,41 @@ const os = require('os');
 const fs = require('fs');
 const { AnalysisTask } = require('../AnalysisTask');
 const { ensureDb } = require('../../../data/db/sqlite');
+// c199: there is no legacy `articles` table in the current schema (nor in
+// live) — article content lives in the normalized store. Seed through the
+// API the crawler uses (the c195 analyse-pages precedent).
+const NewsDatabase = require('../../../db');
 function createTempDb() {
   const tmpDir = path.join(os.tmpdir(), 'analysis-task-tests');
   fs.mkdirSync(tmpDir, { recursive: true });
   const unique = `${process.pid}-${Date.now()}-${Math.random()}`;
   const dbPath = path.join(tmpDir, `test-${unique}.db`);
-  
-  // Create database with full schema
-  const db = ensureDb(dbPath);
-  
+
+  // Create database with the full live-mirroring schema
+  const ndb = new NewsDatabase(dbPath);
+  const db = ndb.db;
+  db.__ndb = ndb;
+
   return { dbPath, db };
 }
 
 function seedArticles(db, count = 10) {
   const now = new Date().toISOString();
-  
+
   for (let i = 0; i < count; i++) {
     const url = `https://example.com/article-${i}`;
-    
-    db.prepare(`
-      INSERT INTO articles (url, title, html, text, crawled_at, fetched_at, http_status, word_count)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+
+    db.__ndb.upsertArticle({
       url,
-      `Test Article ${i}`,
-      `<html><body><article><p>Test content for article ${i}. This is a news article about events.</p></article></body></html>`,
-      `Test content for article ${i}. This is a news article about events.`,
-      now,
-      now,
-      200,
-      12
-    );
+      host: 'example.com',
+      title: `Test Article ${i}`,
+      html: `<html><body><article><p>Test content for article ${i}. This is a news article about events.</p></article></body></html>`,
+      request_started_at: now,
+      fetched_at: now,
+      http_status: 200,
+      content_type: 'text/html',
+      word_count: 12
+    });
     
     // Also add fetch record
     db.prepare(`
@@ -162,7 +166,9 @@ describe('AnalysisTask', () => {
         db,
         taskId: 1,
         config: { 
-          analysisVersion: 1, 
+          // c199: the API seed's cascade stamps analysis_version 1 and
+          // pending means version < requested — so the task asks for 2.
+          analysisVersion: 2,
           pageLimit: 5,
           dbPath 
         },
@@ -203,7 +209,9 @@ describe('AnalysisTask', () => {
         db,
         taskId: 1,
         config: { 
-          analysisVersion: 1, 
+          // c199: the API seed's cascade stamps analysis_version 1 and
+          // pending means version < requested — so the task asks for 2.
+          analysisVersion: 2,
           pageLimit: 10,
           dbPath 
         },
@@ -230,7 +238,9 @@ describe('AnalysisTask', () => {
         db,
         taskId: 1,
         config: { 
-          analysisVersion: 1, 
+          // c199: the API seed's cascade stamps analysis_version 1 and
+          // pending means version < requested — so the task asks for 2.
+          analysisVersion: 2,
           pageLimit: 3,
           dbPath,
           skipPages: false,
@@ -383,7 +393,9 @@ describe('AnalysisTask', () => {
         db,
         taskId: 1,
         config: { 
-          analysisVersion: 1, 
+          // c199: the API seed's cascade stamps analysis_version 1 and
+          // pending means version < requested — so the task asks for 2.
+          analysisVersion: 2,
           pageLimit: 10,
           dbPath 
         },
@@ -464,7 +476,9 @@ describe('AnalysisTask', () => {
         db,
         taskId: 1,
         config: { 
-          analysisVersion: 1, 
+          // c199: the API seed's cascade stamps analysis_version 1 and
+          // pending means version < requested — so the task asks for 2.
+          analysisVersion: 2,
           pageLimit: 5,
           dbPath,
           skipDomains: true,
@@ -478,12 +492,12 @@ describe('AnalysisTask', () => {
       await task.execute();
 
       // Check if articles were analyzed
+      // c199: analysis results live in content_analysis now.
       const analyzed = db.prepare(`
-        SELECT COUNT(*) as count 
-        FROM articles 
-        WHERE analysis IS NOT NULL 
-        AND CAST(json_extract(analysis, '$.analysis_version') AS INTEGER) = ?
-      `).get(1);
+        SELECT COUNT(*) as count
+        FROM content_analysis
+        WHERE analysis_version = ?
+      `).get(2);
 
       expect(analyzed.count).toBeGreaterThan(0);
     });
@@ -496,7 +510,9 @@ describe('AnalysisTask', () => {
         db,
         taskId: 1,
         config: { 
-          analysisVersion: 1, 
+          // c199: the API seed's cascade stamps analysis_version 1 and
+          // pending means version < requested — so the task asks for 2.
+          analysisVersion: 2,
           pageLimit: 5,
           dbPath,
           skipDomains: true,
@@ -510,12 +526,12 @@ describe('AnalysisTask', () => {
       await task.execute();
 
       // Should analyze at most 5 articles
+      // c199: analysis results live in content_analysis now.
       const analyzed = db.prepare(`
-        SELECT COUNT(*) as count 
-        FROM articles 
-        WHERE analysis IS NOT NULL 
-        AND analysis_version = ?
-      `).get(1);
+        SELECT COUNT(*) as count
+        FROM content_analysis
+        WHERE analysis_version = ?
+      `).get(2);
 
       expect(analyzed.count).toBeLessThanOrEqual(5);
     });

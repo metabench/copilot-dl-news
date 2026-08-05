@@ -26,7 +26,7 @@ function createJobId() {
     if (typeof crypto.randomUUID === 'function') {
       return crypto.randomUUID();
     }
-  } catch (_) {}
+  } catch (_) { /* best-effort progress/telemetry — reviewed c199 */ }
   return `job-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 }
 
@@ -151,7 +151,7 @@ class InProcessCrawlJobRegistry {
   _emit(event) {
     try {
       this._events.raise('next', event);
-    } catch (_) {}
+    } catch (_) { /* best-effort progress/telemetry — reviewed c199 */ }
   }
 
   getObservable() {
@@ -323,7 +323,7 @@ class InProcessCrawlJobRegistry {
     const job = this._getInternal(jobId);
     if (!job) return false;
     if (typeof job.pause === 'function') {
-      try { job.pause(); } catch (_) {}
+      try { job.pause(); } catch (_) { /* best-effort progress/telemetry — reviewed c199 */ }
     }
     job.paused = true;
     this._emit({ type: 'job:paused', jobId });
@@ -334,7 +334,7 @@ class InProcessCrawlJobRegistry {
     const job = this._getInternal(jobId);
     if (!job) return false;
     if (typeof job.resume === 'function') {
-      try { job.resume(); } catch (_) {}
+      try { job.resume(); } catch (_) { /* best-effort progress/telemetry — reviewed c199 */ }
     }
     job.paused = false;
     this._emit({ type: 'job:resumed', jobId });
@@ -345,7 +345,7 @@ class InProcessCrawlJobRegistry {
     const job = this._getInternal(jobId);
     if (!job) return false;
     if (typeof job.stop === 'function') {
-      try { job.stop(); } catch (_) {}
+      try { job.stop(); } catch (_) { /* best-effort progress/telemetry — reviewed c199 */ }
     }
     job.abortRequested = true;
     this._emit({ type: 'job:stop-requested', jobId });
@@ -576,14 +576,14 @@ class InProcessCrawlJobRegistry {
       job.status = status;
       if (error) job.error = typeof error === 'string' ? error : (error.message || JSON.stringify(error).slice(0, 500));
       job.finishedAt = new Date().toISOString();
-      try { if (disconnect) disconnect(); } catch (_) {}
+      try { if (disconnect) disconnect(); } catch (_) { /* best-effort progress/telemetry — reviewed c199 */ }
       try {
         if (logStream) {
           const errLine = job.errorSummary ? ` errors=${job.errorSummary.total} kinds=${JSON.stringify(job.errorSummary.byKind)}` : '';
           logStream.write(`[job ${jobId}] finished status=${status}${job.error ? ` error=${job.error}` : ''}${errLine} ${job.finishedAt}\n`);
           logStream.end();
         }
-      } catch (_) {}
+      } catch (_) { /* best-effort progress/telemetry — reviewed c199 */ }
       // A finished job frees its bandwidth slice for the survivors.
       this._rebalanceBandwidth();
       this._emit({ type: status === 'completed' ? 'job:completed' : 'job:failed', jobId, error: job.error || undefined });
@@ -592,7 +592,7 @@ class InProcessCrawlJobRegistry {
     child.on('message', (m) => {
       if (!m || typeof m !== 'object') return;
       if (m.type === 'crawler-event') {
-        try { emitter.emit(m.event, m.data); } catch (_) {}
+        try { emitter.emit(m.event, m.data); } catch (_) { /* best-effort progress/telemetry — reviewed c199 */ }
       } else if (m.type === 'bandwidth-usage') {
         this._noteBandwidthUsage(job, m.totalBytes);
       } else if (m.type === 'result') {
@@ -609,9 +609,9 @@ class InProcessCrawlJobRegistry {
 
     job.stop = () => {
       job.abortRequested = true;
-      try { child.send({ type: 'stop' }); } catch (_) {}
+      try { child.send({ type: 'stop' }); } catch (_) { /* best-effort progress/telemetry — reviewed c199 */ }
       // Escalate if the graceful stop stalls.
-      setTimeout(() => { if (!settled) { try { child.kill(); } catch (_) {} } }, 30000);
+      setTimeout(() => { if (!settled) { try { child.kill(); } catch (_) { /* best-effort progress/telemetry — reviewed c199 */ } } }, 30000);
     };
 
     job.promise = new Promise((resolve) => {

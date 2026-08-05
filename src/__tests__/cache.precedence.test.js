@@ -1,4 +1,5 @@
-const { shouldUseCache } = require('../cache');
+// c199: shouldUseCache moved to the engine with the c178 fetch cluster.
+const { shouldUseCache } = require('news-crawler-itself/fetch-pipeline');
 
 describe('shouldUseCache precedence and edges', () => {
   const fixedNow = new Date('2025-09-16T12:00:00.000Z').getTime();

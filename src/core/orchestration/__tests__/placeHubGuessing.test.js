@@ -194,8 +194,11 @@ describe('Orchestration Layer - Basic Integration', () => {
       const options = {
         domain: 'example.com',
         kinds: ['country'],
-        enableTopicDiscovery: false, // Explicitly disabled
-        topics: ['politics'],
+        // c199: the flag gates AUTO-discovery only — an explicit topics list
+        // processes regardless (DomainProcessor:217's deliberate OR). Testing
+        // the flag means passing no explicit topics.
+        enableTopicDiscovery: false,
+        topics: [],
         limit: 2,
         apply: false,
         patternsPerPlace: 1,

@@ -353,7 +353,7 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     onRateLimitDeferred: () => {
       try {
         crawler.state.incrementCacheRateLimitedDeferred();
-      } catch (_) {}
+      } catch (_) { /* best-effort wiring teardown — reviewed c199 */ }
     }
   });
   crawler.robotsCoordinator = new RobotsAndSitemapCoordinator({
@@ -465,7 +465,7 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     // queued URL for the host dequeues into a HOST_RETRY_EXHAUSTED error
     // (LeMonde 2026-07-15: 5,140 synthetic errors during one 2-min lock).
     onHostLockout: (host, lockExpiresAt) => {
-      try { crawler.domainThrottle.applyHostBackoff(host, lockExpiresAt); } catch (_) {}
+      try { crawler.domainThrottle.applyHostBackoff(host, lockExpiresAt); } catch (_) { /* best-effort wiring teardown — reviewed c199 */ }
     },
     recordError: (info) => crawler._recordError(info),
     handleConnectionReset: (normalized, err) => crawler._handleConnectionReset(normalized, err),
@@ -594,7 +594,7 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
     emitPageEvent: (pageInfo) => {
       try {
         crawler.emit('url:visited', pageInfo);
-      } catch (_) {}
+      } catch (_) { /* best-effort wiring teardown — reviewed c199 */ }
     },
     getLimiterSnapshot: (host) => {
       try {

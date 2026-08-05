@@ -1,4 +1,6 @@
-const { ArticleCache, shouldUseCache } = require('../cache');
+const { ArticleCache } = require('../cache');
+// c199: shouldUseCache moved to the engine with the c178 fetch cluster.
+const { shouldUseCache } = require('news-crawler-itself/fetch-pipeline');
 
 // file path helper removed
 
