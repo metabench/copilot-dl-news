@@ -40,21 +40,29 @@ const { createStep, runPipeline } = require('../../../core/crawler/pipeline');
  * @returns {import('../../crawler/pipeline').Step}
  */
 function createNormalizeDomainStep(deps) {
-  const { normalizeDomain, applyScheme } = require('../../../shared/utils/domainUtils');
-  
+  const { normalizeDomain, extractDomain } = require('../../../shared/utils/domainUtils');
+
   return createStep('normalizeDomain', async (ctx) => {
     const normalized = normalizeDomain(ctx.domain, ctx.options?.scheme);
-    
+
     if (!normalized) {
       return { ok: false, reason: 'invalid-domain', err: new Error('Domain is required') };
     }
-    
+
+    // c209 (defect #20): this was `host: normalized.host`, but normalizeDomain
+    // returns a STRING — so host was ALWAYS undefined, and it is read five
+    // times downstream, including getDomainCoverageMetrics(ctx.host) and
+    // getLatestDomainDetermination(ctx.host). extractDomain pulls the bare
+    // hostname out of a URL and returns null for an already-bare domain, so
+    // fall back to the normalized value.
+    const host = extractDomain(normalized) || normalized;
+
     return {
       ok: true,
       value: {
         ...ctx,
         normalizedDomain: normalized,
-        host: normalized.host
+        host
       }
     };
   }, { optional: false });
@@ -119,7 +127,7 @@ function createInitSummaryStep(deps) {
  */
 function createAssessReadinessStep(deps) {
   const { getDsplForDomain } = require('../../../services/shared/dspl');
-  const { assessDomainReadiness } = require('../../../shared/utils/analysisUtils');
+  const { assessDomainReadiness } = require('../utils/analysisUtils');
   
   return createStep('assessReadiness', async (ctx) => {
     const { queries, analyzers, logger } = deps;
@@ -184,7 +192,7 @@ function createAssessReadinessStep(deps) {
  * @returns {import('../../crawler/pipeline').Step}
  */
 function createSelectPlacesStep(deps) {
-  const { selectPlaces } = require('../../../shared/utils/analysisUtils');
+  const { selectPlaces } = require('../utils/analysisUtils');
   
   return createStep('selectPlaces', async (ctx) => {
     const { analyzers } = deps;
@@ -218,7 +226,7 @@ function createSelectPlacesStep(deps) {
  * @returns {import('../../crawler/pipeline').Step}
  */
 function createSelectTopicsStep(deps) {
-  const { selectTopics } = require('../../../shared/utils/analysisUtils');
+  const { selectTopics } = require('../utils/analysisUtils');
   
   return createStep('selectTopics', async (ctx) => {
     const { analyzers } = deps;

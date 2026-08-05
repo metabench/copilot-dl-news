@@ -4,7 +4,7 @@ const {
   resolveOverrides
 } = require('../../crawl.js');
 const { DEFAULT_BASIC_OUTPUT_VERBOSITY } = require('../../src/shared/config/ConfigurationService');
-const { OUTPUT_VERBOSITY_LEVELS } = require('../../src/shared/utils/outputVerbosity');
+const { OUTPUT_VERBOSITY_LEVELS } = require('news-crawler-itself/output-verbosity');
 
 describe('getLoggerWriter', () => {
   test('prefers info over log', () => {

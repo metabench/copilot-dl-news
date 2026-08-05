@@ -7,7 +7,13 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
  * Contract tests for user database operations.
  * Uses in-memory SQLite for isolation.
  */
-const { createUserAdapter, hashPassword, verifyPassword, generateSessionToken } = require('../../src/db/sqlite/v1/queries/userAdapter');
+// c209: absorbed into news-crawler-db (the trustAdapter precedent, c201).
+const {
+  createUserAdapter,
+  hashSqliteUserPassword: hashPassword,
+  verifySqliteUserPassword: verifyPassword,
+  generateSqliteUserSessionToken: generateSessionToken
+} = require('news-crawler-db');
 
 describe('userAdapter', () => {
   let db;

@@ -17,7 +17,11 @@ const { openNewsCrawlerDb } = require('../../src/db/openNewsCrawlerDb');
  */
 const path = require('path');
 const { SearchService } = require('../../src/search/SearchService');
-const { createSearchAdapter, sanitizeFtsQuery } = require('../../src/db/sqlite/v1/queries/searchAdapter');
+// c209: absorbed into news-crawler-db (the trustAdapter precedent, c201).
+const {
+  createSqliteArticleSearchAdapter: createSearchAdapter,
+  sanitizeSqliteArticleSearchQuery: sanitizeFtsQuery
+} = require('news-crawler-db');
 
 // Test database setup
 let db;
