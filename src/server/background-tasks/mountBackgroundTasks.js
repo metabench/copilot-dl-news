@@ -69,12 +69,15 @@ function mountBackgroundTasks(app, getDbRW, options = {}) {
   // AVAILABLE here; it only exercises its deps when actually triggered.
   // ingest-admin-areas gets the injected network (registrationOptions);
   // the rest take their defaults.
+  // c210: register LAZILY — the loader runs on first access to TaskClass,
+  // not here. Mounting used to load all six task trees, and BackfillDatesTask
+  // alone pulls the engine's jsdom utilities (all of jsdom) into every
+  // require of this server. A task type nobody starts now costs nothing.
   const registered = [];
   for (const [taskType, load] of Object.entries(BUILTIN_TASKS)) {
     try {
-      const TaskClass = load();
       const opts = taskType === 'ingest-admin-areas' ? (options.registrationOptions || {}) : {};
-      manager.registerTaskType(taskType, TaskClass, opts);
+      manager.registerTaskTypeLazy(taskType, load, opts);
       registered.push(taskType);
     } catch (err) {
       logger.warn(`[background-tasks] could not register ${taskType}: ${err.message}`);

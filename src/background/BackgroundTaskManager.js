@@ -194,8 +194,57 @@ class BackgroundTaskManager extends EventEmitter {
     if (this.taskRegistry.has(taskType)) {
       throw new Error(`Task type ${taskType} is already registered`);
     }
-    
+
     this.taskRegistry.set(taskType, { TaskClass, options });
+  }
+
+  /**
+   * Register a task type WITHOUT loading its class yet.
+   *
+   * c210: registering the six builtin tasks eagerly meant requiring the
+   * unified-app server loaded every task's dependency tree at module scope —
+   * BackfillDatesTask alone drags in the engine's jsdom utilities and
+   * therefore all of jsdom (measured: ~1.4s of a 3.3s cold require, far
+   * worse under parallel load). Nothing at mount time needs the classes;
+   * only createTask's sibling startTask and direct registry inspection do.
+   * So the loader is stored and `TaskClass` resolves on first ACCESS,
+   * memoized — mounting stays cheap, and a task type that is never started
+   * never pays for its dependencies.
+   *
+   * @param {string} taskType
+   * @param {Function} loader - () => TaskClass, called at most once
+   * @param {Object} [options]
+   */
+  registerTaskTypeLazy(taskType, loader, options = {}) {
+    if (!taskType || tof(taskType) !== 'string') {
+      throw new Error('Task type must be a non-empty string');
+    }
+
+    if (tof(loader) !== 'function') {
+      throw new Error('loader must be a function returning the TaskClass');
+    }
+
+    if (this.taskRegistry.has(taskType)) {
+      throw new Error(`Task type ${taskType} is already registered`);
+    }
+
+    let resolved = null;
+    const registration = { options };
+    Object.defineProperty(registration, 'TaskClass', {
+      enumerable: true,
+      get() {
+        if (resolved === null) {
+          const TaskClass = loader();
+          if (!TaskClass || tof(TaskClass) !== 'function') {
+            throw new Error(`Task type ${taskType} loader did not return a constructor function`);
+          }
+          resolved = TaskClass;
+        }
+        return resolved;
+      }
+    });
+
+    this.taskRegistry.set(taskType, registration);
   }
   
   /**

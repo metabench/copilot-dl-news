@@ -34,7 +34,7 @@ describe('progress-surface contracts', () => {
 
   describe('P2 immediate refresh (guards the c128.5 fix)', () => {
     it('fires when the bare refresh() call is removed, leaving only the interval', () => {
-      const real = read('src/ui/server/projectStatus/controls.js');
+      const real = read('src/ui/server/projectStatus/controls/app/Status_Widget.js');
       const mutated = real.replace(/^\s*refresh\(\);\s*$/m, '');
       const problems = checkImmediateRefresh(mutated);
       expect(problems.some((p) => /never calls refresh\(\) immediately/.test(p))).toBe(true);

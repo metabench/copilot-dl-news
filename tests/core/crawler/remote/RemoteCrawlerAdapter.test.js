@@ -1,7 +1,9 @@
 'use strict';
 
 const { openNewsCrawlerDb } = require('../../../../src/db/openNewsCrawlerDb');
-const { describe, it, beforeEach } = require('node:test');
+// c210: was require('node:test') — Node's built-in runner shadowed jest's
+// globals, so jest collected ZERO tests here and reported the file as an
+// empty suite. jest provides these globals; node:assert works under both.
 const assert = require('node:assert/strict');
 const EventEmitter = require('events');
 

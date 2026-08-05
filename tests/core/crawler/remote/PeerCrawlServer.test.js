@@ -1,6 +1,8 @@
 'use strict';
 
-const { describe, it, before, after } = require('node:test');
+// c210: was require('node:test') — Node's built-in runner shadowed jest's
+// globals, so jest collected ZERO tests here and reported the file as an
+// empty suite. jest provides these globals; node:assert works under both.
 const assert = require('node:assert/strict');
 const EventEmitter = require('events');
 
@@ -79,7 +81,7 @@ describe('PeerCrawlServer', () => {
     let server;
     let baseUrl;
 
-    before(async () => {
+    beforeAll(async () => {
       server = createPeerServer({
         port: 0, // random port
         nodeId: 'test-server',
@@ -94,7 +96,7 @@ describe('PeerCrawlServer', () => {
       baseUrl = `http://127.0.0.1:${address.port}`;
     });
 
-    after(async () => {
+    afterAll(async () => {
       if (server) {
         await server.stop();
       }

@@ -50,6 +50,13 @@ const WRITE_ALLOWLIST = new Set([
   'src/core/crawler/PuppeteerDomainManager.js',                       // domain state file (migration planned)
   'tools/crawl/lib/sync-ledger.js',                                   // migration planned (plan §1)
   'tools/crawl/run.js',                                               // UI log plumbing (operational)
+  // Caught by this guard in copilot cycle 210 — both are OPERATOR ARTIFACTS,
+  // not crawl-data persistence, and both match a category already accepted
+  // above (campaign-runner's status/stop plumbing; the report writers).
+  // Reviewed individually before being inventoried, per "no NEW writers may
+  // join" — these are new FILES, not a new kind of write.
+  'tools/crawl/frontier-composition.js',                              // --json-out report, only when the operator asks (operational)
+  'tools/crawl/frontier-fill.js',                                     // pollable status + stop-file plumbing, same shape as campaign-runner (operational)
 ]);
 
 function walk(dir, acc = []) {

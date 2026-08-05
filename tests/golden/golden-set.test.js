@@ -15,7 +15,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { TemplateExtractor } = require('../../src/extraction/TemplateExtractor');
+const { TemplateExtractor } = require('../../src/data/extraction/TemplateExtractor');
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 
