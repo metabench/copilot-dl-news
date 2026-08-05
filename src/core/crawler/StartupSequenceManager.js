@@ -1,5 +1,9 @@
 const { createSequenceRunner } = require('../../core/orchestration/SequenceRunner');
-const { createCliLogger } = require('../../cli/progressReporter');
+// c207: was '../../cli/progressReporter' (resolves to the nonexistent
+// src/cli/) — the reporter lives in this tree's own cli/ dir. The module
+// had been unloadable since the cli move; note it has NO production
+// consumers today (wire-or-retire is an owner call).
+const { createCliLogger } = require('./cli/progressReporter');
 
 function createStartupSequenceRunner(crawler) {
   const log = createCliLogger();

@@ -12,7 +12,7 @@ const {
   RemediationStrategies,
   HealingReport,
   FailureTypes
-} = require('../../../src/crawler/healing');
+} = require('../../../src/core/crawler/healing');
 
 // Mock dependencies
 const createMockLogger = () => ({

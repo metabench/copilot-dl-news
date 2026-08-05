@@ -4,7 +4,7 @@
  * Tests for cost-aware hub ranking in HubSeeder
  */
 
-const { HubSeeder } = require('../../src/crawler/planner/HubSeeder');
+const { HubSeeder } = require('news-crawler-itself/planner');
 
 describe('Cost-Aware Hub Ranking', () => {
   let mockEnqueueRequest;

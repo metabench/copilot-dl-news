@@ -47,6 +47,9 @@ describe('Analysis Samples', () => {
     expect(hubCandidate.placeKind).toBe('planet');
     expect(hubCandidate.placeLabel).toBe('Earth'); // The label is derived from the slug 'world'
     expect(analysis.kind).toBe('hub');
-    expect(hubCandidate.placeSource).toBe('gazetteer-override');
+    // c207: 'gazetteer', not 'gazetteer-override' — the c199 world-override
+    // guard (defect #6 fix) fires only when NO gazetteer match exists;
+    // 'world' resolves to Earth in the gazetteer, so the real match wins.
+    expect(hubCandidate.placeSource).toBe('gazetteer');
   });
 });

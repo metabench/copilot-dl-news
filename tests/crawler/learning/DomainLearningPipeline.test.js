@@ -15,7 +15,7 @@ const {
   ReviewStatus,
   DEFAULT_AUTO_APPROVE_THRESHOLD,
   MIN_SAMPLES
-} = require('../../../src/crawler/learning');
+} = require('../../../src/core/crawler/learning');
 
 // Create sample HTML pages for testing
 const createSampleHtml = (opts = {}) => {

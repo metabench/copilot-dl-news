@@ -130,7 +130,17 @@ describe('place hubs router', () => {
     expect(optionsArg.domainBatch).toHaveLength(1);
     expect(optionsArg.domainBatch[0]).toMatchObject({ domain: 'example.com', kinds: ['country'] });
     expect(optionsArg.limit).toBe(5);
-    expect(createPlaceHubDependencies).toHaveBeenCalledWith({ dbPath: 'c:/data/news.db', verbose: true });
+    // c207: the router defaults to distributed fetching now
+    // (PLACE_HUB_GUESSING_DISTRIBUTED default true, batchSize 50,
+    // concurrency 10 — worker-request parallelism, politeness enforced
+    // worker-side by the engine's throttle).
+    expect(createPlaceHubDependencies).toHaveBeenCalledWith({
+      dbPath: 'c:/data/news.db',
+      verbose: true,
+      distributed: true,
+      workerUrl: undefined,
+      distributedOptions: { batchSize: 50, concurrency: 10 }
+    });
     expect(response.body.batch.totalDomains).toBe(2);
     expect(response.body.totals.totalPlaces).toBe(5);
     expect(response.body.diffPreview.insertedCount).toBe(1);

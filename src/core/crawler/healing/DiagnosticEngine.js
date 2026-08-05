@@ -552,7 +552,10 @@ class DiagnosticEngine {
 
     // Direct status code match (401, 402, 407)
     if (pattern.statusCodes.includes(statusCode)) {
-      confidence = 0.99;
+      // c207: 407 is PROXY auth (RFC 7235), not site auth — score it below
+      // _checkStaleProxy's 0.90 so a proxy-context diagnosis wins the sort
+      // when a proxy is in play, while a proxyless 407 still gets labeled.
+      confidence = statusCode === 407 ? 0.85 : 0.99;
       evidence.statusMatch = true;
     }
 

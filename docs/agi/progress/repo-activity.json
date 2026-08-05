@@ -46,10 +46,10 @@
         ],
         [
           "2026-08-05",
-          11
+          12
         ]
       ],
-      "total": 107
+      "total": 108
     },
     {
       "name": "news-crawler-itself",
@@ -73,10 +73,10 @@
         ],
         [
           "2026-08-05",
-          2
+          3
         ]
       ],
-      "total": 18
+      "total": 19
     },
     {
       "name": "news-crawler-db",

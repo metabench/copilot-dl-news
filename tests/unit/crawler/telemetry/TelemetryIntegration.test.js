@@ -4,7 +4,7 @@ const { EventEmitter } = require('events');
 
 const express = require('express');
 
-const { TelemetryIntegration } = require('../../../../src/crawler/telemetry');
+const { TelemetryIntegration } = require('../../../../src/core/crawler/telemetry');
 
 describe('TelemetryIntegration (SSE robustness)', () => {
   test('broadcast emits fallback telemetry error when event cannot be serialized', () => {

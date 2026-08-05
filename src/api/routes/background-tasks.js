@@ -309,7 +309,10 @@ function createBackgroundTasksRouter({ taskManager, getDbRW, logger } = {}) {
       }
 
       const db = resolveDb();
-      if (db && typeof db.prepare === 'function') {
+      // c207: ncdb's deleteBackgroundTask requires exec too (its schema
+      // ensure rejects prepare-only handles) — guard for what the callee
+      // actually needs, or a thin handle turns delete into a 500.
+      if (db && typeof db.prepare === 'function' && typeof db.exec === 'function') {
         deleteBackgroundTask(db, taskId);
       }
 

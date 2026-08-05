@@ -1,7 +1,7 @@
 'use strict';
 
 const NewAbstractionsAdapter = require('../../../src/core/crawler/integration/NewAbstractionsAdapter');
-const { CrawlerState } = require('../../../src/core/crawler/CrawlerState');
+const { CrawlerState } = require('news-crawler-itself/crawler-state');
 
 /**
  * Mock crawler that simulates enough of NewsCrawler for adapter testing.

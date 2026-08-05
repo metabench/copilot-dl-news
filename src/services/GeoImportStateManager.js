@@ -179,6 +179,97 @@ class GeoImportStateManager extends EventEmitter {
   getStages() {
     return IMPORT_STAGES;
   }
+
+  /**
+   * Build a READ-ONLY plan preview for an import source — what would run,
+   * what it needs, and what network activity to expect — without executing
+   * any ingestion. (c207: built to the pins of the sleeping
+   * GeoImportPlanPreview suite, the same designed-surface pattern as the
+   * c200 pause/resume build on this manager.)
+   *
+   * @param {Object} options
+   * @param {'geonames'|'wikidata'|'osm'} options.source
+   * @param {'fast'|'full'} [options.detail='fast'] - 'full' counts file lines
+   * @returns {Promise<Object>} plan { source, detail, prerequisite, expected, algorithm }
+   */
+  async getPlan({ source = 'geonames', detail = 'fast' } = {}) {
+    const fs = require('fs');
+    const path = require('path');
+
+    if (source === 'geonames') {
+      const citiesFile = path.join(this._dataDir, 'cities15000.txt');
+      const exists = fs.existsSync(citiesFile);
+      let lineCount = null;
+      if (exists && detail === 'full') {
+        const raw = fs.readFileSync(citiesFile, 'utf8');
+        lineCount = raw.split(/\r?\n/).filter((l) => l.length > 0).length;
+      }
+      return {
+        source,
+        detail,
+        prerequisite: {
+          ready: exists,
+          file: citiesFile,
+          hint: exists ? null : 'cities15000.txt missing — the import must download it first'
+        },
+        expected: {
+          networkRequests: exists ? 0 : 1,
+          downloads: exists ? [] : [{
+            url: 'https://download.geonames.org/export/dump/cities15000.zip',
+            unpacksTo: 'cities15000.txt'
+          }],
+          file: { path: citiesFile, exists, lineCount }
+        },
+        algorithm: {
+          // The real pipeline stages, minus terminal/control states.
+          stages: IMPORT_STAGES
+            .filter((s) => ['validating', 'counting', 'preparing', 'importing', 'indexing', 'verifying'].includes(s.id))
+            .map((s) => ({ id: s.id, label: s.label, description: s.description }))
+        }
+      };
+    }
+
+    if (source === 'wikidata') {
+      return {
+        source,
+        detail,
+        prerequisite: { ready: true, hint: 'queries the public Wikidata SPARQL endpoint' },
+        expected: {
+          // At least one SPARQL query per admin class per country; unbounded
+          // above one — an estimate range, not a fixed count.
+          networkRequestsEstimate: { min: 1, max: null },
+          endpoints: ['https://query.wikidata.org/sparql (wikidata WDQS)']
+        },
+        algorithm: {
+          stages: [
+            { id: 'querying', label: 'Querying', description: 'SPARQL queries per admin class' },
+            { id: 'importing', label: 'Importing', description: 'Upserting places, names, hierarchy' }
+          ]
+        }
+      };
+    }
+
+    if (source === 'osm') {
+      return {
+        source,
+        detail,
+        prerequisite: { ready: true, hint: 'uses the Overpass API when boundary data is requested' },
+        expected: {
+          // Zero when everything needed is already cached locally.
+          networkRequestsEstimate: { min: 0, max: null },
+          endpoints: ['https://overpass-api.de/api/interpreter (overpass)']
+        },
+        algorithm: {
+          stages: [
+            { id: 'querying', label: 'Querying', description: 'Overpass area queries as needed' },
+            { id: 'importing', label: 'Importing', description: 'Upserting boundaries and relations' }
+          ]
+        }
+      };
+    }
+
+    throw new Error(`getPlan: unknown source "${source}"`);
+  }
   
   /**
    * Check if import is running

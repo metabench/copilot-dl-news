@@ -295,8 +295,12 @@ describe('background tasks router', () => {
 
   test('DELETE /:id removes task and cleans database when terminal', async () => {
     const run = jest.fn();
-    const statement = { run };
+    const statement = { run, get: jest.fn(), all: jest.fn(() => []) };
     const prepare = jest.fn(() => statement);
+    // c207: ncdb's deleteBackgroundTask ensures schema first, which needs a
+    // handle with exec as well as prepare — the old prepare-only mock made
+    // the route 500.
+    const exec = jest.fn();
     const taskManager = {
       listTasks: jest.fn(),
       getTask: jest.fn().mockReturnValue({ id: 77, status: 'completed' }),
@@ -305,7 +309,7 @@ describe('background tasks router', () => {
       pauseTask: jest.fn(),
       resumeTask: jest.fn(),
       stopTask: jest.fn(),
-      db: { prepare }
+      db: { prepare, exec }
     };
 
     const { app } = createApp({ taskManager, skipDb: true, getDbRW: () => taskManager.db });

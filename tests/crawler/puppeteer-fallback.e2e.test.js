@@ -10,7 +10,7 @@
  * 4. Telemetry events are emitted correctly
  */
 
-const { FetchPipeline } = require('../../src/crawler/FetchPipeline');
+const { FetchPipeline } = require('news-crawler-itself/fetch-pipeline');
 
 // Track all telemetry events
 function createEventTracker() {
