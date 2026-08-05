@@ -62,11 +62,11 @@ function runOnce({ fx, enableDb, tmpDir, tag, idx }) {
       fx.url, '1', String(PAGES), dbPath, enableDb ? '1' : '0'
     ], { cwd: ROOT });
     child.stdout.on('data', () => {}); child.stderr.on('data', () => {});
-    const kill = setTimeout(() => { try { child.kill('SIGKILL'); } catch (_) {} }, 180000);
+    const kill = setTimeout(() => { try { child.kill('SIGKILL'); } catch (_) { /* timeout child kill best-effort — reviewed c206 */ } }, 180000);
     child.on('close', () => {
       clearTimeout(kill);
       const s = fx.stats();
-      try { for (const suf of ['', '-wal', '-shm']) fs.rmSync(dbPath + suf, { force: true }); } catch (_) {}
+      try { for (const suf of ['', '-wal', '-shm']) fs.rmSync(dbPath + suf, { force: true }); } catch (_) { /* bench tmp db cleanup — files may be locked on Windows — reviewed c206 */ }
       resolve({
         tag, idx, requests: s.requests,
         perPageMs: s.requests > 1 ? s.spanMs / (s.requests - 1) : null
@@ -164,5 +164,5 @@ function compare(label, aXs, bXs) {
     parseGrowth: { diff: Number(parseGrowth.diff.toFixed(2)), band: parseGrowth.band != null ? Number(parseGrowth.band.toFixed(2)) : null, resolvable: parseGrowth.resolvable }
   })}`);
 
-  try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}
+  try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) { /* bench tmp dir cleanup — reviewed c206 */ }
 })();

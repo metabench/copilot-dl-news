@@ -39,7 +39,13 @@ function* walk(dir) {
     if (e.name === 'node_modules' || e.name === '.git' || e.name === '__tests__' || e.name === 'archive') continue;
     const p = path.join(dir, e.name);
     if (e.isDirectory()) yield* walk(p);
-    else if (e.isFile() && e.name.endsWith('.js') && !e.name.endsWith('.test.js')) yield p;
+    else if (e.isFile() && e.name.endsWith('.js') && !e.name.endsWith('.test.js')) {
+      // c206: a .js.map sibling marks a BUILT bundle (esbuild output) —
+      // annotating generated code is wiped by the next build, and its
+      // catches replicate source-level ones counted at their real homes.
+      try { if (fs.existsSync(p + '.map')) continue; } catch { /* count it */ }
+      yield p;
+    }
   }
 }
 
@@ -86,7 +92,7 @@ function main() {
 // Baseline measured cycle 197 after loud-ening the Cities ingestor's three.
 // Lower by converting bare swallows to loud warns or commented decisions;
 // never by deleting the catch without reading what it guards.
-const CEILING = Number(process.argv.includes('--ceiling') ? process.argv[process.argv.indexOf('--ceiling') + 1] : 136);
+const CEILING = Number(process.argv.includes('--ceiling') ? process.argv[process.argv.indexOf('--ceiling') + 1] : 103);
 
 const bare = main();
 console.log(`silent-catches: ${bare.length} BARE (uncommented) silent catches, both repos (ceiling ${CEILING}); commented swallows are reviewed decisions and not counted`);

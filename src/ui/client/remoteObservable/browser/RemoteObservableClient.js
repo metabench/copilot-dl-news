@@ -5,7 +5,7 @@
 
   try {
     root.createRemoteObservableClient = api.createRemoteObservableClient;
-  } catch (_) {}
+  } catch (_) { /* global attach — root may be frozen in exotic hosts — reviewed c206 */ }
 
   if (typeof module === 'object' && module.exports) {
     module.exports = api;
@@ -42,7 +42,7 @@
       }
 
       if (es) {
-        try { es.close(); } catch (_) {}
+        try { es.close(); } catch (_) { /* EventSource close during reconnect teardown — reviewed c206 */ }
         es = null;
       }
 
@@ -90,7 +90,7 @@
 
     function close() {
       if (es) {
-        try { es.close(); } catch (_) {}
+        try { es.close(); } catch (_) { /* EventSource close in close() — reviewed c206 */ }
       }
       es = null;
       obs.close();

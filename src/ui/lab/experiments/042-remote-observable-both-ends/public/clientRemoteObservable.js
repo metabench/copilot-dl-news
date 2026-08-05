@@ -33,7 +33,7 @@
       }
 
       if (es) {
-        try { es.close(); } catch (_) {}
+        try { es.close(); } catch (_) { /* EventSource close during reconnect teardown (lab snapshot) — reviewed c206 */ }
         es = null;
       }
 
@@ -81,7 +81,7 @@
 
     function close() {
       if (es) {
-        try { es.close(); } catch (_) {}
+        try { es.close(); } catch (_) { /* EventSource close in close() (lab snapshot) — reviewed c206 */ }
       }
       es = null;
       obs.close();

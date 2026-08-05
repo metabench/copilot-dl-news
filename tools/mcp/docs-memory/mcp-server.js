@@ -624,7 +624,11 @@ const listProposals = (statusFilter) => {
             const proposal = JSON.parse(raw);
             if (statusFilter && proposal.status !== statusFilter) continue;
             proposals.push(proposal);
-        } catch { }
+        } catch (error) {
+            // Loud (c206): a corrupt proposal file silently vanishing from
+            // every listing is record loss. stderr is MCP-protocol-safe.
+            console.error(`[docs-memory] unreadable proposal ${fileName}:`, error?.message || error);
+        }
     }
     return proposals;
 };
@@ -2485,7 +2489,7 @@ const tools = {
                     try {
                         if (lines.length > 0) firstTs = JSON.parse(lines[0]).ts;
                         if (lines.length > 0) lastTs = JSON.parse(lines[lines.length - 1]).ts;
-                    } catch { }
+                    } catch { /* session-bounds ts parse — malformed head/tail lines tolerated — reviewed c206 */ }
 
                     return {
                         session: fileName.replace(".ndjson", ""),
@@ -2639,7 +2643,7 @@ const tools = {
                             if (msgMatch || dataMatch) {
                                 matches.push({ session, ...entry });
                             }
-                        } catch { }
+                        } catch { /* jsonl search skips junk lines by design — reviewed c206 */ }
                     }
                 }
 

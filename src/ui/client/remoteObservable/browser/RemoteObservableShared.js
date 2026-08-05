@@ -5,7 +5,7 @@
 
   try {
     root.RemoteObservableShared = api;
-  } catch (_) {}
+  } catch (_) { /* global attach — root may be frozen in exotic hosts — reviewed c206 */ }
 
   if (typeof module === 'object' && module.exports) {
     module.exports = api;
@@ -49,10 +49,10 @@
               for (const eh of [...errHandlers]) {
                 try {
                   eh(e);
-                } catch (_) {}
+                } catch (_) { /* a throwing error-handler must not break dispatch — reviewed c206 */ }
               }
             }
-          } catch (_) {}
+          } catch (_) { /* handler dispatch guard — listener errors stay contained — reviewed c206 */ }
         }
       }
     }

@@ -64,12 +64,12 @@ function runOnce({ fx, concurrency, tmpDir, idx }) {
     let stderr = '';
     child.stdout.on('data', () => {});
     child.stderr.on('data', (d) => { stderr += String(d).slice(0, 2000); });
-    const kill = setTimeout(() => { try { child.kill('SIGKILL'); } catch (_) {} }, 180000);
+    const kill = setTimeout(() => { try { child.kill('SIGKILL'); } catch (_) { /* timeout child kill best-effort — reviewed c206 */ } }, 180000);
     child.on('close', (code) => {
       clearTimeout(kill);
       const wallMs = Date.now() - t0;
       const s = fx.stats();
-      try { fs.rmSync(dbPath, { force: true }); fs.rmSync(dbPath + '-wal', { force: true }); fs.rmSync(dbPath + '-shm', { force: true }); } catch (_) {}
+      try { fs.rmSync(dbPath, { force: true }); fs.rmSync(dbPath + '-wal', { force: true }); fs.rmSync(dbPath + '-shm', { force: true }); } catch (_) { /* bench tmp db cleanup — files may be locked on Windows — reviewed c206 */ }
       resolve({
         concurrency, idx, code, wallMs,
         requests: s.requests, maxInFlight: s.maxInFlight,
@@ -146,5 +146,5 @@ const spreadPct = (xs) => {
   console.log(`\nMACHINE ${JSON.stringify({ latency: LATENCY, pages: PAGES, reps: REPS, noisePct: Number(noise.toFixed(1)), summary })}`);
 
   await fx.close();
-  try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}
+  try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) { /* bench tmp dir cleanup — reviewed c206 */ }
 })();

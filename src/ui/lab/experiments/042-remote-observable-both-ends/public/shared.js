@@ -43,10 +43,10 @@
               for (const eh of [...errHandlers]) {
                 try {
                   eh(e);
-                } catch (_) {}
+                } catch (_) { /* a throwing error-handler must not break dispatch (lab snapshot) — reviewed c206 */ }
               }
             }
-          } catch (_) {}
+          } catch (_) { /* handler dispatch guard (lab snapshot) — reviewed c206 */ }
         }
       }
     }

@@ -24,7 +24,7 @@ try {
       if (err && err.code === 'EPIPE') process.exit(0);
     });
   }
-} catch (_) {}
+} catch (_) { /* EPIPE guard install — stdout may lack .on in exotic hosts — reviewed c206 */ }
 
 function parseCliArgs(argv) {
   const parser = new CliArgumentParser(
@@ -234,7 +234,7 @@ function extractDate(html) {
         dom.window.close();
       }
     }
-  } catch (_) {}
+  } catch (_) { /* date extraction returns null by contract on unparseable HTML — reviewed c206 */ }
   return null;
 }
 
@@ -333,7 +333,7 @@ if (require.main === module) {
       fmt.error(error instanceof Error ? error.message : String(error));
       process.exitCode = 1;
     } finally {
-      try { dbHandle.close(); } catch (_) {}
+      try { dbHandle.close(); } catch (_) { /* db close in finally — reviewed c206 */ }
     }
   })();
 }

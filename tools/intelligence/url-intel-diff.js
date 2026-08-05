@@ -64,7 +64,7 @@ function pullHostUrls(host, limit) {
   const urls = [];
   for (const line of out.split(/\r?\n/)) {
     const m = line.match(/^row\[\d+\]:\s*(\{.*\})\s*$/);
-    if (m) { try { const u = JSON.parse(m[1]).url; if (u) urls.push(u); } catch (_) {} }
+    if (m) { try { const u = JSON.parse(m[1]).url; if (u) urls.push(u); } catch (_) { /* row JSON parse skip — non-row lines expected in output — reviewed c206 */ } }
   }
   return urls;
 }
@@ -76,7 +76,7 @@ function pullHostUrls(host, limit) {
  */
 function bucketOf(url, direction, moduleLabel) {
   let pathname = '/';
-  try { pathname = new URL(url).pathname; } catch (_) {}
+  try { pathname = new URL(url).pathname; } catch (_) { /* URL parse fallback — pathname defaults to / — reviewed c206 */ }
   const segs = pathname.split('/').filter(Boolean);
   const last = segs.length ? segs[segs.length - 1] : '';
   const hyphenParts = last.split('-').filter(Boolean).length;
@@ -117,7 +117,7 @@ async function main() {
   const byHost = {};
 
   for (const url of urls) {
-    let host = ''; try { host = new URL(url).hostname; } catch (_) {}
+    let host = ''; try { host = new URL(url).hostname; } catch (_) { /* URL parse fallback — host defaults to empty — reviewed c206 */ }
     let cop, cls;
     try { cop = ArticleSignalsService.isArticleShapedUrl(url); } catch (_) { errors++; continue; }
     try { cls = urlIntel.classifyUrl(url); } catch (_) { errors++; continue; }
