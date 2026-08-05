@@ -122,9 +122,42 @@ class GeoImportStateManager extends EventEmitter {
     
     // Observable control functions
     this._controls = null;
-    
+
     // Max log entries to keep
     this._maxLogs = 200;
+
+    // Stall detection (c200 — pinned by the unit suite, never implemented):
+    // when no progress lands within stallThresholdMs, state.stall.stale goes
+    // true and a 'stall' event fires; it clears the same way when progress
+    // resumes.
+    this._stallThresholdMs = options.stallThresholdMs || 30000;
+    this._stallPollMs = options.stallPollMs || 5000;
+    this._stallTimer = null;
+    this._lastProgressAt = null;
+    this._state.stall = { stale: false, lastProgressAt: null };
+  }
+
+  /**
+   * Begin watching for progress stalls. Safe to call repeatedly.
+   */
+  _startStallTimer() {
+    if (this._stallTimer) return;
+    if (this._lastProgressAt == null) this._lastProgressAt = Date.now();
+    this._stallTimer = setInterval(() => {
+      const stale = (Date.now() - (this._lastProgressAt || 0)) >= this._stallThresholdMs;
+      if (stale !== this._state.stall.stale) {
+        this._state.stall = { stale, lastProgressAt: this._lastProgressAt };
+        this._emitEvent('stall', { stale, lastProgressAt: this._lastProgressAt });
+      }
+    }, this._stallPollMs);
+    if (typeof this._stallTimer.unref === 'function') this._stallTimer.unref();
+  }
+
+  _stopStallTimer() {
+    if (this._stallTimer) {
+      clearInterval(this._stallTimer);
+      this._stallTimer = null;
+    }
   }
   
   // ─────────────────────────────────────────────────────────────────────────
@@ -432,8 +465,11 @@ class GeoImportStateManager extends EventEmitter {
       batchSize: 1000
     });
     
-    // Store control functions
+    // Store the live observable so _ensureControls can discover its
+    // pause/resume/stop (c200 — controls were never wired before).
+    this._import$ = import$;
     this._controls = null;
+    this._ensureControls();
     
     await new Promise((resolve, reject) => {
       import$.on('next', progress => {
@@ -522,13 +558,62 @@ class GeoImportStateManager extends EventEmitter {
    */
   pause() {
     if (!this.isRunning()) return;
-    
-    if (this._controls && this._controls[1]) {
-      this._controls[1](); // pause function
+
+    // c200: _controls was only ever assigned null, so pause/resume/stop
+    // never reached the underlying import — the state SAID paused while the
+    // import kept running. When controls are not yet available, record the
+    // intent (pausePending) and apply it the moment _ensureControls finds
+    // them; never claim 'paused' before the import actually paused.
+    if (!this._controls || !this._controls[1]) {
+      this._ensureControls();
     }
-    
+    if (!this._controls || !this._controls[1]) {
+      this._updateState({ pausePending: true });
+      this._log('info', '⏸️ Pause requested — waiting for import controls');
+      return;
+    }
+
+    this._controls[1](); // pause function
+    // Remember the stage we paused FROM so resume returns there instead of
+    // assuming 'importing' (pinned by the unit suite's round-trip test).
+    this._updateState({ pausePending: false, pausedFrom: this._state.status });
     this._setStage('paused');
     this._log('info', '⏸️ Import paused');
+  }
+
+  /**
+   * Pure helper: pull [stop, pause, resume] off an observable-like instance.
+   * (Pinned by the unit suite; _ensureControls delegates here.)
+   */
+  _extractControlsFromObservable(src) {
+    if (!src) return null;
+    if (typeof src.pause !== 'function' && typeof src.resume !== 'function' && typeof src.stop !== 'function') {
+      return null;
+    }
+    return [
+      typeof src.stop === 'function' ? src.stop : null,
+      typeof src.pause === 'function' ? src.pause : null,
+      typeof src.resume === 'function' ? src.resume : null
+    ];
+  }
+
+  /**
+   * Discover control functions from the live import observable and apply any
+   * deferred pause. Safe to call repeatedly.
+   */
+  _ensureControls() {
+    if (!this._controls && this._import$) {
+      const extracted = this._extractControlsFromObservable(this._import$);
+      if (extracted) {
+        this._controls = extracted.map((fn) => (fn ? fn.bind(this._import$) : null));
+      }
+    }
+    if (this._state.pausePending && this._controls && this._controls[1]) {
+      this._controls[1]();
+      this._updateState({ pausePending: false, pausedFrom: this._state.status });
+      this._setStage('paused');
+      this._log('info', '⏸️ Deferred pause applied');
+    }
   }
   
   /**
@@ -536,12 +621,16 @@ class GeoImportStateManager extends EventEmitter {
    */
   resume() {
     if (this._state.status !== 'paused') return;
-    
+
     if (this._controls && this._controls[2]) {
       this._controls[2](); // resume function
     }
-    
-    this._setStage('importing');
+
+    // Return to the stage we paused FROM (c200 — resume once hardcoded
+    // 'importing', wrong when paused during counting/indexing/etc.).
+    const target = this._state.pausedFrom || 'importing';
+    this._updateState({ pausedFrom: null });
+    this._setStage(target);
     this._log('info', '▶️ Import resumed');
   }
   

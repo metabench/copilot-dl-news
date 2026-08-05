@@ -105,7 +105,13 @@ describe('HubGapAnalyzer DSPL integration', () => {
     const urls = analyzer.predictCountryHubUrls('www.theguardian.com', 'Brazil', 'BR');
 
     expect(urls).toContain('https://www.theguardian.com/brazil/culture');
-    expect(urls).not.toContain('https://www.theguardian.com/world/brazil');
+    // c200: the subject DELIBERATELY keeps generic guesses at discounted
+    // confidence when DSPL patterns exist ("Lower base confidence if DSPL
+    // patterns exist" — CountryHubGapAnalyzer) — "prioritises" means the
+    // verified pattern ranks ABOVE the generic guess, not that the guess
+    // vanishes. The old exclusion assertion pinned a different design.
+    expect(urls.indexOf('https://www.theguardian.com/brazil/culture'))
+      .toBeLessThan(urls.indexOf('https://www.theguardian.com/world/brazil'));
   });
 
   test('region analyzer surfaces DSPL-backed URLs', () => {

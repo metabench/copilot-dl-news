@@ -138,10 +138,13 @@ describe('DataValidator', () => {
       const manifest = buildManifest();
       const responseRow = targetDb.prepare('SELECT id FROM http_responses LIMIT 1').get();
 
+      // c200: PRAGMA via prepare().run() does not reliably toggle FKs in
+      // better-sqlite3 — use the pragma API, and disable BEFORE both deletes
+      // (content_storage rows are themselves referenced by content_analysis).
+      targetDb.pragma('foreign_keys = OFF');
       targetDb.prepare('DELETE FROM content_storage WHERE http_response_id = ?').run(responseRow.id);
-      targetDb.prepare('PRAGMA foreign_keys = OFF').run();
       targetDb.prepare('DELETE FROM http_responses WHERE id = ?').run(responseRow.id);
-      targetDb.prepare('PRAGMA foreign_keys = ON').run();
+      targetDb.pragma('foreign_keys = ON');
 
       const result = await validator.validateMigration(manifest, targetDb);
 

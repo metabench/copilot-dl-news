@@ -44,7 +44,11 @@ class ArticleCache {
             return val;
           }
         }
-      } catch (_) { }
+      } catch (error) {
+        // Loud (c200): this bare swallow hid the real failure while a test
+        // chased a null — cache reads failing is information.
+        console.warn('[ArticleCache] db read failed:', error?.message || error);
+      }
     }
     return null;
   }
