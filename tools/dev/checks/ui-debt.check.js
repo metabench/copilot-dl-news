@@ -66,7 +66,14 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // pattern guides, so deleting it was never an option either. Living docs
 // were repointed at the new repo; dated session records were deliberately
 // left as historical record. See ../jsgui3-experiments/ORIGIN.md.
-const CEILING = 361;
+// c211: 361 → 357. Four verified orphans retired in place (the treatment
+// news-crawler-ui's contract prescribes for stale UI): cssLoader,
+// commandStack, diagramDataService (the retired diagram-atlas surface) and
+// ResizableControl — which its own interactive/index.js does NOT re-export,
+// unlike its Draggable/Selectable siblings. Each was checked individually
+// for basename refs, npm-script targets, directory scans, shebangs and
+// index re-exports; git history keeps them if any is ever wanted back.
+const CEILING = 357;
 
 function trackedFiles(prefix) {
   const out = execFileSync('git', ['ls-files', prefix], { cwd: ROOT, encoding: 'utf8' });

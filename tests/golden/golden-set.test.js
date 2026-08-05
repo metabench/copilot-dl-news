@@ -116,13 +116,35 @@ function loadFixtures() {
 /**
  * Convert new metadata.json format to legacy expected format for test compatibility
  */
+// c211: the selector profile used for hierarchical fixtures, which are
+// captured pages carrying no per-site selectors of their own.
+const GENERIC_EXTRACTION_CONFIG = {
+  version: 1,
+  titleSelector: 'h1',
+  titleFallback: ['h1', '.headline', 'article h1', 'title'],
+  bodySelector: 'article',
+  bodyFallback: ['article', 'main', '.article-body', '.article-content', '.content', 'body'],
+  dateSelector: 'time[datetime]',
+  dateFallback: ['time', 'meta[property="article:published_time"]', '.publish-date'],
+  dateAttribute: 'datetime',
+  authorSelector: '.byline .author',
+  authorFallback: ['.author', '[rel="author"]', 'meta[name="author"]', '.byline'],
+  excludeSelectors: ['.ad', '.ads', '.related-articles', '.sidebar', 'nav', 'footer', 'script', 'style']
+};
+
 function convertMetadataToExpected(metadata) {
   const exp = metadata.expected || {};
   return {
     name: exp.title || 'Unknown',
     category: metadata.category || 'unknown',
     domain: extractDomain(metadata.url),
-    extractionConfig: {},
+    // c211: was `{}` — an EMPTY config handed to a SELECTOR-DRIVEN extractor,
+    // so every hierarchical fixture extracted nothing and failed its whole
+    // block (19 of them). Hierarchical fixtures are captured pages without
+    // per-site selectors, so they get this generic profile; measured to
+    // extract them correctly (ai-warning: 386 words, expected snippets
+    // present). Per-site tuning still belongs in a fixture's own config.
+    extractionConfig: GENERIC_EXTRACTION_CONFIG,
     expected: {
       title: exp.title ? { exact: exp.title } : undefined,
       author: exp.author ? { contains: exp.author } : undefined,
@@ -152,6 +174,9 @@ function extractDomain(url) {
   }
 }
 
+// c211: the extractor returns { text, publicationDate }, not { body, date }.
+// Every body assertion was reading undefined and measuring 0 words — the
+// suite only became visible at all when c210 repathed its import.
 describe('Golden Set Regression Tests', () => {
   let extractor;
   const fixtures = loadFixtures();
@@ -209,20 +234,20 @@ describe('Golden Set Regression Tests', () => {
       
       if (bodyExpect.minWordCount) {
         it(`extracts body with at least ${bodyExpect.minWordCount} words`, () => {
-          const wordCount = (result.body || '').split(/\s+/).filter(Boolean).length;
+          const wordCount = (result.text || '').split(/\s+/).filter(Boolean).length;
           expect(wordCount).toBeGreaterThanOrEqual(bodyExpect.minWordCount);
         });
       }
       
       if (bodyExpect.containsSnippets && bodyExpect.containsSnippets.length > 0) {
         it.each(bodyExpect.containsSnippets)('body contains snippet: "%s"', (snippet) => {
-          expect(result.body?.toLowerCase()).toContain(snippet.toLowerCase());
+          expect(result.text?.toLowerCase()).toContain(snippet.toLowerCase());
         });
       }
       
       if (bodyExpect.excludes && bodyExpect.excludes.length > 0) {
         it.each(bodyExpect.excludes)('body excludes: "%s"', (excluded) => {
-          expect(result.body?.toLowerCase()).not.toContain(excluded.toLowerCase());
+          expect(result.text?.toLowerCase()).not.toContain(excluded.toLowerCase());
         });
       }
     }
@@ -233,7 +258,11 @@ describe('Golden Set Regression Tests', () => {
       
       if (dateExpect.iso) {
         it('extracts correct date', () => {
-          expect(result.date).toBe(dateExpect.iso);
+          // c211: compare INSTANTS, not ISO spellings. The extractor emits
+          // milliseconds ("…10:30:00.000Z") and the fixtures were written
+          // without them ("…10:30:00Z") — the same moment, and a golden set
+          // should pin the moment, not one serialization of it.
+          expect(Date.parse(result.publicationDate)).toBe(Date.parse(dateExpect.iso));
         });
       }
     }
@@ -273,7 +302,7 @@ describe('Golden Set Regression Tests', () => {
     for (const fixture of fixtures) {
       const config = fixture.expected.extractionConfig;
       const result = extractor.extract(fixture.html, config);
-      if (result.success && result.title && result.body) {
+      if (result.success && result.title && result.text) {
         successCount++;
       }
     }
