@@ -18,7 +18,19 @@
 
 const path = require('path');
 const { ensureDb } = require('../data/db/sqlite/ensureDb');
-const { normalizeName } = require('news-crawler-db');
+// c214 (ncdb-debt ratchet): the gazetteer table access lives in
+// news-crawler-db now, so the cascade-delete order for a place has one home.
+// This tool keeps its scoring policy, reporting and CLI behaviour.
+const {
+  normalizeName,
+  listPlacesMissingWikidataQid,
+  backfillWikidataQidsFromExternalIds,
+  listDuplicateNameGroups,
+  listPlaceQualityDetails,
+  mergePlacesIntoSurvivor,
+  listOrphanPlaces,
+  deletePlacesCascade
+} = require('news-crawler-db');
 const { CliFormatter, COLORS, ICONS } = require('../shared/utils/CliFormatter');
 
 // Default paths
@@ -99,13 +111,7 @@ function backfillWikidataQids(db, dryRun = false) {
   console.log(COLORS.dim('─'.repeat(40)));
   
   // Find places with Wikidata external ID but no wikidata_qid in main table
-  const missingQids = db.prepare(`
-    SELECT p.id, p.kind, pei.ext_id as qid,
-           (SELECT name FROM place_names WHERE place_id = p.id LIMIT 1) as name
-    FROM places p
-    JOIN place_external_ids pei ON pei.place_id = p.id AND pei.source = 'wikidata'
-    WHERE p.wikidata_qid IS NULL
-  `).all();
+  const missingQids = listPlacesMissingWikidataQid(db);
   
   if (missingQids.length === 0) {
     console.log(`  ${COLORS.success('✓')} All places already have wikidata_qid set`);
@@ -130,21 +136,10 @@ function backfillWikidataQids(db, dryRun = false) {
   }
   
   // Perform the backfill
-  const result = db.prepare(`
-    UPDATE places
-    SET wikidata_qid = (
-      SELECT ext_id FROM place_external_ids
-      WHERE source = 'wikidata' AND place_id = places.id
-    )
-    WHERE wikidata_qid IS NULL
-      AND EXISTS (
-        SELECT 1 FROM place_external_ids
-        WHERE source = 'wikidata' AND place_id = places.id
-      )
-  `).run();
+  const changes = backfillWikidataQidsFromExternalIds(db);
   
-  console.log(`  ${COLORS.success('✓')} Updated ${COLORS.cyan(result.changes)} records`);
-  return { updated: result.changes };
+  console.log(`  ${COLORS.success('✓')} Updated ${COLORS.cyan(changes)} records`);
+  return { updated: changes };
 }
 
 /**
@@ -153,30 +148,9 @@ function backfillWikidataQids(db, dryRun = false) {
 function findDuplicates(db, options = {}) {
   const { countryFilter = null, proximityThreshold = 0.1 } = options;
   
-  // Build where clause
-  const whereConditions = ['p.kind IS NOT NULL'];
-  if (countryFilter) {
-    whereConditions.push(`p.country_code = '${countryFilter}'`);
-  }
-  
-  // Find duplicates by normalized name + country + kind
-  const query = `
-    SELECT
-      p.country_code,
-      p.kind,
-      pn.normalized,
-      MIN(pn.name) as example_name,
-      GROUP_CONCAT(DISTINCT p.id) as ids,
-      COUNT(DISTINCT p.id) as count
-    FROM places p
-    JOIN place_names pn ON p.id = pn.place_id
-    WHERE ${whereConditions.join(' AND ')}
-    GROUP BY p.country_code, p.kind, pn.normalized
-    HAVING count > 1
-    ORDER BY count DESC, p.country_code, p.kind
-  `;
-  
-  const groups = db.prepare(query).all();
+  // c214: grouping moved to news-crawler-db. The country filter is a BOUND
+  // parameter there — it used to be interpolated straight from CLI input.
+  const groups = listDuplicateNameGroups(db, { countryFilter });
   
   // Enrich with place details and check proximity
   const duplicateSets = [];
@@ -184,16 +158,8 @@ function findDuplicates(db, options = {}) {
   for (const group of groups) {
     const ids = group.ids.split(',').map(id => parseInt(id, 10));
     
-    // Get full details
-    const places = db.prepare(`
-      SELECT
-        p.id, p.lat, p.lng, p.wikidata_qid, p.population, p.source,
-        (SELECT COUNT(*) FROM place_names WHERE place_id = p.id) as name_count,
-        (SELECT COUNT(*) FROM place_external_ids WHERE place_id = p.id) as ext_id_count,
-        json_extract(p.extra, '$.role') as role
-      FROM places p
-      WHERE p.id IN (${ids.join(',')})
-    `).all();
+    // Get full details (the scoring INPUTS; the policy stays here)
+    const places = listPlaceQualityDetails(db, ids);
     
     // Check proximity if we have coordinates
     const withCoords = places.filter(p => p.lat !== null && p.lng !== null);
@@ -355,98 +321,17 @@ function mergeDuplicates(db, options = {}) {
     if (deleteIds.length === 0) continue;
     
     try {
-      db.transaction(() => {
-        // Merge place_names - transfer unique names to the kept record
-        for (const dupId of deleteIds) {
-          // Find names that don't conflict
-          const uniqueNames = db.prepare(`
-            SELECT n.id
-            FROM place_names n
-            WHERE n.place_id = ?
-            AND NOT EXISTS (
-              SELECT 1 FROM place_names n2
-              WHERE n2.place_id = ?
-              AND n2.normalized = n.normalized
-              AND n2.lang = n.lang
-              AND n2.name_kind = n.name_kind
-            )
-          `).all(dupId, keepId);
-          
-          if (uniqueNames.length > 0) {
-            const nameIds = uniqueNames.map(n => n.id);
-            db.prepare(`
-              UPDATE place_names SET place_id = ?
-              WHERE id IN (${nameIds.join(',')})
-            `).run(keepId);
-          }
-          
-          // Delete remaining (conflicting) names
-          db.prepare(`DELETE FROM place_names WHERE place_id = ?`).run(dupId);
-        }
-        
-        // Transfer hierarchy relationships
-        db.prepare(`
-          UPDATE OR IGNORE place_hierarchy SET child_id = ?
-          WHERE child_id IN (${deleteIds.join(',')})
-        `).run(keepId);
-        
-        db.prepare(`
-          UPDATE OR IGNORE place_hierarchy SET parent_id = ?
-          WHERE parent_id IN (${deleteIds.join(',')})
-        `).run(keepId);
-        
-        // Delete conflicting hierarchy
-        db.prepare(`
-          DELETE FROM place_hierarchy
-          WHERE child_id IN (${deleteIds.join(',')}) OR parent_id IN (${deleteIds.join(',')})
-        `).run();
-        
-        // Transfer attributes
-        db.prepare(`
-          UPDATE OR IGNORE place_attribute_values SET place_id = ?
-          WHERE place_id IN (${deleteIds.join(',')})
-        `).run(keepId);
-        
-        // Delete conflicting attributes
-        db.prepare(`
-          DELETE FROM place_attribute_values
-          WHERE place_id IN (${deleteIds.join(',')})
-        `).run();
-        
-        // Transfer external IDs
-        db.prepare(`
-          UPDATE OR IGNORE place_external_ids SET place_id = ?
-          WHERE place_id IN (${deleteIds.join(',')})
-        `).run(keepId);
-        
-        // Delete conflicting external IDs
-        db.prepare(`
-          DELETE FROM place_external_ids
-          WHERE place_id IN (${deleteIds.join(',')})
-        `).run();
-        
-        // Update place_attributes (different table)
-        try {
-          db.prepare(`
-            UPDATE OR IGNORE place_attributes SET place_id = ?
-            WHERE place_id IN (${deleteIds.join(',')})
-          `).run(keepId);
-          db.prepare(`
-            DELETE FROM place_attributes
-            WHERE place_id IN (${deleteIds.join(',')})
-          `).run();
-        } catch (e) {
-          // Table may not exist
-        }
-        
-        // Delete the duplicate places
-        db.prepare(`
-          DELETE FROM places WHERE id IN (${deleteIds.join(',')})
-        `).run();
-        
-        merged++;
-        deleted += deleteIds.length;
-      })();
+      // c214: the entire merge transaction now lives in news-crawler-db as
+      // mergePlacesIntoSurvivor — names, hierarchy, attribute values,
+      // attributes, external ids, then the places themselves, in that order,
+      // atomically. Named for what it is: a PRIMITIVE that takes the survivor
+      // this tool picked. ncdb also has a mergeDuplicatePlaces, but that one
+      // carries its OWN scoring policy (coords first, then qid) which differs
+      // from this tool's (qid first, then population) — they are not
+      // interchangeable, and picking between them is an owner call.
+      const deletedHere = mergePlacesIntoSurvivor(db, { keepId, deleteIds });
+      merged++;
+      deleted += deletedHere;
       
       if (flags.verbose) {
         console.log(`    ${COLORS.success('✓')} ${dup.example_name}: kept ID ${keepId}, deleted ${deleteIds.length}`);
@@ -471,39 +356,11 @@ function removeOrphans(db, options = {}) {
   console.log(COLORS.dim('─'.repeat(40)));
   
   // Build where clause
-  const whereConditions = [
-    `p.wikidata_qid IS NULL`,
-    `p.population IS NULL`,
-    `p.source = 'restcountries@v3.1'`,
-    `(SELECT COUNT(*) FROM place_names WHERE place_id = p.id) = 1`
-  ];
-  
-  if (countryFilter) {
-    whereConditions.push(`p.country_code = '${countryFilter}'`);
-  }
-  
-  // Find orphans that have a better record with same normalized name
-  const orphans = db.prepare(`
-    SELECT 
-      p.id,
-      p.kind,
-      p.country_code,
-      pn.name,
-      pn.normalized
-    FROM places p
-    JOIN place_names pn ON pn.place_id = p.id
-    WHERE ${whereConditions.join(' AND ')}
-      AND EXISTS (
-        SELECT 1 FROM places p2
-        JOIN place_names pn2 ON pn2.place_id = p2.id
-        WHERE p2.id != p.id
-          AND p2.country_code = p.country_code
-          AND p2.kind = p.kind
-          AND pn2.normalized = pn.normalized
-          AND (p2.wikidata_qid IS NOT NULL OR p2.population IS NOT NULL OR 
-               (SELECT COUNT(*) FROM place_names WHERE place_id = p2.id) > 1)
-      )
-  `).all();
+  // c214: the orphan predicate (no qid, no population, restcountries
+  // source, exactly one name, AND a better same-country/kind sibling to
+  // defer to) moved to news-crawler-db, with the country filter BOUND
+  // instead of interpolated from CLI input.
+  const orphans = listOrphanPlaces(db, { countryFilter });
   
   if (orphans.length === 0) {
     console.log(`  ${COLORS.success('✓')} No orphan records found`);
@@ -530,25 +387,10 @@ function removeOrphans(db, options = {}) {
   const orphanIds = orphans.map(o => o.id);
   
   // Delete in transaction
-  db.transaction(() => {
-    // Delete names first
-    db.prepare(`DELETE FROM place_names WHERE place_id IN (${orphanIds.join(',')})`).run();
-    
-    // Delete hierarchy
-    db.prepare(`DELETE FROM place_hierarchy WHERE child_id IN (${orphanIds.join(',')}) OR parent_id IN (${orphanIds.join(',')})`).run();
-    
-    // Delete attributes
-    db.prepare(`DELETE FROM place_attribute_values WHERE place_id IN (${orphanIds.join(',')})`).run();
-    try {
-      db.prepare(`DELETE FROM place_attributes WHERE place_id IN (${orphanIds.join(',')})`).run();
-    } catch (e) {}
-    
-    // Delete external IDs
-    db.prepare(`DELETE FROM place_external_ids WHERE place_id IN (${orphanIds.join(',')})`).run();
-    
-    // Delete places
-    db.prepare(`DELETE FROM places WHERE id IN (${orphanIds.join(',')})`).run();
-  })();
+  // c214: the cascade-delete ORDER (names, hierarchy, attribute values,
+  // attributes, external ids, then places) lives in news-crawler-db now —
+  // atomic, with bound id placeholders instead of interpolation.
+  deletePlacesCascade(db, orphanIds);
   
   console.log(`  ${COLORS.success('✓')} Removed ${COLORS.cyan(orphanIds.length)} orphan records`);
   return { removed: orphanIds.length };

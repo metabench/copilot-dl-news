@@ -76,7 +76,7 @@
       "args": [
         "tools/dev/ncdb-debt-scan.js",
         "--max",
-        "233"
+        "209"
       ],
       "needsServer": false,
       "timeoutMs": 20000
