@@ -351,7 +351,9 @@ describe('swcAst helpers', () => {
     expect(output).toContain('Function Inventory');
     expect(output).toContain('Detected Functions');
     expect(output).toContain('alpha | kind=function-declaration | hash=');
-    expect(output).toContain('loc=1:8 | bytes=41');
+    // c202: 41 → 40 — function spans no longer swallow the newline byte
+    // after the closing brace.
+    expect(output).toContain('loc=1:8 | bytes=40');
     expect(output).toContain('replaceable=yes');
     expect(output).not.toContain('index │ name');
   });
@@ -785,11 +787,15 @@ describe('swcAst helpers', () => {
       expect(payload.guard.result.status).toBe('changed');
       expect(payload.guard.newline.status).toBe('converted');
       expect(payload.guard.newline.file?.style).toBe('crlf');
-      expect(payload.guard.newline.result?.style).toBe('crlf');
+      // c202: result reports the final snippet's own newline stats — a
+      // single-line declarator has zero internal newlines, so 'none'.
+      expect(payload.guard.newline.result?.style).toBe('none');
       expect(payload.guard.newline.replacement).toEqual(expect.objectContaining({
         targetStyle: 'crlf',
         converted: true,
-        normalizedStyle: 'crlf'
+        // c202: single-line replacement; its trailing newline is stripped
+        // now (span excludes the line terminator), so zero newlines remain.
+        normalizedStyle: 'none'
       }));
       expect(payload.guard.newline.byteDelta).toBeGreaterThan(0);
       const updated = fs.readFileSync(targetFile, 'utf8');
@@ -866,13 +872,15 @@ describe('swcAst helpers', () => {
         expect(bindingPayload.variable.target.resolvedMode).toBe('binding');
         expect(bindingPayload.guard.hash.status).toBe('ok');
         expect(bindingPayload.guard.result.status).toBe('changed');
-        expect(bindingPayload.guard.newline.status).toBe('converted');
+        // c202: a single-line replacement has no newlines to convert once
+        // the framing trailing newline is stripped — 'ok', not 'converted'.
+        expect(bindingPayload.guard.newline.status).toBe('ok');
         expect(bindingPayload.guard.newline.file?.style).toBe('crlf');
-        expect(bindingPayload.guard.newline.result?.style).toBe('crlf');
+        expect(bindingPayload.guard.newline.result?.style).toBe('none'); // c202: single-line snippet has no internal newlines
         expect(bindingPayload.guard.newline.replacement).toEqual(expect.objectContaining({
           targetStyle: 'crlf',
-          converted: true,
-          normalizedStyle: 'crlf'
+          converted: false, // c202: strip-only, no style conversion needed
+          normalizedStyle: 'none'
         }));
         expect(bindingPayload.guard.newline.byteDelta).toBeGreaterThanOrEqual(0);
         const bindingUpdated = fs.readFileSync(bindingTargetFile, 'utf8');
@@ -955,11 +963,11 @@ describe('swcAst helpers', () => {
         expect(declarationPayload.guard.result.status).toBe('changed');
         expect(declarationPayload.guard.newline.status).toBe('converted');
         expect(declarationPayload.guard.newline.file?.style).toBe('crlf');
-        expect(declarationPayload.guard.newline.result?.style).toBe('crlf');
+        expect(declarationPayload.guard.newline.result?.style).toBe('none'); // c202: single-line snippet has no internal newlines
         expect(declarationPayload.guard.newline.replacement).toEqual(expect.objectContaining({
           targetStyle: 'crlf',
-          converted: true,
-          normalizedStyle: 'crlf'
+          converted: true, // c202: LF trailing newline converted then stripped
+          normalizedStyle: 'none'
         }));
         expect(declarationPayload.guard.newline.byteDelta).toBeGreaterThanOrEqual(0);
         const declarationUpdated = fs.readFileSync(declarationTargetFile, 'utf8');
@@ -1814,7 +1822,9 @@ describe('swcAst helpers', () => {
       expect(payload.guard.span.expectedEnd).toBe(alphaRecord.span.end);
       expect(payload.guard.newline.status).toBe('converted');
       expect(payload.guard.newline.file?.style).toBe('crlf');
-      expect(payload.guard.newline.result?.style).toBe('none');
+      // c202: result reports the final snippet's own newline stats — a
+      // multi-line function body converted to the file's CRLF is 'crlf'.
+      expect(payload.guard.newline.result?.style).toBe('crlf');
       expect(payload.guard.newline.replacement).toEqual(
         expect.objectContaining({
           targetStyle: 'crlf',
@@ -1822,14 +1832,14 @@ describe('swcAst helpers', () => {
           converted: true
         })
       );
-      expect(payload.guard.newline.byteDelta).toBeLessThan(0);
+      expect(payload.guard.newline.byteDelta).toBeGreaterThan(0); // c202: converting LF snippet to CRLF file adds a byte per newline
       expect(payload.plan.newline).toEqual(
         expect.objectContaining({
           status: 'converted',
           file: expect.objectContaining({ style: 'crlf' })
         })
       );
-      expect(payload.plan.newline.result?.style).toBe('none');
+      expect(payload.plan.newline.result?.style).toBe('crlf'); // c202: multi-line function replacement keeps internal CRLF newlines
       expect(fs.existsSync(planPath)).toBe(true);
       const planFile = JSON.parse(fs.readFileSync(planPath, 'utf8'));
       expect(planFile.matches[0].expectedHash).toBe(expectedHash);
@@ -1856,7 +1866,7 @@ describe('swcAst helpers', () => {
           file: expect.objectContaining({ style: 'crlf' })
         })
       );
-      expect(planFile.newline.result?.style).toBe('none');
+      expect(planFile.newline.result?.style).toBe('crlf'); // c202: multi-line function replacement keeps internal CRLF newlines
       expect(planFile.newline.replacement).toEqual(
         expect.objectContaining({
           targetStyle: 'crlf',
@@ -1864,7 +1874,7 @@ describe('swcAst helpers', () => {
           converted: true
         })
       );
-      expect(planFile.newline.byteDelta).toBeLessThan(0);
+      expect(planFile.newline.byteDelta).toBeGreaterThan(0); // c202: converting LF snippet to CRLF file adds a byte per newline
     })
 
 ;

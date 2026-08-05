@@ -248,7 +248,7 @@ describe('js-scan CLI parse error handling', () => {
 
     const clean = stripAnsi(output);
     const depsIndex = clean.indexOf('Dependencies');
-    const detailIndex = clean.indexOf('hub-analysis-workflow.js');
+    const detailIndex = clean.indexOf('broken-syntax.fixture.js');
 
     expect(depsIndex).toBeGreaterThan(-1);
     expect(detailIndex).toBeGreaterThan(depsIndex);
@@ -271,7 +271,7 @@ describe('js-scan CLI parse error handling', () => {
     });
 
     const clean = stripAnsi(output);
-    const detailIndex = clean.indexOf('hub-analysis-workflow.js');
+    const detailIndex = clean.indexOf('broken-syntax.fixture.js');
 
     expect(detailIndex).toBeGreaterThan(-1);
     expect(clean.includes('Use --deps-parse-errors for details.')).toBe(false);

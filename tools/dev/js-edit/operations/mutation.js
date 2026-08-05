@@ -816,10 +816,16 @@ function replaceVariable(options, source, record, replacementPath, selector) {
 
   const fileNewlineStats = options.sourceNewline || computeNewlineStats(source);
   const replacementSource = getReplacementSource(options);
+  // c202: variable spans (binding, declarator, declaration) never end at a
+  // newline, so a replacement's trailing newline is file framing — keeping
+  // it wrote a newline MID-STATEMENT for binding replaces and a blank line
+  // for declaration replaces (measured on js-edit-sample.js).
+  const targetEndChar = source[target.span.end - 1];
+  const targetEndsAtNewline = targetEndChar === '\n' || targetEndChar === '\r';
   const normalizedReplacement = prepareNormalizedSnippet(
     replacementSource,
     fileNewlineStats.style,
-    { ensureTrailingNewline: true }
+    targetEndsAtNewline ? { ensureTrailingNewline: true } : { stripTrailingNewline: true }
   );
   const workingSnippet = normalizedReplacement.text;
   const replacementBuffer = Buffer.from(workingSnippet, 'utf8');
@@ -1162,10 +1168,16 @@ function replaceFunction(options, source, record, replacementPath, selector) {
     replacementMeta = normalizedRangeReplacement;
   } else if (options.replacementPath || options.replacementCode) {
     const replacementSource = getReplacementSource(options);
+    // c202: function spans end at the closing brace, never at a newline
+    // (swc's swallowed newline byte is trimmed at the record layer now), so
+    // a replacement's trailing newline is file framing — keeping it
+    // inserted a blank line after every replaced function.
+    const spanEndChar = source[record.span.end - 1];
+    const spanEndsAtNewline = spanEndChar === '\n' || spanEndChar === '\r';
     const normalizedReplacement = prepareNormalizedSnippet(
       replacementSource,
       fileNewlineStats.style,
-      { ensureTrailingNewline: true }
+      spanEndsAtNewline ? { ensureTrailingNewline: true } : { stripTrailingNewline: true }
     );
     workingSnippet = normalizedReplacement.text;
     replacementMeta = normalizedReplacement;

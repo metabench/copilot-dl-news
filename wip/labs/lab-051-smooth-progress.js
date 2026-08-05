@@ -58,8 +58,10 @@ async function run() {
   const monitorInterval = setInterval(async () => {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     try {
-      const text = await page.\('[data-downloads-stat=\"progress-text\"]', el => el.textContent);
-      const width = await page.\('[data-downloads-progress-bar]', el => el.style.width);
+      // c202: was `page.\(` — shell interpolation ate `$eval` when this lab
+      // was first written, leaving a bare backslash no parser accepts.
+      const text = await page.$eval('[data-downloads-stat="progress-text"]', el => el.textContent);
+      const width = await page.$eval('[data-downloads-progress-bar]', el => el.style.width);
       if (text !== lastText) {
         console.log('[' + elapsed + 's] Progress: \"' + text + '\" (' + width + ')');
         progressHistory.push({ time: elapsed, text, width });

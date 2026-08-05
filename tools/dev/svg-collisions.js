@@ -360,6 +360,14 @@ function classifyCollision(el1, el2, intersection, strict) {
   
   // Other combinations - only report large overlaps in strict mode
   if (strict && overlapRatio > 0.5) {
+    // c202: full bbox containment is nesting, not collision — a backdrop
+    // rect "collides" with every path drawn on it, and a curvy path's bbox
+    // swallows its own arrowheads. Only PARTIAL overlaps are evidence at
+    // this bbox-level analysis; the rect/text pairings above already treat
+    // containment as by-design.
+    if (contains(el1.bbox, el2.bbox) || contains(el2.bbox, el1.bbox)) {
+      return { report: false, reason: "Nested bounding boxes" };
+    }
     return {
       type: "general-overlap",
       severity: "low",

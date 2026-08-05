@@ -1,5 +1,7 @@
 // phantom-sweep: runtime-fixtures — this suite writes fixture modules before requiring them (42/42 green c187).
-#!/usr/bin/env node
+// c202: a stray shebang sat below this pragma (only legal as a file's first
+// bytes) — every real parser rejected the file at 2:1. Test files are not
+// executables; the shebang is gone.
 'use strict';
 
 const path = require('path');

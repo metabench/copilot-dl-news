@@ -185,6 +185,29 @@ function resolveByteContext(byteIndexCandidate) {
   return null;
 }
 
+// c202: statement-level spans from swc land one byte past the closing
+// token — the line's first newline byte. On LF sources the swallowed '\n'
+// was invisibly cancelled by the replacement pipeline's ensured trailing
+// newline; on CRLF sources the span SPLIT the '\r\n' pair, so extract
+// returned "…;\r" and replace wrote "…;\r\n\n" — mixed line endings in a
+// previously uniform file (measured on js-edit-sample.js, declaration and
+// function modes alike). Trim up to one trailing newline sequence; newline
+// bytes are 1 code unit each, so byte and code-unit ends shrink together.
+function trimTrailingNewlineBytesFromSpan(span, sourceBuffer) {
+  if (!span || !sourceBuffer || span.byteEnd <= span.byteStart) return span;
+  let lastByte = sourceBuffer[span.byteEnd - 1];
+  if (lastByte === 0x0A) {
+    span.byteEnd -= 1;
+    span.end -= 1;
+    lastByte = span.byteEnd > span.byteStart ? sourceBuffer[span.byteEnd - 1] : null;
+  }
+  if (lastByte === 0x0D && span.byteEnd > span.byteStart) {
+    span.byteEnd -= 1;
+    span.end -= 1;
+  }
+  return span;
+}
+
 function normalizeSpan(span, byteIndex = null) {
   if (!span) {
     return { start: 0, end: 0, byteStart: 0, byteEnd: 0, __normalized: true };
@@ -591,14 +614,14 @@ function prependContext(stack, entry) {
   return [entry, ...normalizeContextStack(stack)];
 }
 
-function formatEnclosingContexts(contexts, byteIndex) {
+function formatEnclosingContexts(contexts, byteIndex, sourceBuffer = null) {
   return normalizeContextStack(contexts)
     .map((ctx) => {
       if (!ctx || typeof ctx !== 'object' || !ctx.span) return null;
       return {
         kind: ctx.kind || null,
         name: ctx.name || null,
-        span: normalizeSpan(ctx.span, byteIndex)
+        span: trimTrailingNewlineBytesFromSpan(normalizeSpan(ctx.span, byteIndex), sourceBuffer)
       };
     })
     .filter(Boolean);
@@ -612,6 +635,7 @@ function recordFunction(results, source, meta) {
   const sourceBuffer = meta.sourceBuffer
     || (meta.mapper && typeof meta.mapper.getBuffer === 'function' ? meta.mapper.getBuffer()
       : Buffer.from(source, 'utf8'));
+  trimTrailingNewlineBytesFromSpan(normalizedSpan, sourceBuffer);
   const byteStart = normalizedSpan.byteStart;
   const byteEnd = normalizedSpan.byteEnd;
   const snippetBuffer = byteEnd > byteStart
@@ -625,7 +649,7 @@ function recordFunction(results, source, meta) {
   const pathSignature = buildPathSignature(meta.pathSegments, meta.nodeType);
   const identifierSpan = meta.identifierSpan ? normalizeSpan(meta.identifierSpan, mappingContext) : null;
   const byteLength = Math.max(0, byteEnd - byteStart);
-  const enclosingContexts = formatEnclosingContexts(meta.enclosingContexts, mappingContext);
+  const enclosingContexts = formatEnclosingContexts(meta.enclosingContexts, mappingContext, sourceBuffer);
   const primaryEnclosing = enclosingContexts[0] || null;
 
   results.push({
@@ -660,6 +684,7 @@ function recordVariable(results, source, meta) {
   const sourceBuffer = meta.sourceBuffer
     || (meta.mapper && typeof meta.mapper.getBuffer === 'function' ? meta.mapper.getBuffer()
       : Buffer.from(source, 'utf8'));
+  trimTrailingNewlineBytesFromSpan(normalizedSpan, sourceBuffer);
   const byteStart = normalizedSpan.byteStart;
   const byteEnd = normalizedSpan.byteEnd;
   const snippetBuffer = byteEnd > byteStart
@@ -670,6 +695,8 @@ function recordVariable(results, source, meta) {
 
   const declaratorSpan = meta.declaratorSpan ? normalizeSpan(meta.declaratorSpan, mappingContext) : normalizedSpan;
   const declarationSpan = meta.declarationSpan ? normalizeSpan(meta.declarationSpan, mappingContext) : declaratorSpan;
+  trimTrailingNewlineBytesFromSpan(declarationSpan, sourceBuffer);
+  trimTrailingNewlineBytesFromSpan(declaratorSpan, sourceBuffer);
 
   const declaratorSnippet = declaratorSpan.byteEnd > declaratorSpan.byteStart
     ? sourceBuffer.slice(declaratorSpan.byteStart, declaratorSpan.byteEnd)
@@ -694,7 +721,7 @@ function recordVariable(results, source, meta) {
   const declarationPathSignature = Array.isArray(meta.declarationPathSegments)
     ? buildPathSignature(meta.declarationPathSegments, null)
     : null;
-  const enclosingContexts = formatEnclosingContexts(meta.enclosingContexts, mappingContext);
+  const enclosingContexts = formatEnclosingContexts(meta.enclosingContexts, mappingContext, sourceBuffer);
   const primaryEnclosing = enclosingContexts[0] || null;
 
   results.push({
@@ -745,7 +772,7 @@ function recordType(results, source, meta) {
   const canonicalName = buildCanonicalName(meta.name, scopeChain, meta.exportKind);
   const pathSignature = buildPathSignature(meta.pathSegments, meta.nodeType);
   const byteLength = Math.max(0, byteEnd - byteStart);
-  const enclosingContexts = formatEnclosingContexts(meta.enclosingContexts, mappingContext);
+  const enclosingContexts = formatEnclosingContexts(meta.enclosingContexts, mappingContext, sourceBuffer);
   const primaryEnclosing = enclosingContexts[0] || null;
 
   results.push({
@@ -1019,7 +1046,11 @@ function collectFunctions(ast, source, mapper = null) {
     if (!entry) {
       return;
     }
-    const normalizedSpan = sourceMapper.normalize(methodNode.span);
+    // c202: must match the trimmed record span or the params join misses.
+    const normalizedSpan = trimTrailingNewlineBytesFromSpan(
+      sourceMapper.normalize(methodNode.span),
+      typeof sourceMapper.getBuffer === 'function' ? sourceMapper.getBuffer() : null
+    );
     const constructorKey = createSpanKey(normalizedSpan);
     if (!constructorKey) {
       return;
@@ -1572,7 +1603,12 @@ function collectFunctions(ast, source, mapper = null) {
         const className = node.identifier ? node.identifier.value : '(anonymous class)';
         const classScope = node.identifier ? extendScopeChain(currentScope, [className]) : currentScope;
         const classSpan = context.exportSpan || node.span;
-        const normalizedClassSpan = sourceMapper.normalize(node.span);
+        // c202: keyed maps must agree with the trimmed record spans, or
+        // constructor↔class pairing silently drops entries.
+        const normalizedClassSpan = trimTrailingNewlineBytesFromSpan(
+          sourceMapper.normalize(node.span),
+          typeof sourceMapper.getBuffer === 'function' ? sourceMapper.getBuffer() : null
+        );
         const classEntry = { kind: 'class', name: className, span: normalizedClassSpan };
         const classKey = createSpanKey(normalizedClassSpan);
         if (classKey) {

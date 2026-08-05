@@ -120,6 +120,7 @@ function prepareNormalizedSnippet(snippet, targetStyle, options = {}) {
 
   const newlineToken = newlineTokenForStyle(resolvedTarget);
   let trailingAdded = false;
+  let trailingStripped = false;
 
   if (ensureTrailingNewline) {
     if (!normalized.endsWith('\n') && !normalized.endsWith('\r')) {
@@ -128,6 +129,17 @@ function prepareNormalizedSnippet(snippet, targetStyle, options = {}) {
     } else if (!normalized.endsWith(newlineToken)) {
       const trimmed = normalized.replace(/(?:\r\n|\r|\n)$/, '');
       normalized = `${trimmed}${newlineToken}`;
+      converted = true;
+    }
+  } else if (options.stripTrailingNewline === true) {
+    // c202: when the target span does not end at a newline (statement and
+    // function spans never do), a replacement's trailing newline is file
+    // framing, not content — keeping it inserted a blank line after every
+    // replaced function and a newline mid-statement for variables.
+    const trimmed = normalized.replace(/(?:\r\n|\r|\n)$/, '');
+    if (trimmed !== normalized) {
+      normalized = trimmed;
+      trailingStripped = true;
       converted = true;
     }
   }
@@ -142,6 +154,7 @@ function prepareNormalizedSnippet(snippet, targetStyle, options = {}) {
     targetStyle: resolvedTarget,
     converted: converted || trailingAdded,
     trailingAdded,
+    trailingStripped,
     originalBytes,
     normalizedBytes,
     byteDelta: normalizedBytes - originalBytes

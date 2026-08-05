@@ -1348,7 +1348,13 @@ function normalizeOptions(raw) {
     suggestSelectors: Boolean(resolved.suggestSelectors),
     fuzzy: Boolean(resolved.fuzzy),
     replaceRange,
-    renameTo,
+    // c202: this key was defined AGAIN 38 lines down as `renameTo:
+    // resolved.to` (added for rename-symbol) — the duplicate literal key
+    // silently clobbered the validated --rename value, so --replace
+    // --rename wrote the file unchanged while reporting applied:true.
+    // One definition, both sources: --rename wins, --to is the
+    // rename-symbol spelling.
+    renameTo: renameTo !== null ? renameTo : (resolved.to !== undefined ? resolved.to : null),
     extractVariableSelector,
     replaceVariableSelector,
     listTypes: Boolean(resolved.listTypes),
@@ -1386,7 +1392,6 @@ function normalizeOptions(raw) {
     transaction: resolved.transaction, // Keep as string (file path) for transaction mode
     diffIntent: Boolean(resolved.diffIntent), // Human-readable diff preview
     renameSymbol: resolved.renameSymbol, // Symbol name to rename
-    renameTo: resolved.to, // New name for rename-symbol
     scopeAware: resolved.scopeAware !== false, // Default true
     semanticExtract: resolved.semanticExtract, // Intent pattern for extraction
     analyze: Boolean(resolved.analyze), // Show semantic analysis
