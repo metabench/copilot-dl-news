@@ -73,7 +73,14 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // unlike its Draggable/Selectable siblings. Each was checked individually
 // for basename refs, npm-script targets, directory scans, shebangs and
 // index re-exports; git history keeps them if any is ever wanted back.
-const CEILING = 357;
+// c212: 357 → 351. The six candidates c211 held as KEEP were held only
+// because SOME file in their directory did a dynamic scan — a coarse test.
+// Checking what each scan actually reads cleared all six: the controls scan
+// reads a sequence dir, and the docsViewer scan reads the PLUGINS path, so
+// neither can reach them. The two shebang patch scripts target
+// docsViewer/server/public/… which does not exist at all, and they patched
+// BUILD output the next build overwrites — dead twice over.
+const CEILING = 351;
 
 function trackedFiles(prefix) {
   const out = execFileSync('git', ['ls-files', prefix], { cwd: ROOT, encoding: 'utf8' });
