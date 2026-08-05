@@ -299,16 +299,25 @@ async function run() {
         // Artifacts: screenshot + HTML snapshot.
         try {
           await page.screenshot({ path: path.join(artifactsDir, `${scenarioKey}.png`), fullPage: true });
-        } catch (_) {}
+        } catch (artifactError) {
+          // Loud (c204): losing the failure screenshot makes the scenario failure undiagnosable after the fact.
+          console.warn('[ui-scenarios] failure screenshot failed to save:', artifactError?.message || artifactError);
+        }
 
         try {
           const html = await page.content();
           await writeArtifact(artifactsDir, scenarioKey, "html", html);
-        } catch (_) {}
+        } catch (artifactError) {
+          // Loud (c204): losing the failure HTML snapshot makes the scenario failure undiagnosable after the fact.
+          console.warn('[ui-scenarios] failure HTML snapshot failed to save:', artifactError?.message || artifactError);
+        }
 
         try {
           await writeArtifact(artifactsDir, scenarioKey, "logs.json", JSON.stringify({ logs: capture.logs, errors: capture.errors, network: capture.network }, null, 2));
-        } catch (_) {}
+        } catch (artifactError) {
+          // Loud (c204): losing the failure logs artifact makes the scenario failure undiagnosable after the fact.
+          console.warn('[ui-scenarios] failure logs artifact failed to save:', artifactError?.message || artifactError);
+        }
 
         if (!jsonOutput && printLogsOnFailure) {
           out.log(`\n❌ Failure details for ${scenario.id || scenario.index} ${scenario.name || "(unnamed)"}`);

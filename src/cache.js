@@ -6,7 +6,20 @@ class ArticleCache {
   constructor({ db = null, dataDir, normalizeUrl } = {}) {
     this.db = db; // NewsDatabase instance or null
     if (!this.db) this.db = getDb();
-    if (this.db && typeof this.db.getHandle === 'function') this.db = this.db.getHandle();
+    // c204 (defect #15): the 2025-12-14 unconditional getHandle() unwrap
+    // swapped the NewsDatabase for its RAW handle, which has no
+    // getArticleByUrl — every cache read missed, so every crawl silently
+    // re-downloaded content it already had and refetched known 404s.
+    // The only API this cache needs is the article query; keep whichever
+    // object actually serves it.
+    if (this.db && typeof this.db.getArticleByUrl !== 'function' &&
+        typeof this.db.getArticleByUrlOrCanonical !== 'function' &&
+        typeof this.db.getHandle === 'function') {
+      const handle = this.db.getHandle();
+      if (handle && (typeof handle.getArticleByUrl === 'function' || typeof handle.getArticleByUrlOrCanonical === 'function')) {
+        this.db = handle;
+      }
+    }
 
     this.normalizeUrl = typeof normalizeUrl === 'function' ? normalizeUrl : (u) => u;
     // Tiny positive memo to avoid repeated DB hits during rapid cache checking

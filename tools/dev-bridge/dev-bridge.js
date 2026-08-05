@@ -143,9 +143,9 @@ function startManaged(name, cmd, args, { env = {}, cwd = ROOT } = {}) {
 function stopManaged(name) {
   const rec = liveProcs()[name];
   if (!rec) return { ok: false, error: `${name} not running` };
-  try { process.kill(rec.pid); } catch {}
+  try { process.kill(rec.pid); } catch { /* best-effort kill — process may already be gone — reviewed c204 */ }
   if (process.platform === 'win32') {
-    try { spawn('taskkill', ['/PID', String(rec.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    try { spawn('taskkill', ['/PID', String(rec.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* taskkill sweep best-effort — reviewed c204 */ }
   }
   const procs = readProcs();
   delete procs[name];
@@ -170,7 +170,7 @@ const ACTIONS = {
   // the loop respawns with fresh code and a visible console. Otherwise spawn a
   // detached replacement first.
   'restart-bridge': async () => {
-    try { fs.unlinkSync(LOCK); } catch {}
+    try { fs.unlinkSync(LOCK); } catch { /* stale lock removal — ENOENT expected — reviewed c204 */ }
     let newPid = null;
     if (process.env.BRIDGE_SUPERVISED !== '1') {
       const child = spawn(process.execPath, [path.join(BASE, 'dev-bridge.js')], {
@@ -311,7 +311,7 @@ const ACTIONS = {
       let out = '';
       const cap = (c) => { out += c.toString(); if (out.length > 20000) out = out.slice(-20000); };
       child.stdout.on('data', cap); child.stderr.on('data', cap);
-      const timer = setTimeout(() => { try { child.kill(); } catch {} }, 180000);
+      const timer = setTimeout(() => { try { child.kill(); } catch { /* timeout child kill best-effort — reviewed c204 */ } }, 180000);
       child.on('exit', (code) => { clearTimeout(timer); resolve({ ok: code === 0, exitCode: code, tail: out.slice(-4000) }); });
     });
   },
@@ -339,7 +339,7 @@ const ACTIONS = {
         '--screenshot-delay-ms', String(Number(p.delayMs) || 2000),
         '--user-data-dir', userDataDir
       ], { cwd: ROOT, windowsHide: false, shell: true });
-      const timer = setTimeout(() => { try { child.kill(); } catch {} }, 60000);
+      const timer = setTimeout(() => { try { child.kill(); } catch { /* timeout child kill best-effort — reviewed c204 */ } }, 60000);
       child.on('exit', (code) => {
         clearTimeout(timer);
         resolve({ ok: fs.existsSync(outPath), exitCode: code, path: `tools/dev-bridge/state/ui-shots/${name}` });
@@ -414,7 +414,7 @@ const ACTIONS = {
       const cap = (c) => { out += c.toString(); if (out.length > 40000) out = out.slice(-40000); };
       child.stdout.on('data', cap); child.stderr.on('data', cap);
       const budget = Math.min(Number(p.timeoutMs) || 120000, 2000000); // L4 crawls need ~30min reps
-      const timer = setTimeout(() => { try { child.kill(); } catch {} }, budget);
+      const timer = setTimeout(() => { try { child.kill(); } catch { /* timeout child kill best-effort — reviewed c204 */ } }, budget);
       child.on('exit', (code) => { clearTimeout(timer); resolve({ ok: code === 0, exitCode: code, output: out.slice(-8000) }); });
     });
   },
@@ -459,7 +459,7 @@ async function processFile(file) {
   try {
     fs.writeFileSync(resultPath, JSON.stringify({ ...result, action: file, finishedAt: new Date().toISOString() }, null, 2));
   } catch (err) { log('result write failed:', err.message); }
-  try { fs.unlinkSync(processing); } catch {}
+  try { fs.unlinkSync(processing); } catch { /* processing-marker removal — result write above is loud — reviewed c204 */ }
   log(`done ${file} -> ${path.basename(resultPath)}`);
 }
 
@@ -471,7 +471,7 @@ function heartbeat() {
     const name = path.join(STATE, `hb-${Math.floor(Date.now() / 30000)}.json`);
     if (name === lastHb) return;
     fs.writeFileSync(name, JSON.stringify({ pid: process.pid, at: new Date().toISOString() }));
-    if (lastHb) { try { fs.unlinkSync(lastHb); } catch {} }
+    if (lastHb) { try { fs.unlinkSync(lastHb); } catch { /* previous heartbeat removal — ENOENT fine — reviewed c204 */ } }
     lastHb = name;
   } catch { /* best-effort */ }
 }

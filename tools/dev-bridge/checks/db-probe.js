@@ -52,7 +52,7 @@ const openAndRead = (label) => {
   let ok = attempt(`${label}: open (rw, timeout 5s)`, () => { db = new Database(DB_PATH, { timeout: 5000 }); });
   if (!ok) return false;
   ok = attempt(`${label}: quick read (place_hubs count)`, () => db.prepare('SELECT COUNT(*) AS n FROM place_hubs').get().n);
-  if (!ok) { try { db.close(); } catch (_) {} return false; }
+  if (!ok) { try { db.close(); } catch (_) { /* db close after failed read — probe already reported — reviewed c204 */ } return false; }
   return true;
 };
 
@@ -66,7 +66,7 @@ if (!openAndRead('pass1')) {
   try {
     const walSize = fs.existsSync(wal) ? fs.statSync(wal).size : -1;
     if (walSize === 0) attempt('unlink empty -wal', () => { fs.unlinkSync(wal); });
-  } catch (_) {}
+  } catch (_) { /* wal stat probe — absence is fine — reviewed c204 */ }
   openAndRead('pass2 (after cleanup)');
 }
 
@@ -74,6 +74,6 @@ if (db && db.open) {
   attempt('journal_mode', () => db.pragma('journal_mode', { simple: true }));
   attempt('write lock (BEGIN IMMEDIATE + ROLLBACK)', () => { db.exec('BEGIN IMMEDIATE'); db.exec('ROLLBACK'); });
   attempt('wal checkpoint (PASSIVE)', () => db.pragma('wal_checkpoint(PASSIVE)'));
-  try { db.close(); } catch (_) {}
+  try { db.close(); } catch (_) { /* db close at probe end — reviewed c204 */ }
 }
 console.log('[probe] done');

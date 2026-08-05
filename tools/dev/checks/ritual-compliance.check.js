@@ -206,13 +206,13 @@ function gatherState() {
   const ahead = git(['rev-list', '--count', 'origin/main..HEAD']);
 
   let activityWindowTo = null;
-  try { activityWindowTo = (JSON.parse(fs.readFileSync(DEFAULT_ACTIVITY, 'utf8')).window || {}).to || null; } catch (_) {}
+  try { activityWindowTo = (JSON.parse(fs.readFileSync(DEFAULT_ACTIVITY, 'utf8')).window || {}).to || null; } catch (_) { /* optional activity snapshot — absent is a finding, not an error — reviewed c204 */ }
 
   let concurrencyDefault = null;
-  try { concurrencyDefault = parseConcurrencyDefault(fs.readFileSync(path.join(ROOT, CRAWLER_REL), 'utf8')); } catch (_) {}
+  try { concurrencyDefault = parseConcurrencyDefault(fs.readFileSync(path.join(ROOT, CRAWLER_REL), 'utf8')); } catch (_) { /* optional crawler source read — parse failure reported by null — reviewed c204 */ }
 
   let gated = {};
-  try { gated = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'gated-surfaces.json'), 'utf8')); } catch (_) {}
+  try { gated = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'gated-surfaces.json'), 'utf8')); } catch (_) { /* optional gated-surfaces config — absent means nothing gated — reviewed c204 */ }
 
   return {
     workingNewest: newestStanza(workingLedger),
@@ -240,11 +240,11 @@ function gatherSurfaces(gated) {
     try {
       const j = JSON.parse(fs.readFileSync(path.join(dotClaude, f), 'utf8'));
       if (j && j.hooks && Object.keys(j.hooks).length) hooks.push(`${f}:hooks`);
-    } catch (_) {}
+    } catch (_) { /* settings file may not exist or parse — hooks then not detected — reviewed c204 */ }
   }
   try {
     for (const e of fs.readdirSync(path.join(dotClaude, 'hooks'))) hooks.push(`hooks/${e}`);
-  } catch (_) {}
+  } catch (_) { /* hooks dir may not exist — reviewed c204 */ }
 
   // Skills are gated, so the scan must cover EVERY place a skill can load from,
   // not just this repo. A skill installed at the user level (~/.claude/skills)
@@ -262,10 +262,10 @@ function gatherSurfaces(gated) {
       for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
         // isDirectory() is false for a junction/symlink, so stat through it.
         let isDir = d.isDirectory();
-        if (!isDir) { try { isDir = fs.statSync(path.join(dir, d.name)).isDirectory(); } catch (_) {} }
+        if (!isDir) { try { isDir = fs.statSync(path.join(dir, d.name)).isDirectory(); } catch (_) { /* stat through junction may fail — treated as non-dir — reviewed c204 */ } }
         if (isDir) seen.add(d.name);
       }
-    } catch (_) {}
+    } catch (_) { /* agents dir may not exist — reviewed c204 */ }
   }
   const skills = [...seen].sort();
 
