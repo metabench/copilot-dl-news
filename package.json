@@ -207,7 +207,8 @@
       "/src/deprecated-ui/",
       "/tests/deprecated-ui/",
       "/tmp/",
-      "/wip/"
+      "/wip/",
+      "\\.e2e\\.test\\.js$"
     ],
     "reporters": [
       "default",

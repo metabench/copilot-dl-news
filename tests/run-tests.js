@@ -90,9 +90,15 @@ if (cmdArgs.files && cmdArgs.files.length > 0) {
   // Add each file as a positional argument
   args.push(...cmdArgs.files);
 } else {
-  // Add test path pattern
+  // Add test path pattern.
+  // c208: Jest 30 renamed --testPathPattern to --testPathPatterns and now
+  // ERRORS on the old name, which silently killed TEN of the twelve lanes
+  // here (integration, e2e, e2e-quick, puppeteer, crawler-soak,
+  // crawler-live, dev-geography x2, migration, deprecated-ui) — every one
+  // exited 0 after printing the deprecation, so `npm run test:e2e` looked
+  // like a pass while running nothing.
   if (suite.testPathPattern) {
-    args.push('--testPathPattern', suite.testPathPattern);
+    args.push('--testPathPatterns', suite.testPathPattern);
   }
 }
 
