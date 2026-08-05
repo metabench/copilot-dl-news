@@ -30,10 +30,10 @@ handoffs:
       
       {{PASTE: tooling gaps, required capabilities, priority}}
 
-  - label: '🧠 Hand off to CrawlOps Brain'
-    agent: '🧠 CrawlOps Brain Singularity 🧠'
+  - label: '🕷️ Hand off to Crawler Singularity'
+    agent: '🕷️ Crawler Singularity 🕷️'
     prompt: |
-      AGI BRAIN → CRAWLOPS HANDOFF
+      AGI BRAIN → CRAWLER HANDOFF
       
       Please take over this crawler operations initiative:
       

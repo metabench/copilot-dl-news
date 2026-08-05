@@ -27,7 +27,7 @@ handoffs:
       Please implement the DB layer changes to support crawler evolution.
 
   - label: '🧪 Hand off test audit'
-    agent: 'Jest Test Auditer'
+    agent: '🧬 Deterministic Testwright 🧬'
     prompt: |
       CRAWLER → TEST HANDOFF
       
@@ -36,17 +36,6 @@ handoffs:
       {{PASTE: new modules, test coverage gaps, flaky tests}}
       
       Please audit and improve test coverage.
-
-  - label: '🔬 Hand off to Diagnostic & Repair'
-    agent: '🔬🛠️ Diagnostic & Repair Singularity 🛠️🔬'
-    prompt: |
-      CRAWLER → DIAGNOSTIC & REPAIR HANDOFF
-
-      Crawler work surfaced a data pipeline investigation need:
-
-      {{PASTE: symptoms, affected URLs/time periods, what you've tried}}
-
-      Please investigate root cause using diagnostic instruments and coordinate the fix.
 ---
 
 # 🕷️ Crawler Singularity 🕷️
@@ -167,8 +156,8 @@ If the UI cannot represent “1000 nodes discovered in 1 second” without locki
 - **When to invoke**: For any task related to `src/crawler/`, `src/fetch/`, or the crawling database tables (`fetches`, `http_responses`).
 - **Handoffs**:
     - To **🧠 AGI Singularity Brain 🧠** for cross-domain coordination.
-    - To **DB Modular** for schema changes.
-    - To **Jest Test Auditer** for test suite improvements.
+    - To **🗄️ DB Guardian Singularity 🗄️** for schema changes.
+    - To **🧬 Deterministic Testwright 🧬** for test suite improvements.
 
 ## Self-Improvement
 - After every major feature, update the `RELIABLE_CRAWLER_ROADMAP.md` status.

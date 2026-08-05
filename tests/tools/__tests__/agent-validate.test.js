@@ -20,7 +20,7 @@ describe('agent-validate utility', () => {
     expect(results.filesScanned).toBeGreaterThan(0);
   });
 
-  it('ensures AGI-Orchestrator handoff targets exist', () => {
+  it('ensures orchestrator (AGI Singularity Brain) handoff targets exist', () => {
     const agentDir = path.join(process.cwd(), '.github', 'agents');
 
     const results = validateAgents({
@@ -28,7 +28,7 @@ describe('agent-validate utility', () => {
       options: { checkHandoffAgents: true }
     });
 
-    const orchestrator = results.files.find((file) => file.agentName === 'AGI-Orchestrator');
+    const orchestrator = results.files.find((file) => file.agentName === '🧠 AGI Singularity Brain 🧠');
     expect(orchestrator).toBeDefined();
     expect(orchestrator.issues).toEqual([]);
   });
