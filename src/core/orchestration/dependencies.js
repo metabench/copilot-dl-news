@@ -79,10 +79,23 @@ function createPlaceHubDependencies(options = {}) {
   let batchProcessor = null;
   
   if (distributed) {
+    // c208 (defect #17): callers pass `concurrency` (the router's
+    // PLACE_HUB_GUESSING_CONCURRENCY knob, default 10) but the adapter reads
+    // `maxConcurrency` — the names never matched, so the knob was INERT and
+    // every batch told the remote worker to use the adapter's own default of
+    // 20. Map it here, at the boundary that owns the adapter contract, and
+    // keep honouring an explicit maxConcurrency if a caller uses that name.
+    // IMPACT: hub-guessing worker concurrency drops 20 -> 10 (the value the
+    // API has always advertised). See
+    // docs/decisions/2026-08-05-hub-guessing-concurrency.md
+    const { concurrency: aliasedConcurrency, ...restDistributed } = distributedOptions;
     distributedAdapter = createDistributedFetchAdapter({
       workerUrl,
       localFetch: customFetchFn || fetchImpl,
-      ...distributedOptions,
+      ...restDistributed,
+      ...(restDistributed.maxConcurrency == null && aliasedConcurrency != null
+        ? { maxConcurrency: aliasedConcurrency }
+        : {}),
     });
     
     // Wrap the adapter's fetch method to match the expected signature
