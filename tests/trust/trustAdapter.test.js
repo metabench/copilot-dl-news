@@ -14,8 +14,11 @@ describe('trustAdapter module exports', () => {
     expect(typeof trustAdapterModule.createTrustAdapter).toBe('function');
   });
   
-  it('should only export createTrustAdapter', () => {
-    expect(Object.keys(trustAdapterModule)).toEqual(['createTrustAdapter']);
+  it('exports createTrustAdapter', () => {
+    // c201: the adapter was absorbed into news-crawler-db — the module is
+    // the whole package now (1300+ exports), so the exclusive-surface pin
+    // is dead; the contract that matters is that the factory is present.
+    expect(Object.keys(trustAdapterModule)).toContain('createTrustAdapter');
   });
 });
 

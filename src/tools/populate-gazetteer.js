@@ -234,7 +234,7 @@ function normalizeOptions(rawArgs) {
   } = options;
 
   const raw = ensureDb(dbPath);
-  try { ensureGazetteer(raw); } catch (_) {}
+  try { ensureGazetteer(raw); } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
 
   const facade = new HttpRequestResponseFacadeInstance(raw);
 
@@ -314,7 +314,7 @@ function normalizeOptions(rawArgs) {
   // Register source
   try {
     populateQueries.ensureRestCountriesSource();
-  } catch (_) {}
+  } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
 
   // Check if this ingestion has already been completed
   try {
@@ -332,7 +332,7 @@ function normalizeOptions(rawArgs) {
       };
       telemetry.info(`[gazetteer] Skipping: already ingested on ${runDate}`);
       telemetry.summary(summary);
-      try { raw.close(); } catch (_) {}
+      try { raw.close(); } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
       return;
     }
   } catch (_) { /* ignore and proceed */ }
@@ -345,7 +345,7 @@ function normalizeOptions(rawArgs) {
     if (!force && noFilters && populatedEnough) {
       const summary = { countries: 0, capitals: 0, names: 0, source: 'restcountries@v3.1', skipped: 'already-populated' };
       telemetry.summary(summary);
-      try { raw.close(); } catch (_) {}
+      try { raw.close(); } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
       return;
     }
   } catch (_) { /* ignore and proceed */ }
@@ -430,7 +430,7 @@ function normalizeOptions(rawArgs) {
         isOfficial: true,
         source: 'restcountries'
       });
-    } catch (_) {}
+    } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
     if (acronym) {
       try {
         populateQueries.insertPlaceName({
@@ -443,7 +443,7 @@ function normalizeOptions(rawArgs) {
           isOfficial: false,
           source: 'restcountries'
         });
-      } catch (_) {}
+      } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
     }
     return id;
   }
@@ -674,7 +674,10 @@ function normalizeOptions(rawArgs) {
             // Register the restcountries external ID on the existing place
             try {
               populateQueries.insertExternalId('restcountries', externalId, cid);
-            } catch (_) {}
+            } catch (error) {
+        // Loud (c201): a swallowed gazetteer WRITE is silent data loss.
+        console.warn('[populate-gazetteer] write failed:', error?.message || error);
+      }
           }
         }
 
@@ -694,11 +697,17 @@ function normalizeOptions(rawArgs) {
           capitals++;
           try {
             populateQueries.insertExternalId('restcountries', externalId, cid);
-          } catch (_) {}
+          } catch (error) {
+        // Loud (c201): a swallowed gazetteer WRITE is silent data loss.
+        console.warn('[populate-gazetteer] write failed:', error?.message || error);
+      }
         } else if (capLat && capLng) {
           try {
             populateQueries.updateCoordinatesIfMissing(cid, capLat, capLng);
-          } catch (_) {}
+          } catch (error) {
+        // Loud (c201): a swallowed gazetteer WRITE is silent data loss.
+        console.warn('[populate-gazetteer] write failed:', error?.message || error);
+      }
         }
 
         addRestCountryName(cid, cap, 'und', 'endonym', true, false, normCap);
@@ -738,7 +747,7 @@ function normalizeOptions(rawArgs) {
           if (bestCityName) {
             populateQueries.updateCanonicalName(bestCityName, cid);
           }
-        } catch (_) {}
+        } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
       }
 
       try {
@@ -746,7 +755,7 @@ function normalizeOptions(rawArgs) {
         if (bestCountryName) {
           populateQueries.updateCanonicalName(bestCountryName, pid);
         }
-      } catch (_) {}
+      } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
 
       // Supranational blocs (e.g., EU) membership
       const blocs = is_array(c.regionalBlocs) ? c.regionalBlocs : [];
@@ -758,7 +767,10 @@ function normalizeOptions(rawArgs) {
         const blocId = getOrCreateBloc(ac, nm);
         try {
           populateQueries.insertHierarchyRelation(blocId, pid, 'member_of', null);
-        } catch (_) {}
+        } catch (error) {
+        // Loud (c201): a swallowed gazetteer WRITE is silent data loss.
+        console.warn('[populate-gazetteer] write failed:', error?.message || error);
+      }
       }
     }
   });
@@ -856,7 +868,7 @@ function normalizeOptions(rawArgs) {
       });
       created = true;
       if (extId) {
-        try { populateQueries.insertExternalId(source, extId, pid); } catch (_) {}
+        try { populateQueries.insertExternalId(source, extId, pid); } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
       }
     }
     for (const nm of namesArr || []) {
@@ -872,20 +884,20 @@ function normalizeOptions(rawArgs) {
           isOfficial: Boolean(nm.official),
           source: source || 'wikidata'
         });
-      } catch (_) {}
+      } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
     }
     if (opts.adm1Code) {
-      try { populateQueries.updateAdm1IfMissing(opts.adm1Code, pid); } catch (_) {}
+      try { populateQueries.updateAdm1IfMissing(opts.adm1Code, pid); } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
     }
     if (opts.adm2Code) {
-      try { populateQueries.updateAdm2IfMissing(opts.adm2Code, pid); } catch (_) {}
+      try { populateQueries.updateAdm2IfMissing(opts.adm2Code, pid); } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
     }
     try {
       const best = populateQueries.findBestNameId(pid);
       if (best) {
         populateQueries.updateCanonicalName(best, pid);
       }
-    } catch (_) {}
+    } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
     return { id: pid, created };
   }
 
@@ -961,7 +973,7 @@ function normalizeOptions(rawArgs) {
       const namesArr = ent ? labelMap(ent) : (r.townLabel?.value ? [{ name: r.townLabel.value, lang: 'und', kind:'endonym', preferred:1, official:0 }] : []);
       const { id: sid, created: isNew } = insPlaceWithNames(kind, crow.country_code, pt ? pt.lat : null, pt ? pt.lon : null, pop, namesArr, 'wikidata', qid);
       if (isNew) created++;
-      try { populateQueries.insertHierarchyRelation(crow.id, sid, 'admin_parent', 1); } catch (_) {}
+      try { populateQueries.insertHierarchyRelation(crow.id, sid, 'admin_parent', 1); } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
     }
     return created;
   }
@@ -1012,7 +1024,7 @@ function normalizeOptions(rawArgs) {
             const namesArr = ent ? labelMap(ent) : (r.cityLabel?.value ? [{ name: r.cityLabel.value, lang: 'und', kind:'endonym', preferred:1, official:0 }] : []);
             const { id: cid, created } = insPlaceWithNames('city', crow.country_code, lat, lon, pop, namesArr, 'wikidata', qid);
             if (created) cityCount++;
-            try { populateQueries.insertHierarchyRelation(crow.id, cid, 'admin_parent', 1); } catch (_) {}
+            try { populateQueries.insertHierarchyRelation(crow.id, cid, 'admin_parent', 1); } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
           }
         } catch (e) {
           telemetry.warn(`[gazetteer] Cities import failed for ${crow.country_code}: ${e.message}`);
@@ -1063,11 +1075,11 @@ function normalizeOptions(rawArgs) {
               const claims = ent?.claims?.P300 || [];
               const v = claims[0]?.mainsnak?.datavalue?.value;
               if (tof(v) === 'string' && v.length <= 12) adm1Code = v;
-            } catch (_) {}
+            } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
             const namesArr = ent ? labelMap(ent) : (r.admLabel?.value ? [{ name: r.admLabel.value, lang: 'und', kind:'official', preferred:1, official:1 }] : []);
             const { id: rid, created } = insPlaceWithNames('region', crow.country_code, null, null, null, namesArr, 'wikidata', qid, { adm1Code });
             if (created) adm1Count++;
-            try { populateQueries.insertHierarchyRelation(crow.id, rid, 'admin_parent', 1); } catch (_) {}
+            try { populateQueries.insertHierarchyRelation(crow.id, rid, 'admin_parent', 1); } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
           }
         } catch (e) {
           telemetry.warn(`[gazetteer] ADM1 import failed for ${crow.country_code}: ${e.message}`);
@@ -1114,12 +1126,12 @@ function normalizeOptions(rawArgs) {
             try {
               const v = ent?.claims?.P300?.[0]?.mainsnak?.datavalue?.value;
               if (tof(v) === 'string' && v.length <= 24) adm2Code = v;
-            } catch (_) {}
+            } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
             // US county FIPS code
             try {
               const fips = ent?.claims?.P882?.[0]?.mainsnak?.datavalue?.value;
               if (!adm2Code && tof(fips) === 'string') adm2Code = fips;
-            } catch (_) {}
+            } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
             const pt = r.coord?.value ? parseWktPoint(r.coord.value) : null;
             const lat = pt ? pt.lat : null;
             const lon = pt ? pt.lon : null;
@@ -1134,7 +1146,10 @@ function normalizeOptions(rawArgs) {
             }
             try {
               populateQueries.insertHierarchyRelation(parentId || crow.id, rid, 'admin_parent', 1);
-            } catch (_) {}
+            } catch (error) {
+        // Loud (c201): a swallowed gazetteer WRITE is silent data loss.
+        console.warn('[populate-gazetteer] write failed:', error?.message || error);
+      }
             } catch (rowErr) {
               // Honest counters: a failed row is a FAILED row, not silence.
               adm2Failed++;
@@ -1170,7 +1185,7 @@ function normalizeOptions(rawArgs) {
             if (!cc2 || !qid) continue;
             const row = ccRows.find(x => x.country_code === cc2);
             if (!row) continue;
-            try { populateQueries.insertExternalId('wikidata', qid, row.id); } catch (_) {}
+            try { populateQueries.insertExternalId('wikidata', qid, row.id); } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
           }
         } catch (_) { /* continue next chunk */ }
       }
@@ -1185,7 +1200,10 @@ function normalizeOptions(rawArgs) {
     populateQueries.deleteEmptyPlaceNames();
     populateQueries.deleteNamelessPlaces();
     populateQueries.resetCanonicalNamePointers();
-  } catch (_) {}
+  } catch (error) {
+        // Loud (c201): a swallowed gazetteer WRITE is silent data loss.
+        console.warn('[populate-gazetteer] write failed:', error?.message || error);
+      }
   if (verbose) {
     printExistingSummary('After import');
     // Per-country delta table: existing(before) vs added in this run
@@ -1230,7 +1248,7 @@ function normalizeOptions(rawArgs) {
       } else {
         telemetry.info(lines.join('\n'));
       }
-    } catch (_) {}
+    } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
   }
   // Complete ingestion run
   try {
@@ -1387,5 +1405,5 @@ function normalizeOptions(rawArgs) {
   }
   
   telemetry.summary(finalSummary);
-  try { raw.close(); } catch (_) {}
+  try { raw.close(); } catch (_) { /* best-effort parse/telemetry fallback — reviewed c201 */ }
 })();

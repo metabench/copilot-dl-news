@@ -12,7 +12,7 @@ const {
   HasPaginationPattern,
   IsHomepage,
   FactRegistry
-} = require('../../../src/facts');
+} = require('../../../src/intelligence/facts');
 
 describe('URL Facts', () => {
   describe('HasDateSegment', () => {

@@ -162,7 +162,10 @@ class CrawlModeStrategy {
    */
   static create(crawlType, context) {
     // Lazy-load to avoid circular dependencies
-    const { isGazetteerMode, isIntelligentMode } = require('../../../shared/config');
+    // c201: src/shared/config has no index — these predicates live in the
+    // crawler config normalizer (production dangler: this lazy require threw
+    // whenever a mode was resolved by crawl type).
+    const { isGazetteerMode, isIntelligentMode } = require('../config/CrawlerConfigNormalizer');
     
     if (isGazetteerMode(crawlType)) {
       const GazetteerCrawlMode = require('./GazetteerCrawlMode');

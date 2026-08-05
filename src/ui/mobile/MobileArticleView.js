@@ -484,6 +484,12 @@ class MobileArticleView extends (jsgui?.Control || class {}) {
   _formatDate(dateStr) {
     try {
       const date = new Date(dateStr);
+      // c201: an unparseable date passes through unchanged — rendering the
+      // literal string "Invalid Date" to readers is worse than the raw value
+      // (contract pinned by the unit suite).
+      if (Number.isNaN(date.getTime())) {
+        return dateStr;
+      }
       const now = new Date();
       const diffMs = now - date;
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));

@@ -6,7 +6,7 @@
  * Tests scoring logic, factor weighting, and recommendation generation.
  */
 
-const { ContentConfidenceScorer } = require('../../../src/analysis/ContentConfidenceScorer');
+const { ContentConfidenceScorer } = require('../../../src/intelligence/analysis/ContentConfidenceScorer');
 
 describe('ContentConfidenceScorer', () => {
   let scorer;

@@ -289,7 +289,7 @@ function createRunTracker(dbPath, runId, initialData, { verbose = false } = {}) 
         });
       } catch (updateErr) {
         if (verbose) console.warn(`[analysis-run] tracker init failed: ${updateErr.message || updateErr}`);
-        try { db.close(); } catch (_) {}
+        try { db.close(); } catch (_) { /* best-effort progress/teardown — reviewed c201 */ }
         db = null;
       }
     } else if (verbose) {
@@ -325,7 +325,7 @@ function createRunTracker(dbPath, runId, initialData, { verbose = false } = {}) 
     },
     close() {
       if (!db) return;
-      try { db.close(); } catch (_) {}
+      try { db.close(); } catch (_) { /* best-effort progress/teardown — reviewed c201 */ }
       db = null;
     }
   };
@@ -451,10 +451,10 @@ function ensureDatabasePrepared(dbPath, { verbose = false } = {}) {
       console.log(`[analysis-run] database ensure: running schema migrations for ${dbPath}`);
     }
     if (db && db.db && typeof db.db.pragma === 'function') {
-      try { db.db.pragma('optimize'); } catch (_) {}
+      try { db.db.pragma('optimize'); } catch (_) { /* best-effort progress/teardown — reviewed c201 */ }
     }
   } finally {
-    try { db.close(); } catch (_) {}
+    try { db.close(); } catch (_) { /* best-effort progress/teardown — reviewed c201 */ }
   }
 }
 
@@ -774,11 +774,11 @@ async function runAnalysis(rawOptions = {}) {
   const pushProgress = (payload) => {
     if (!payload) return;
     if (progressSink) {
-      try { progressSink(payload); } catch (_) {}
+      try { progressSink(payload); } catch (_) { /* best-effort progress/teardown — reviewed c201 */ }
     }
     try {
       process.stdout.write(`ANALYSIS_PROGRESS ${JSON.stringify(payload)}\n`);
-    } catch (_) {}
+    } catch (_) { /* best-effort progress/teardown — reviewed c201 */ }
   };
   const emitProgress = (patch = {}, { throttleMs = 0 } = {}) => {
     if (!patch || typeof patch !== 'object') patch = {};
@@ -796,12 +796,12 @@ async function runAnalysis(rawOptions = {}) {
           pendingProgressTimer = null;
           emitProgress(pending || {}, { throttleMs: 0 });
         }, ms);
-        try { pendingProgressTimer.unref?.(); } catch (_) {}
+        try { pendingProgressTimer.unref?.(); } catch (_) { /* best-effort progress/teardown — reviewed c201 */ }
       }
       return;
     }
     if (pendingProgressTimer) {
-      try { clearTimeout(pendingProgressTimer); } catch (_) {}
+      try { clearTimeout(pendingProgressTimer); } catch (_) { /* best-effort progress/teardown — reviewed c201 */ }
       pendingProgressTimer = null;
       pendingProgressPatch = null;
     }
@@ -955,7 +955,7 @@ async function runAnalysis(rawOptions = {}) {
             if (total != null) progressLogger.record(total);
             if (progressReporter) progressReporter.report(payload);
             if (userProgressHandler) {
-              try { userProgressHandler(payload); } catch (_) {}
+              try { userProgressHandler(payload); } catch (_) { /* best-effort progress/teardown — reviewed c201 */ }
             }
             
             // Calculate percentage if total is known
@@ -1121,7 +1121,7 @@ async function runAnalysis(rawOptions = {}) {
     try {
       awarded = awardMilestones(db, { dryRun, verbose });
     } finally {
-      try { db.close(); } catch (_) {}
+      try { db.close(); } catch (_) { /* best-effort progress/teardown — reviewed c201 */ }
     }
 
     runSummary.steps.milestones = {
@@ -1227,7 +1227,7 @@ async function runAnalysis(rawOptions = {}) {
     throw err;
   } finally {
     if (pendingProgressTimer) {
-      try { clearTimeout(pendingProgressTimer); } catch (_) {}
+      try { clearTimeout(pendingProgressTimer); } catch (_) { /* best-effort progress/teardown — reviewed c201 */ }
       pendingProgressTimer = null;
       pendingProgressPatch = null;
     }
