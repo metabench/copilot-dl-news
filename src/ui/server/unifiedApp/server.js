@@ -461,7 +461,7 @@ function mountDashboardModules(unifiedApp, options = {}) {
         countryStats.refreshing = false;
       });
       child.on('error', () => { countryStats.refreshing = false; });
-      setTimeout(() => { try { child.kill(); } catch (_) {} }, 360000);
+      setTimeout(() => { try { child.kill(); } catch (_) { /* timeout child kill best-effort — reviewed c205 */ } }, 360000);
     } catch (_) { countryStats.refreshing = false; }
   }
 
@@ -497,7 +497,7 @@ function mountDashboardModules(unifiedApp, options = {}) {
         hostHealth.refreshing = false;
       });
       child.on('error', () => { hostHealth.refreshing = false; });
-      setTimeout(() => { try { child.kill(); } catch (_) {} }, 60000);
+      setTimeout(() => { try { child.kill(); } catch (_) { /* timeout child kill best-effort — reviewed c205 */ } }, 60000);
     } catch (_) { hostHealth.refreshing = false; }
   }
   unifiedApp.get('/api/v1/crawl/host-health', (req, res) => {
@@ -1468,7 +1468,7 @@ load(); setInterval(load, 60000);
         frontierStats.refreshing = false;
       });
       child.on('error', () => { frontierStats.refreshing = false; });
-      setTimeout(() => { try { child.kill(); } catch (_) {} }, 120000);
+      setTimeout(() => { try { child.kill(); } catch (_) { /* timeout child kill best-effort — reviewed c205 */ } }, 120000);
     } catch (_) { frontierStats.refreshing = false; }
   }
   // Warm the first snapshot shortly after boot, then refresh every 3 minutes.
@@ -1798,7 +1798,7 @@ load(); setInterval(load, 60000);
   async function waitHostJob(jobId, capMs, monitor, toFetchLen) {
     if (!(capMs > 0)) {
       // Single-host callers (/run, place-hubs): just await settlement.
-      try { await inProcessCrawlJobRegistry.waitForJob(jobId); } catch (_) {}
+      try { await inProcessCrawlJobRegistry.waitForJob(jobId); } catch (_) { /* job settlement wait — outcome reconciled by caller — reviewed c205 */ }
       return { reason: 'finished', timedOut: false };
     }
     const POLL_MS = 5000;
@@ -2295,7 +2295,12 @@ load(); setInterval(load, 60000);
           // Measured-stuck ('stuck') or absolute-cap ('timedOut'): abort the
           // lingering worker so it stops holding a slot + downloading past the
           // batch, then let it flush in-flight writes before reconciling.
-          try { inProcessCrawlJobRegistry.stop(s.ctx.jobId); } catch (_) {}
+          try { inProcessCrawlJobRegistry.stop(s.ctx.jobId); } catch (error) {
+            // Loud (c205): a worker that misses this stop keeps holding a
+            // slot and downloading past the batch — the exact condition the
+            // comment above exists to prevent.
+            console.warn('[unified-app] stuck-worker stop failed for job', s.ctx.jobId + ':', error?.message || error);
+          }
           await waitHostJob(s.ctx.jobId, WAIT_CAP_GRACE_MS);
           aborted = true;
         }
@@ -2377,7 +2382,7 @@ load(); setInterval(load, 60000);
           try { resolve(JSON.parse(out)); } catch (_) { resolve(null); }
         });
         child.on('error', () => resolve(null));
-        setTimeout(() => { try { child.kill(); } catch (_) {} resolve(null); }, 60000);
+        setTimeout(() => { try { child.kill(); } catch (_) { /* timeout child kill best-effort — reviewed c205 */ } resolve(null); }, 60000);
       } catch (_) { resolve(null); }
     });
   }

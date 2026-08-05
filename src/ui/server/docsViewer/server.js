@@ -312,7 +312,8 @@ function createDocsViewerServer(options = {}) {
         filters,
         columns,
         sortBy,
-        sortOrder
+        sortOrder,
+        basePath: req.baseUrl || '' // c205: SSR links carry the mount prefix
       });
 
       const html = renderPage(docApp, {
@@ -321,7 +322,8 @@ function createDocsViewerServer(options = {}) {
         columns,
         sortBy,
         sortOrder,
-        plugins // Pass loaded plugins to render
+        plugins, // Pass loaded plugins to render
+        basePath: req.baseUrl || '' // c205: '' standalone, '/docs' under the unified app
       });
 
       // Cache the rendered page
@@ -453,6 +455,11 @@ function renderPage(control, options = {}) {
   const sortBy = options.sortBy || 'name';
   const sortOrder = options.sortOrder || 'asc';
   const plugins = options.plugins || [];
+  // c205: root-relative asset links broke under the unified app's /docs
+  // mount — the browser requested /assets/docs-viewer.css, fell through to
+  // an HTML handler, and the stylesheet was refused (wrong MIME). basePath
+  // is req.baseUrl: '' standalone, '/docs' mounted.
+  const basePath = options.basePath || '';
   const html = control.all_html_render();
 
   // Check if jsgui3 client bundle exists
@@ -460,7 +467,7 @@ function renderPage(control, options = {}) {
   const hasClientBundle = fs.existsSync(clientBundlePath);
 
   const clientBundleScript = hasClientBundle
-    ? '<!-- jsgui3 client bundle for control activation -->\n  <script src="/assets/docs-viewer-client.js" defer></script>'
+    ? `<!-- jsgui3 client bundle for control activation -->\n  <script src="${basePath}/assets/docs-viewer-client.js" defer></script>`
     : '<!-- jsgui3 client bundle not built - run: npm run ui:docs:build -->';
 
   // Embed state for client-side hydration
@@ -468,6 +475,7 @@ function renderPage(control, options = {}) {
     window.__DOCS_FILTERS__ = ${JSON.stringify(filters)};
     window.__DOCS_COLUMNS__ = ${JSON.stringify(columns)};
     window.__DOCS_SORT__ = { sortBy: ${JSON.stringify(sortBy)}, sortOrder: ${JSON.stringify(sortOrder)} };
+    window.__DOCS_VIEWER_BASE_PATH__ = ${JSON.stringify(basePath)};
   </script>`;
 
   return `<!DOCTYPE html>
@@ -479,14 +487,14 @@ function renderPage(control, options = {}) {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manufacturing+Consent&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/docs-viewer.css">
+  <link rel="stylesheet" href="${basePath}/assets/docs-viewer.css">
   ${stateScript}
 </head>
 <body>
   ${html}
   ${clientBundleScript}
   <!-- Fallback vanilla JS for non-jsgui features -->
-   <script src="/assets/docs-viewer.js" defer></script>
+   <script src="${basePath}/assets/docs-viewer.js" defer></script>
    <!-- Plugins -->
    ${plugins.map(p => p.clientScript ? `<script src="${p.clientScript}" defer></script>` : '').join('\n')}
  </body>

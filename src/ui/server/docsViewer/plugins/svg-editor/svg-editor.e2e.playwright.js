@@ -1,6 +1,13 @@
 /**
  * E2E Test: SVG Editor Save Persistence
- * 
+ *
+ * c205: renamed from svg-editor.e2e.test.js — the .test.js name put this
+ * PLAYWRIGHT spec in jest's collection, where it failed to even load
+ * (@playwright/test has never been a dependency of this repo: no config,
+ * no package entry). It has therefore never run. Kept as the written spec
+ * for the save-persistence flow; to make it live, install playwright and
+ * run it with the playwright runner, not jest.
+ *
  * This test verifies that:
  * 1. Dragging an SVG element triggers the save flow
  * 2. The server confirms the save with a hash

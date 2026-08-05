@@ -256,7 +256,7 @@ function ledgerMentions(nodeId) {
  */
 function liveChannels() {
   let agentActivity = { idle: true, reason: 'activity log unavailable' };
-  try { agentActivity = require('./activity').current(); } catch (_) {}
+  try { agentActivity = require('./activity').current(); } catch (_) { /* optional activity module — absent renders as no activity — reviewed c205 */ }
   let pendingSignals = [];
   let signalHistory = [];
   try {
@@ -266,7 +266,7 @@ function liveChannels() {
     // the app now, and per-node YOUR REQUESTS render from this same list —
     // one source, no per-view endpoint.
     signalHistory = signals.effective();
-  } catch (_) {}
+  } catch (_) { /* optional signals module — status page renders without signals — reviewed c205 */ }
   return { agentActivity, pendingSignals, signalHistory };
 }
 
@@ -349,7 +349,7 @@ function buildStatus() {
     const backlogRows = parseBacklog(fs.readFileSync(path.join(ROOT, 'docs', 'agi', 'RESEARCH_BACKLOG.md'), 'utf8'));
     const spec = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'tech-tree.json'), 'utf8'));
     let roadmap = null;
-    try { roadmap = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'roadmap.json'), 'utf8')); } catch (_) {}
+    try { roadmap = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'roadmap.json'), 'utf8')); } catch (_) { /* optional roadmap.json — absent renders as no roadmap — reviewed c205 */ }
     techTree = buildTechTree(backlogRows, roadmap, spec);
     if (roadmap) roadmapOut = { block: roadmap.block || null, steps: Array.isArray(roadmap.steps) ? roadmap.steps : [] };
   } catch (e) {
@@ -379,7 +379,7 @@ function buildStatus() {
     };
     const dirs = fs.readdirSync(toolsRoot, { withFileTypes: true }).filter((e) => e.isDirectory() && e.name !== 'node_modules');
     toolInventory = { total: walk(toolsRoot, 0), dirs: dirs.length };
-  } catch (_) {}
+  } catch (_) { /* tool-inventory walk is a best-effort metric — reviewed c205 */ }
 
   const data = {
     player,

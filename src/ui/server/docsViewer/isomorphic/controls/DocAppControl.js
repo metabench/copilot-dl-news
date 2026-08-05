@@ -39,6 +39,10 @@ class DocAppControl extends jsgui.Control {
     this.columns = spec.columns || { mtime: false };
     this.sortBy = spec.sortBy || 'name';
     this.sortOrder = spec.sortOrder || 'asc';
+    // c205: '' standalone, '/docs' when mounted under the unified app —
+    // SSR'd links must carry the prefix (DocNavControl already took a
+    // basePath; it was just never threaded from the server).
+    this.basePath = spec.basePath || '';
 
     this.add_class("doc-app");
     this.dom.attributes["data-jsgui-id"] = "doc-app";
@@ -62,7 +66,7 @@ class DocAppControl extends jsgui.Control {
       context: this.context,
       docTree: this.docTree,
       selectedPath: this.selectedPath,
-      basePath: "/",
+      basePath: this.basePath || "/",
       filters: this.filters,
       columns: this.columns,
       sortBy: this.sortBy,
@@ -85,7 +89,8 @@ class DocAppControl extends jsgui.Control {
 
     const viewer = new DocViewerControl({
       context: this.context,
-      docContent: this.docContent
+      docContent: this.docContent,
+      basePath: this.basePath
     });
     contentColumn.add(viewer);
 

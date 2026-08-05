@@ -120,10 +120,10 @@ async function guessPlaceHubs(options = {}, legacyDeps = {}) {
   } finally {
     // Release the policy-aware fetch's Puppeteer browser (if it launched
     // one for a TLS-fingerprinting host) before closing the DB.
-    try { if (deps.fetchFn && typeof deps.fetchFn.close === 'function') await deps.fetchFn.close(); } catch (_) {}
+    try { if (deps.fetchFn && typeof deps.fetchFn.close === 'function') await deps.fetchFn.close(); } catch (_) { /* fetcher close in teardown — reviewed c205 */ }
     // Close database connections to avoid EBUSY errors in tests
-    try { if (deps.db && typeof deps.db.close === 'function') deps.db.close(); } catch (_) {}
-    try { if (deps.newsDb && typeof deps.newsDb.close === 'function') deps.newsDb.close(); } catch (_) {}
+    try { if (deps.db && typeof deps.db.close === 'function') deps.db.close(); } catch (_) { /* db close in teardown — reviewed c205 */ }
+    try { if (deps.newsDb && typeof deps.newsDb.close === 'function') deps.newsDb.close(); } catch (_) { /* newsDb close in teardown — reviewed c205 */ }
   }
 }
 
@@ -257,7 +257,7 @@ function extractPredictionSignals(predictionSource) {
 async function fetchUrl(url, fetchFn, { logger, timeoutMs = 15000, method = 'GET' } = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => {
-    try { controller.abort(); } catch (_) {}
+    try { controller.abort(); } catch (_) { /* abort on teardown — controller may already be settled — reviewed c205 */ }
   }, timeoutMs);
   const started = Date.now();
   const requestStartedIso = new Date(started).toISOString();

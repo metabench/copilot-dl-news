@@ -21,9 +21,12 @@ class DocViewerControl extends jsgui.Control {
    */
   constructor(spec = {}) {
     super({ ...spec, tagName: "main" });
-    
+
     this.docContent = spec.docContent || null;
-    
+    // c205: '' standalone, '/docs' under the unified app — welcome links
+    // must carry the mount prefix.
+    this.basePath = spec.basePath || '';
+
     this.add_class("doc-viewer");
     this.dom.attributes["role"] = "main";
     
@@ -81,7 +84,7 @@ class DocViewerControl extends jsgui.Control {
     for (const doc of defaultDocs) {
       const li = new jsgui.Control({ context: this.context, tagName: "li" });
       const link = new jsgui.Control({ context: this.context, tagName: "a" });
-      link.dom.attributes.href = `/?doc=${encodeURIComponent(doc.name)}`;
+      link.dom.attributes.href = `${this.basePath || '/'}?doc=${encodeURIComponent(doc.name)}`;
       link.add(new StringControl({ context: this.context, text: doc.label }));
       li.add(link);
       linkList.add(li);

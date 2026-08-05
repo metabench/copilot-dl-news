@@ -553,17 +553,6 @@ function createSubAppRegistry(options = {}) {
     },
 
     {
-      id: 'crawl-status',
-      label: 'Crawl Status',
-      icon: '🏃',
-      category: 'crawler',
-      description: 'Start crawl operations and view real-time progress',
-      renderContent: async () => {
-        return renderIframeApp('/crawl-status', 'Crawl Status');
-      }
-    },
-
-    {
       id: 'multi-modal-crawl',
       label: 'Multi-Modal Crawl',
       icon: '🔄',
@@ -585,39 +574,10 @@ function createSubAppRegistry(options = {}) {
       }
     },
 
-    {
-      id: 'crawler-profiles',
-      label: 'Crawler Profiles',
-      icon: '🗃️',
-      category: 'crawler',
-      description: 'DB-backed crawl presets (start URL + operation + overrides)',
-      renderContent: async () => {
-        return renderIframeApp('/crawler-profiles', 'Crawler Profiles');
-      }
-    },
-
-    {
-      id: 'domain-registry',
-      label: 'Domain Registry',
-      icon: '🗂️',
-      category: 'crawler',
-      description: 'Manage crawl domains and sync enabled hosts into scheduler',
-      renderContent: async () => {
-        return renderIframeApp('/domain-registry', 'Domain Registry');
-      }
-    },
-
-    {
-      id: 'crawl-strategies',
-      label: 'Crawl Strategies',
-      icon: '🕷️',
-      category: 'crawler',
-      description: 'Browse crawl operations, sequences, and configuration options',
-      renderContent: async () => {
-        return renderIframeApp('/crawl-strategies', 'Crawl Strategies');
-      }
-    },
-
+    // c205: crawler-profiles, domain-registry, and crawl-strategies removed —
+    // their mounts were retired in cycle 171 but the registry entries stayed,
+    // so the sidebar navigated users into 404 iframes (caught by the
+    // puppeteer navigation smoke, invisible to every in-process check).
     {
       id: 'crawler-monitor',
       label: 'Crawler Monitor',
@@ -643,17 +603,8 @@ function createSubAppRegistry(options = {}) {
       }
     },
 
-    {
-      id: 'plugins',
-      label: 'Plugins',
-      icon: '🧩',
-      category: 'admin',
-      description: 'Plugin lifecycle and management',
-      renderContent: async () => {
-        return renderIframeApp('/plugins', 'Plugins');
-      }
-    },
-
+    // c205: 'plugins' removed — pluginDashboard's mount was retired in cycle
+    // 171; this entry iframed the dead /plugins route (404).
     {
       id: 'admin',
       label: 'Admin',
@@ -823,17 +774,8 @@ function createSubAppRegistry(options = {}) {
       }
     },
 
-    {
-      id: 'design',
-      label: 'Design Studio',
-      icon: '🎨',
-      category: 'dev',
-      description: 'Browse design assets (SVG/PNG) in-app',
-      renderContent: async () => {
-        return renderIframeApp('/design', 'Design Studio');
-      }
-    },
-
+    // c205: 'design' removed — designStudio's mount was retired in cycle 171;
+    // this entry iframed the dead /design route (404).
     {
       id: 'panel-demo',
       label: 'Panel Demo',

@@ -24,8 +24,8 @@ function initGazetteerDb(dbPath) {
   // Sensible pragmas for tools
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = OFF'); // Disable during import to handle unordered data
-  try { db.pragma('busy_timeout = 5000'); } catch (_) {}
-  try { db.pragma('synchronous = NORMAL'); } catch (_) {}
+  try { db.pragma('busy_timeout = 5000'); } catch (_) { /* busy_timeout pragma best-effort — reviewed c205 */ }
+  try { db.pragma('synchronous = NORMAL'); } catch (_) { /* synchronous pragma best-effort — reviewed c205 */ }
 
   // Initialize gazetteer tables
   initGazetteerTables(db, { verbose: false, logger: console });
@@ -41,7 +41,7 @@ function getArg(name, fallback) {
 }
 
 (async () => {
-  const log = (...args) => { try { console.error(...args); } catch (_) {} };
+  const log = (...args) => { try { console.error(...args); } catch (_) { /* stderr log guard — logging must never break the import — reviewed c205 */ } };
   const projectRoot = findProjectRoot(__dirname);
   const dbPath = getArg('db', path.join(projectRoot, 'data', 'news.db'));
   const ndjsonPath = getArg('ndjson', path.join(projectRoot, 'data', 'gazetteer.ndjson'));
@@ -196,7 +196,7 @@ function getArg(name, fallback) {
     });
     log(`  Total: ${total} records`);
 
-    try { raw.close(); } catch (_) {}
+    try { raw.close(); } catch (_) { /* raw db close in teardown — reviewed c205 */ }
 
     // Output JSON summary for automation
     console.log(JSON.stringify({
@@ -209,7 +209,7 @@ function getArg(name, fallback) {
 
   parser.on('error', (err) => {
     log(`[gazetteer] Parser error: ${err.message}`);
-    try { raw.close(); } catch (_) {}
+    try { raw.close(); } catch (_) { /* raw db close in teardown — reviewed c205 */ }
     process.exit(1);
   });
 

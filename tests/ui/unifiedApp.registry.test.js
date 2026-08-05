@@ -24,14 +24,14 @@ describe('unifiedApp sub-app registry', () => {
       'home',
       'rate-limits',
       'crawl-observer',
-      'crawl-status',
       'webhooks',
-      'plugins',
       'quality',
       'analytics',
       'query-telemetry',
-      'docs',
-      'design'
+      'docs'
+      // c205: crawl-status, plugins, and design removed from required — their
+      // mounts were retired in cycle 171 and the dangling registry entries
+      // (sidebar links into 404 iframes) were removed this cycle.
     ];
 
     for (const id of required) {
@@ -58,16 +58,16 @@ describe('unifiedApp sub-app registry', () => {
 
     const byId = new Map(apps.map((app) => [app.id, app]));
 
+    // c205: crawl-status, plugins, and design assertions removed with their
+    // dangling registry entries (mounts retired cycle 171 — the sidebar was
+    // iframing 404s).
     await expect(normalizeRenderResult(await byId.get('rate-limits').renderContent({})).content).toContain('src="/rate-limit"');
     await expect(normalizeRenderResult(await byId.get('crawl-observer').renderContent({})).content).toContain('src="/crawl-observer"');
-    await expect(normalizeRenderResult(await byId.get('crawl-status').renderContent({})).content).toContain('src="/crawl-status"');
     await expect(normalizeRenderResult(await byId.get('webhooks').renderContent({})).content).toContain('src="/webhooks"');
-    await expect(normalizeRenderResult(await byId.get('plugins').renderContent({})).content).toContain('src="/plugins"');
     await expect(normalizeRenderResult(await byId.get('quality').renderContent({})).content).toContain('src="/quality"');
     await expect(normalizeRenderResult(await byId.get('analytics').renderContent({})).content).toContain('src="/analytics"');
     await expect(normalizeRenderResult(await byId.get('query-telemetry').renderContent({})).content).toContain('src="/telemetry"');
     await expect(normalizeRenderResult(await byId.get('docs').renderContent({})).content).toContain('src="/docs"');
-    await expect(normalizeRenderResult(await byId.get('design').renderContent({})).content).toContain('src="/design"');
 
     // Regression guard: the embedded panel demo must request activation.
     const panelDemo = normalizeRenderResult(await byId.get('panel-demo').renderContent({}));
@@ -76,6 +76,9 @@ describe('unifiedApp sub-app registry', () => {
     expect(panelDemo.content).toContain('data-unified-activate="panel-demo"');
   });
 
+  // c205: the server.js require alone measures ~5s cold (heavy module
+  // init); under parallel-session CPU load the default 10s budget flakes.
+  // 30s is headroom over the measured baseline, not a hidden hang.
   test('GET /api/apps returns stable schema', async () => {
     const { app: unifiedAppServer, SUB_APPS } = require('../../src/ui/server/unifiedApp/server');
 
@@ -101,9 +104,14 @@ describe('unifiedApp sub-app registry', () => {
 
     // IDs should match the registry the shell actually uses.
     expect(ids).toEqual(SUB_APPS.map((subApp) => subApp.id));
-  });
+  }, 30000);
 
-  test('home page Available Apps count matches actual registry length', async () => {
+  test('home page renders the crawl-ecosystem dashboard', async () => {
+    // c205: the old pin ("Available Apps" stat equals registry length) died
+    // in the panel-hero redesign — the home page is a crawl-ecosystem
+    // dashboard now, and no app-count stat exists anywhere in its markup.
+    // Pin the redesigned contract instead: the hero plus the five live
+    // stat cards (values load client-side, so labels are the stable part).
     const apps = createSubAppRegistry();
     const home = apps.find((app) => app.id === 'home');
     expect(home).toBeDefined();
@@ -111,9 +119,14 @@ describe('unifiedApp sub-app registry', () => {
     const result = normalizeRenderResult(await home.renderContent({}));
     const html = result.content;
 
-    // The stat-value for Available Apps should equal apps.length (dynamic, not hardcoded).
-    const match = html.match(/<span class="stat-value">(\d+)<\/span>\s*\n?\s*<span class="stat-label">Available Apps<\/span>/);
-    expect(match).not.toBeNull();
-    expect(Number(match[1])).toBe(apps.length);
+    expect(html).toContain('panel-hero__title');
+    const labels = [...html.matchAll(/panel-stat-card__label">([^<]+)</g)].map((m) => m[1]);
+    expect(labels).toEqual([
+      'Articles Indexed',
+      'Known Hub Pages',
+      'Tracked Domains',
+      'Active Crawls',
+      'Recent Errors (10m)'
+    ]);
   });
 });

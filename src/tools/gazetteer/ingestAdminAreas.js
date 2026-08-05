@@ -127,7 +127,10 @@ async function ingestAdminAreas(db, opts = {}) {
 
             const parentQ = (r.parent?.value || '').split('/').pop();
             const parentId = parentQ ? (q.findExternalId('wikidata', parentQ)?.id || null) : null;
-            try { q.insertHierarchyRelation(parentId || country.id, findExtId(q, qid), 'admin_parent', 1); } catch (_) {}
+            try { q.insertHierarchyRelation(parentId || country.id, findExtId(q, qid), 'admin_parent', 1); } catch (error) {
+              // Loud (c205): a swallowed hierarchy WRITE is silent data loss.
+              logger.warn(`[ingest-admin] hierarchy write failed ${classKey}:${qid}: ${error?.message || error}`);
+            }
           } catch (rowErr) {
             perClass.failed++; result.failed++;
             result.errors.push(`${classKey}:${qid}: ${rowErr.message}`);
@@ -139,7 +142,7 @@ async function ingestAdminAreas(db, opts = {}) {
         logger.warn(`[ingest-admin] class failed ${classKey}: ${classErr.message}`);
       }
       result.byClass[classKey] = perClass;
-      if (onProgress) { try { onProgress({ country: countryCode, classQid: cls.wikidataClassQid, ...perClass }); } catch (_) {} }
+      if (onProgress) { try { onProgress({ country: countryCode, classQid: cls.wikidataClassQid, ...perClass }); } catch (_) { /* onProgress listener guard — a throw must not break ingest — reviewed c205 */ } }
     }
   }
 
@@ -198,7 +201,10 @@ function upsertPlaceWithNames(q, { kind, countryCode, lat, lng, namesArr, source
       canonicalNameId: null, source, extra: null,
     });
     created = true;
-    if (extId) { try { q.insertExternalId(source, extId, pid); } catch (_) {} }
+    if (extId) { try { q.insertExternalId(source, extId, pid); } catch (error) {
+      // Loud (c205): a swallowed external-id WRITE breaks future dedup joins.
+      console.warn(`[ingest-admin] external-id write failed (${source}:${extId}):`, error?.message || error);
+    } }
   }
   for (const nm of namesArr || []) {
     if (!nm || !nm.name) continue;
@@ -209,15 +215,25 @@ function upsertPlaceWithNames(q, { kind, countryCode, lat, lng, namesArr, source
         isPreferred: Boolean(nm.preferred), isOfficial: Boolean(nm.official),
         source: source || 'wikidata',
       });
-    } catch (_) {}
+    } catch (error) {
+      // Loud (c205): a swallowed name WRITE loses the place's searchable label.
+      console.warn(`[ingest-admin] place-name write failed (place ${pid}, "${nm.name}"):`, error?.message || error);
+    }
   }
   if (adm2Code && typeof q.updateAdm2IfMissing === 'function') {
-    try { q.updateAdm2IfMissing(adm2Code, pid); } catch (_) {}
+    try { q.updateAdm2IfMissing(adm2Code, pid); } catch (error) {
+      // Loud (c205): a swallowed adm2 WRITE leaves the region unlinked.
+      console.warn(`[ingest-admin] adm2 write failed (place ${pid}):`, error?.message || error);
+    }
   }
   try {
     const best = q.findBestNameId(pid);
     if (best) q.updateCanonicalName(best, pid);
-  } catch (_) {}
+  } catch (error) {
+    // Loud (c205): a swallowed canonical-name WRITE leaves the place unnamed
+    // in every rendered view.
+    console.warn(`[ingest-admin] canonical-name write failed (place ${pid}):`, error?.message || error);
+  }
   return { id: pid, created };
 }
 
