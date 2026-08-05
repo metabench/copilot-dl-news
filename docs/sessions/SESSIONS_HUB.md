@@ -31,6 +31,24 @@
 
 ## Current Sessions
 
+### Session 2026-08-05: Slow-dashboard snapshot cache (c205 perf chip)
+
+**Duration**: Complete
+**Type**: performance fix
+**Completion**: ✅ Complete
+
+**Focus**:
+- /quality (14-39s of synchronous aggregates) and /place-hubs (~9s jsgui3 render, 8.5MB page) froze the unified server's event loop per request
+- Added `htmlSnapshotCache` (child-process page builds, serve-stale, TTL 45s — the countryStats/hostHealth idiom at the dashboard layer); warm serves now 3-190ms
+- Removed both e2e walk exceptions; `tests/ui/unifiedApp.puppeteer.e2e.test.js` passes with the plain 20s budget
+
+**Location**: `docs/sessions/2026-08-05-slow-dashboard-snapshot-cache/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2026-08-05-slow-dashboard-snapshot-cache/PLAN.md)
+- 📝 [Working Notes](./2026-08-05-slow-dashboard-snapshot-cache/WORKING_NOTES.md)
+- 📐 [ADR](../decisions/2026-08-05-dashboard-html-snapshot-cache.md)
+
 ### Session 2026-02-02: MoldBot research (OpenClaw)
 
 **Duration**: Complete

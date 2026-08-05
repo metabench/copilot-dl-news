@@ -325,17 +325,11 @@ describe('unifiedApp puppeteer navigation smoke', () => {
         throw new Error('No nav items found to test');
       }
 
-      // c205: quality + place-hubs are NOT activated in this walk. Their
-      // pages run synchronous better-sqlite3 aggregates (9-19s and 6s) that
-      // FREEZE the whole server event loop the moment the iframe request
-      // lands — poisoning every later step even if the client navigates
-      // away. Their nav wiring is pinned by the registry unit test; the perf
-      // defect is chipped. Re-add them here when the pages are fast.
-      const skipActivation = new Set(['quality', 'place-hubs']);
-
-      // Walk all apps via the actual UI.
+      // Walk all apps via the actual UI. quality + place-hubs are walked like
+      // every other app since the c205 perf chip landed: their pages serve an
+      // HTML snapshot (or an instant "computing" placeholder) built in a
+      // child process, so nothing here can freeze the server's event loop.
       for (const appId of uniqueAppIds) {
-        if (skipActivation.has(appId)) continue;
         // c205: name the app in every wait failure — a bare TimeoutError
         // from a 27-app walk is undiagnosable.
         const step = async (label, fn) => {
@@ -373,26 +367,7 @@ describe('unifiedApp puppeteer navigation smoke', () => {
         });
 
         if (iframeSrc) {
-          // c205: /quality measures 19.1s alone against the live db
-          // (uncached synchronous aggregates — chipped as a perf defect) and
-          // exceeds any sane budget under parallel load. For known-slow
-          // routes the walk verifies the nav wiring (iframe present with the
-          // right src) without riding the slow body. Remove the exception
-          // when the chip lands and the page is fast.
-          // Latency census 2026-08-05: /quality 9.1s warm (19.1s cold),
-          // /place-hubs 6.0s; every other mounted route <1.5s. Worse:
-          // better-sqlite3 aggregates are SYNCHRONOUS, so while one of these
-          // pages renders, the whole unified-app event loop is frozen and
-          // every later walk step stalls behind it. For known-slow routes
-          // the walk verifies nav wiring (iframe present, right src), then
-          // BLANKS the iframe so its load cannot freeze the server under
-          // subsequent apps. Remove when the perf chip lands.
-          const knownSlowRoutes = new Set(['/quality', '/place-hubs']);
-          if (!knownSlowRoutes.has(iframeSrc)) {
-            await waitForHttp200(`${baseUrl}${iframeSrc}`, { timeoutMs: 20_000 });
-          } else {
-            await page.$eval(`#app-${appId} iframe.app-embed`, (el) => { el.src = 'about:blank'; });
-          }
+          await step('iframe route 200', () => waitForHttp200(`${baseUrl}${iframeSrc}`, { timeoutMs: 20_000 }));
         } else {
           // Non-iframe apps render the home dashboard, a placeholder, or a
           // panel-system root (c205: background-tasks / crawl-throughput).

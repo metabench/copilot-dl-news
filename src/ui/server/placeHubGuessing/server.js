@@ -8,11 +8,12 @@ const jsgui = require('jsgui3-html');
 
 const { resolveBetterSqliteHandle } = require('../utils/dashboardModule');
 const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
+const { createHtmlSnapshotCache, renderComputingPage } = require('../utils/htmlSnapshotCache');
+const { renderPlaceHubGuessingMatrixHtml, normalizeMatrixMode } = require('./renderMatrixPage');
 
 const { renderPageHtml } = require('../shared');
 
 const {
-  buildMatrixModel,
   getCellModel,
   upsertCellVerification,
   computeAgeLabel,
@@ -54,7 +55,7 @@ const { createPlaceHubDependencies } = require('../../../core/orchestration/depe
 const CrawlOperations = require('../../../core/crawler/CrawlOperations');
 const { UrlPatternLearningService } = require('../../../services/UrlPatternLearningService');
 
-const { PlaceHubGuessingMatrixControl, PlaceHubGuessingCellControl } = require('./controls');
+const { PlaceHubGuessingCellControl } = require('./controls');
 const { createHubGuessingJobStore } = require('../hubGuessing/utils/hubGuessingJobs');
 const { parseBoolean, parseNumber } = require('../hubGuessing/utils/guessingRequestUtils');
 
@@ -120,12 +121,6 @@ function broadcastEvent(type, data = {}) {
 
 // ==========================================
 
-function normalizeMatrixMode(value) {
-  const v = String(value || '').toLowerCase().trim();
-  if (v === 'table' || v === 'virtual') return v;
-  return 'auto';
-}
-
 const VALID_STATE_FILTERS = new Set([
   'all',
   'unchecked',
@@ -148,35 +143,6 @@ function renderErrorHtml(message, title = 'Error') {
   const pre = new jsgui.Control({ context: ctx, tagName: 'pre' });
   pre.add(new jsgui.String_Control({ context: ctx, text: String(message || '') }));
   return renderPageHtml(pre, { title });
-}
-
-function renderPlaceHubGuessingMatrixHtml(options = {}) {
-  const { dbHandle } = options;
-  if (!dbHandle) {
-    throw new Error('renderPlaceHubGuessingMatrixHtml requires dbHandle');
-  }
-
-  const model = buildMatrixModel(dbHandle, options);
-  model.activePattern = options.activePattern;
-  model.parentPlace = options.parentPlace;
-  model.continent = options.continent;
-  model.matrixMode = options.matrixMode;
-  model.matrixThreshold = options.matrixThreshold;
-  const ctx = new jsgui.Page_Context();
-
-  const control = new PlaceHubGuessingMatrixControl({
-    context: ctx,
-    basePath: options.basePath || '',
-    model,
-    computeAgeLabel,
-    getMappingOutcome,
-    matrixMode: normalizeMatrixMode(options.matrixMode),
-    matrixThreshold: Number.isFinite(options.matrixThreshold) ? options.matrixThreshold : undefined
-  });
-
-  return renderPageHtml(control, {
-    title: '🧭 Place Hub Guessing — Coverage Matrix'
-  });
 }
 
 function renderPlaceHubGuessingCellHtml({
@@ -289,6 +255,10 @@ async function createPlaceHubGuessingRouter(options = {}) {
   }
 
   const router = express.Router();
+
+  // Extra teardown steps (e.g. the matrix snapshot cache) run before the db
+  // handle closes.
+  const routerClosers = [];
 
   // Needed for simple HTML form submissions.
   router.use(express.urlencoded({ extended: false }));
@@ -2041,6 +2011,28 @@ async function createPlaceHubGuessingRouter(options = {}) {
   });
 
   if (includeRootRoute) {
+    // GET / serves the last HTML snapshot instead of rendering in-band. The
+    // matrix queries are cheap (buildMatrixModel ~0.3s cold / ~10ms warm) but
+    // the jsgui3 render of the 200×30 matrix is a synchronous ~6-9s producing
+    // an ~8.5MB page (latency census 2026-08-05) — on the unified server it
+    // froze every other route while rendering. snapshotChild.js re-renders in
+    // a child process per parameter combination; until a combination's first
+    // snapshot lands, visitors get an instant auto-refreshing placeholder.
+    // Same pattern as countryStats/hostHealth in unifiedApp/server.js.
+    // maxEntries is small on purpose: each cached entry is ~8.5MB.
+    const isCheckMode = process.argv.includes('--check');
+    const matrixSnapshot = createHtmlSnapshotCache({
+      label: 'place-hub-matrix',
+      ttlMs: 45000,
+      maxEntries: 6,
+      childModulePath: path.join(__dirname, 'snapshotChild.js'),
+      childArgs: (renderOptions) => [
+        '--options', JSON.stringify(renderOptions),
+        ...(dbPath ? ['--db-path', dbPath] : [])
+      ]
+    });
+    routerClosers.push(() => matrixSnapshot.dispose());
+
     router.get('/', (req, res) => {
       try {
         const placeKind = normalizePlaceKind(req.query.kind);
@@ -2057,8 +2049,7 @@ async function createPlaceHubGuessingRouter(options = {}) {
         const activePattern = req.query.activePattern || '';
         const parentPlace = req.query.parentPlace || '';
 
-        const html = renderPlaceHubGuessingMatrixHtml({
-          dbHandle: resolved.dbHandle,
+        const renderOptions = {
           placeKind,
           pageKind,
           placeLimit,
@@ -2072,9 +2063,21 @@ async function createPlaceHubGuessingRouter(options = {}) {
           activePattern,
           parentPlace,
           basePath: req.baseUrl || ''
-        });
+        };
+        const cacheKey = JSON.stringify(renderOptions);
 
-        res.type('html').send(html);
+        if (!isCheckMode) {
+          matrixSnapshot.maybeRefresh(cacheKey, renderOptions);
+        }
+        const hit = matrixSnapshot.get(cacheKey);
+        if (hit) {
+          res.type('html').send(hit.html);
+          return;
+        }
+        res.type('html').send(renderComputingPage({
+          title: '🧭 Place Hub Guessing — Coverage Matrix',
+          message: 'Rendering the coverage-matrix snapshot (large jsgui3 render runs off the event loop).'
+        }));
       } catch (err) {
         res.status(500).type('html').send(renderErrorHtml(err.stack || err.message));
       }
@@ -2273,7 +2276,19 @@ async function createPlaceHubGuessingRouter(options = {}) {
     });
   }
 
-  return { router, close: resolved.close };
+  return {
+    router,
+    close: () => {
+      for (const closeStep of routerClosers) {
+        try {
+          closeStep();
+        } catch (err) {
+          // ignore
+        }
+      }
+      resolved.close();
+    }
+  };
 }
 
 module.exports = {

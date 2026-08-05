@@ -21,6 +21,7 @@ const { openNewsCrawlerDb } = require('../../../db/openNewsCrawlerDb');
 const jsgui = require('jsgui3-html');
 
 const { wrapServerForCheck } = require('../utils/serverStartupCheck');
+const { createHtmlSnapshotCache, renderComputingPage } = require('../utils/htmlSnapshotCache');
 
 const { QualityMetricsService } = require('./QualityMetricsService');
 const { DomainQualityTable, ConfidenceHistogram, RegressionAlerts } = require('./controls');
@@ -704,13 +705,45 @@ function renderDashboard(ctx, summary, distribution, regressions) {
   return container;
 }
 
+/**
+ * Build the complete dashboard page HTML (the three heavy aggregates + SSR).
+ * Runs 14-39s against the live db — call it from snapshotChild.js (off the
+ * server's event loop), never from a request handler.
+ */
+function renderDashboardPageHtml(service) {
+  const summary = service.getSummary();
+  const distribution = service.getConfidenceDistribution();
+  const regressions = service.getRegressions();
+
+  const ctx = new jsgui.Page_Context();
+  const content = renderDashboard(ctx, summary, distribution, regressions);
+  return renderPage('Quality Dashboard', content, 'dashboard');
+}
+
 // ─────────────────────────────────────────────────────────────
 // Express app
 // ─────────────────────────────────────────────────────────────
 
-function createApp(service = metricsService) {
+function createApp(service = metricsService, appOptions = {}) {
   const app = express();
   const isCheckMode = process.argv.includes('--check');
+
+  // GET / serves the last HTML snapshot instead of querying in-band: the
+  // dashboard aggregates are synchronous better-sqlite3 scans measured at
+  // 14-39s against the live db (latency census 2026-08-05), which froze the
+  // whole event loop — on the unified server every other route stalled
+  // behind one /quality request. snapshotChild.js re-renders the page in a
+  // child process; until the first snapshot lands, visitors get an instant
+  // auto-refreshing placeholder. Same pattern as countryStats/hostHealth in
+  // unifiedApp/server.js (tasks #39/#40).
+  const pageSnapshot = createHtmlSnapshotCache({
+    label: 'quality-dashboard',
+    ttlMs: 45000,
+    maxEntries: 2,
+    childModulePath: path.join(__dirname, 'snapshotChild.js'),
+    childArgs: () => (appOptions.dbPath ? ['--db-path', appOptions.dbPath] : [])
+  });
+  app.disposeSnapshotCache = () => pageSnapshot.dispose();
 
   // JSON API endpoints
   app.get('/api/quality/summary', (req, res) => {
@@ -800,13 +833,16 @@ function createApp(service = metricsService) {
         res.type('html').send('<!DOCTYPE html><html><head><title>Quality Dashboard (check)</title></head><body>ok</body></html>');
         return;
       }
-      const summary = service.getSummary();
-      const distribution = service.getConfidenceDistribution();
-      const regressions = service.getRegressions();
-
-      const ctx = new jsgui.Page_Context();
-      const content = renderDashboard(ctx, summary, distribution, regressions);
-      res.send(renderPage('Quality Dashboard', content, 'dashboard'));
+      pageSnapshot.maybeRefresh('dashboard', {});
+      const hit = pageSnapshot.get('dashboard');
+      if (hit) {
+        res.type('html').send(hit.html);
+        return;
+      }
+      res.type('html').send(renderComputingPage({
+        title: 'Quality Dashboard',
+        message: 'Computing the extraction-quality snapshot (heavy aggregates run off the event loop).'
+      }));
     } catch (err) {
       console.error('Dashboard render error:', err);
       res.status(500).send(`Error: ${err.message}`);
@@ -878,8 +914,8 @@ function startServer(options = {}) {
   const dbPath = options.dbPath || DB_PATH;
   
   initDb(dbPath);
-  const app = createApp(metricsService);
-  
+  const app = createApp(metricsService, { dbPath });
+
   server = wrapServerForCheck(app, port, undefined, () => {
     console.log(`\n📊 Quality Dashboard running at http://localhost:${port}`);
     console.log(`   Database: ${dbPath}\n`);
@@ -913,8 +949,18 @@ function createQualityDashboardRouter(options = {}) {
   }
 
   const service = new QualityMetricsService(dbHandle);
-  const router = createApp(service);
-  return { router, close };
+  const router = createApp(service, { dbPath });
+  return {
+    router,
+    close: () => {
+      try {
+        router.disposeSnapshotCache?.();
+      } catch (err) {
+        // ignore
+      }
+      close();
+    }
+  };
 }
 
 function closeServer() {
@@ -940,12 +986,13 @@ if (require.main === module) {
   });
 }
 
-module.exports = { 
-  createApp, 
+module.exports = {
+  createApp,
   createQualityDashboardRouter,
-  startServer, 
-  closeServer, 
+  startServer,
+  closeServer,
   initDb,
+  renderDashboardPageHtml,
   QualityMetricsService,
   SummaryCard,
   QualityTiers
