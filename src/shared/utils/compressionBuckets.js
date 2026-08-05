@@ -18,6 +18,19 @@ const {
   createStatsObject,
   PRESETS
 } = require('./CompressionFacade');
+// c209 (ncdb-debt ratchet): the compression_buckets SQL lives in
+// news-crawler-db now, so the bucket schema has one home. This module keeps
+// all tar/compression logic; only table access moved.
+const {
+  insertCompressionBucket,
+  getCompressionBucketBlob,
+  getCompressionBucketIndex,
+  getCompressionBucketStats,
+  finalizeCompressionBucket,
+  countContentStorageForBucket,
+  deleteCompressionBucket,
+  queryCompressionBuckets
+} = require('news-crawler-db');
 
 /**
  * Create a compression bucket from multiple items
@@ -117,30 +130,17 @@ function createBucket(db, options) {
             uncompressedSize: aggregatedContentSize
           });
 
-          const insertResult = db.prepare(`
-            INSERT INTO compression_buckets (
-              bucket_type,
-              domain_pattern,
-              compression_type_id,
-              bucket_blob,
-              content_count,
-              uncompressed_size,
-              compressed_size,
-              compression_ratio,
-              index_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            RETURNING id
-          `).get(
+          const insertResult = insertCompressionBucket(db, {
             bucketType,
-            domainPattern || null,
-            type.id,
-            result.compressed,
-            items.length,
-            stats.uncompressedSize,
-            stats.compressedSize,
-            stats.ratio,
-            JSON.stringify(index)
-          );
+            domainPattern: domainPattern || null,
+            compressionTypeId: type.id,
+            bucketBlob: result.compressed,
+            contentCount: items.length,
+            uncompressedSize: stats.uncompressedSize,
+            compressedSize: stats.compressedSize,
+            compressionRatio: stats.ratio,
+            indexJson: JSON.stringify(index)
+          });
 
           resolve({
             bucketId: insertResult.id,
@@ -182,12 +182,7 @@ function createBucket(db, options) {
  */
 async function retrieveFromBucket(db, bucketId, entryKey, cachedTarBuffer = null) {
   // Fetch bucket metadata
-  const bucket = db.prepare(`
-    SELECT cb.bucket_blob, cb.index_json, ct.algorithm
-    FROM compression_buckets cb
-    JOIN compression_types ct ON cb.compression_type_id = ct.id
-    WHERE cb.id = ?
-  `).get(bucketId);
+  const bucket = getCompressionBucketBlob(db, bucketId);
   
   if (!bucket) {
     throw new Error(`Bucket not found: ${bucketId}`);
@@ -289,9 +284,7 @@ async function retrieveFromBucket(db, bucketId, entryKey, cachedTarBuffer = null
  * @returns {Array<Object>} Array of { key, filename, size, metadata }
  */
 function listBucketEntries(db, bucketId) {
-  const bucket = db.prepare(`
-    SELECT index_json FROM compression_buckets WHERE id = ?
-  `).get(bucketId);
+  const bucket = getCompressionBucketIndex(db, bucketId);
   
   if (!bucket) {
     throw new Error(`Bucket not found: ${bucketId}`);
@@ -315,24 +308,7 @@ function listBucketEntries(db, bucketId) {
  * @returns {Object} Bucket statistics
  */
 function getBucketStats(db, bucketId) {
-  const bucket = db.prepare(`
-    SELECT 
-      cb.id,
-      cb.bucket_type,
-      cb.domain_pattern,
-      cb.content_count,
-      cb.uncompressed_size,
-      cb.compressed_size,
-      cb.compression_ratio,
-      cb.created_at,
-      cb.finalized_at,
-      ct.name as compression_type,
-      ct.algorithm,
-      ct.level
-    FROM compression_buckets cb
-    JOIN compression_types ct ON cb.compression_type_id = ct.id
-    WHERE cb.id = ?
-  `).get(bucketId);
+  const bucket = getCompressionBucketStats(db, bucketId);
   
   if (!bucket) {
     throw new Error(`Bucket not found: ${bucketId}`);
@@ -348,13 +324,9 @@ function getBucketStats(db, bucketId) {
  * @param {number} bucketId - Bucket ID
  */
 function finalizeBucket(db, bucketId) {
-  const result = db.prepare(`
-    UPDATE compression_buckets
-    SET finalized_at = CURRENT_TIMESTAMP
-    WHERE id = ? AND finalized_at IS NULL
-  `).run(bucketId);
-  
-  if (result.changes === 0) {
+  const changes = finalizeCompressionBucket(db, bucketId);
+
+  if (changes === 0) {
     throw new Error(`Bucket not found or already finalized: ${bucketId}`);
   }
 }
@@ -367,20 +339,15 @@ function finalizeBucket(db, bucketId) {
  */
 function deleteBucket(db, bucketId) {
   // Check if any content_storage rows reference this bucket
-  const references = db.prepare(`
-    SELECT COUNT(*) as count FROM content_storage
-    WHERE compression_bucket_id = ?
-  `).get(bucketId);
-  
-  if (references.count > 0) {
-    throw new Error(`Cannot delete bucket: ${references.count} content_storage rows reference it`);
+  const referenceCount = countContentStorageForBucket(db, bucketId);
+
+  if (referenceCount > 0) {
+    throw new Error(`Cannot delete bucket: ${referenceCount} content_storage rows reference it`);
   }
-  
-  const result = db.prepare(`
-    DELETE FROM compression_buckets WHERE id = ?
-  `).run(bucketId);
-  
-  if (result.changes === 0) {
+
+  const changes = deleteCompressionBucket(db, bucketId);
+
+  if (changes === 0) {
     throw new Error(`Bucket not found: ${bucketId}`);
   }
 }
@@ -410,49 +377,7 @@ function sanitizeFilename(key) {
  * @returns {Array<Object>} Array of bucket records
  */
 function queryBuckets(db, filters = {}) {
-  const { bucketType, domainPattern, finalizedOnly, limit } = filters;
-  
-  let sql = `
-    SELECT 
-      cb.id,
-      cb.bucket_type,
-      cb.domain_pattern,
-      cb.content_count,
-      cb.uncompressed_size,
-      cb.compressed_size,
-      cb.compression_ratio,
-      cb.created_at,
-      cb.finalized_at,
-      ct.name as compression_type
-    FROM compression_buckets cb
-    JOIN compression_types ct ON cb.compression_type_id = ct.id
-    WHERE 1=1
-  `;
-  
-  const params = [];
-  
-  if (bucketType) {
-    sql += ' AND cb.bucket_type = ?';
-    params.push(bucketType);
-  }
-  
-  if (domainPattern) {
-    sql += ' AND cb.domain_pattern = ?';
-    params.push(domainPattern);
-  }
-  
-  if (finalizedOnly) {
-    sql += ' AND cb.finalized_at IS NOT NULL';
-  }
-  
-  sql += ' ORDER BY cb.created_at DESC';
-  
-  if (limit) {
-    sql += ' LIMIT ?';
-    params.push(limit);
-  }
-  
-  return db.prepare(sql).all(...params);
+  return queryCompressionBuckets(db, filters);
 }
 
 module.exports = {
