@@ -85,7 +85,7 @@ Good places for MVRs in this repo:
 
 - `src/**/checks/*.check.js` for quick, deterministic checks
 - `tests/**` for Jest-based regression/contract tests
-- `src/ui/lab/experiments/**` for UI/activation/browser semantic research
+- `jsgui3-experiments/experiments/**` for UI/activation/browser semantic research
 
 ### 5) Run, observe, and iterate (tight loop)
 

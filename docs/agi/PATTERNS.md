@@ -148,7 +148,7 @@ AGI-accumulated knowledge catalog.
 
 **Steps/Details**:
 1. Search existing docs first (fast): run md-scan on guides, then docs, then docs/sessions for the topic/keywords.
-1. If no clear answer emerges, create a minimal lab experiment under src/ui/lab/experiments/ (smallest reproduction; SSR + client activation if relevant).
+1. If no clear answer emerges, create a minimal lab experiment under jsgui3-experiments/experiments/ (smallest reproduction; SSR + client activation if relevant).
 1. Add a check script alongside the experiment (under the experiment’s checks/ folder or the repo’s expected lab check harness) that renders/asserts the behavior deterministically.
 1. Wire the experiment into the lab manifest/catalog (keep status: proposed|active|validated|promoted|deprecated) and update the lab README if required.
 1. Run the experiment check and record the finding (what worked, what failed, edge cases). Promote the discovery into a durable guide if it’s generally useful.
@@ -413,7 +413,7 @@ AGI-accumulated knowledge catalog.
 1. Persist scalar state into `data-jsgui-fields` (via jsgui3 Control fields/persisted fields) so the client can hydrate it into `_persisted_fields`.
 1. Expose named child refs by emitting `data-jsgui-ctrl-fields` mapping (key→childId) so `pre_activate_content_controls` binds `this[key]` to the hydrated child control.
 1. In the control’s `activate()`, read `_persisted_fields` to restore state, then attach handlers using the hydrated ctrl_fields refs (e.g., `this.btn.on('click', ...)`).
-1. Validate end-to-end with a deterministic Puppeteer check (use experiment-style scripts like `src/ui/lab/.../check.js`) and keep it as a regression guard for dependency upgrades.
+1. Validate end-to-end with a deterministic Puppeteer check (use experiment-style scripts like `jsgui3-experiments/.../check.js`) and keep it as a regression guard for dependency upgrades.
 
 
 
@@ -434,14 +434,14 @@ AGI-accumulated knowledge catalog.
 1. 5. Populate the live model: `Object.entries(data).forEach(([k, v]) => this.data.model.set(k, v, true));` (silent=true for initial population)
 1. 6. Set up change listeners after population to react to future updates
 
-**Example**: src/ui/lab/experiments/021-data-model-mvc/client.js
+**Example**: jsgui3-experiments/experiments/021-data-model-mvc/client.js
 
 ---
 
 ## Safe two-way binding for Data_Object (use set, not assignment)
 
 **Added**: 2025-12-14
-**Context**: src/ui/lab/experiments/023-advanced-mvvm-patterns/client.js
+**Context**: jsgui3-experiments/experiments/023-advanced-mvvm-patterns/client.js
 
 **When to use**: You need two-way sync between a `Data_Object` and a view-model field, and you rely on `change` events (raw property assignment may not emit `change`).
 

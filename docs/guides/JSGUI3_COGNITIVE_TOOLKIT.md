@@ -33,7 +33,7 @@ _Last Verified: 2026-01-17_
 | **Performance diagnostics** | Before ANY optimization | 100% | Create diagnostic script FIRST |
 | **Control counting** | Slow renders | 95% | Walk `__ctrl_chain`, count total |
 | **Terminal hypothesis testing** | Understanding runtime behavior | 95% | Create minimal `node -e` scripts |
-| **Lab check scripts** | Validating examples in guides | 90% | Run `src/ui/lab/experiments/*/check.js` |
+| **Lab check scripts** | Validating examples in guides | 90% | Run `jsgui3-experiments/experiments/*/check.js` |
 | **Source grep + read** | Finding how something works | 90% | `grep_search` → `read_file` → understand |
 | **Diagram before code** | Understanding complex flows | 85% | ASCII diagrams clarify thinking |
 | **Compare to React/Vue** | Translating concepts | 80% | jsgui3 activation ≈ React hydration |

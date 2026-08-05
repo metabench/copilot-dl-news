@@ -24,24 +24,24 @@ description: Use repo lab experiments (src/ui/lab) to answer jsgui3 “how shoul
    - Then search sessions: `node tools/dev/md-scan.js --dir docs/sessions --search "<topic>" --json`
 
 2. Check whether a lab experiment already covers it
-   - Open lab index: `src/ui/lab/README.md`
-   - Open manifest: `src/ui/lab/manifest.json`
-   - Optional: render the Lab Console card list (quick sanity): `node src/ui/lab/checks/labConsole.check.js`
+   - Open lab index: `jsgui3-experiments/README.md`
+   - Open manifest: `jsgui3-experiments/manifest.json`
+   - Optional: render the Lab Console card list (quick sanity): `node jsgui3-experiments/checks/labConsole.check.js`
 
 3. Run the smallest relevant check(s)
    - Each experiment should have a `check.js` (or `check.all.js`) that exits cleanly.
    - Prefer targeted runs, e.g.:
-     - `node src/ui/lab/experiments/002-platform-helpers/check.js`
-     - `node src/ui/lab/experiments/004-theme-mixin/check.js`
+     - `node jsgui3-experiments/experiments/002-platform-helpers/check.js`
+     - `node jsgui3-experiments/experiments/004-theme-mixin/check.js`
 
 4. If the answer is still unclear, create a minimal new experiment
-   - Create `src/ui/lab/experiments/NNN-short-slug/`
+   - Create `jsgui3-experiments/experiments/NNN-short-slug/`
    - Add `README.md` (hypothesis + expected result) and `check.js` (deterministic assertions)
-   - Add an entry to `src/ui/lab/manifest.json` and the table in `src/ui/lab/README.md`
+   - Add an entry to `jsgui3-experiments/manifest.json` and the table in `jsgui3-experiments/README.md`
 
 5. If the behavior touches event semantics, run the delegation suite
    - Use the shared runner (reuses one browser/page):
-     - `node src/ui/lab/experiments/run-delegation-suite.js --scenario=005,006`
+     - `node jsgui3-experiments/experiments/run-delegation-suite.js --scenario=005,006`
    - Add/adjust scenarios if your change affects capture/bubble/selector matching/stopPropagation.
 
 6. If the behavior requires SSR + client activation + real interactivity, run a Puppeteer scenario suite
@@ -59,13 +59,13 @@ description: Use repo lab experiments (src/ui/lab) to answer jsgui3 “how shoul
 
 ## Validation
 
-- Lab console renders: `node src/ui/lab/checks/labConsole.check.js`
+- Lab console renders: `node jsgui3-experiments/checks/labConsole.check.js`
 - Run the specific experiment check(s) you relied on (examples):
-  - `node src/ui/lab/experiments/001-color-palette/check.js`
-  - `node src/ui/lab/experiments/002-platform-helpers/check.js`
-  - `node src/ui/lab/experiments/004-theme-mixin/check.js`
+  - `node jsgui3-experiments/experiments/001-color-palette/check.js`
+  - `node jsgui3-experiments/experiments/002-platform-helpers/check.js`
+  - `node jsgui3-experiments/experiments/004-theme-mixin/check.js`
 - If delegation/event semantics are involved:
-  - `node src/ui/lab/experiments/run-delegation-suite.js --scenario=005,006,007,008,011,014`
+  - `node jsgui3-experiments/experiments/run-delegation-suite.js --scenario=005,006,007,008,011,014`
 
 - If you need SSR + activation + browser interaction coverage:
    - `node tools/dev/ui-scenario-suite.js --suite=scripts/ui/scenarios/control-harness-counter.suite.js`
@@ -80,9 +80,9 @@ Ask for dedicated research if:
 
 ## References
 
-- Lab index: `src/ui/lab/README.md`
-- Lab manifest: `src/ui/lab/manifest.json`
-- Delegation suite runner: `src/ui/lab/experiments/run-delegation-suite.js`
+- Lab index: `jsgui3-experiments/README.md`
+- Lab manifest: `jsgui3-experiments/manifest.json`
+- Delegation suite runner: `jsgui3-experiments/experiments/run-delegation-suite.js`
 - Puppeteer scenario suites guide: `docs/guides/PUPPETEER_SCENARIO_SUITES.md`
 - Pattern: “Lab-First jsgui3 Knowledge Gap Closure” in `docs/agi/PATTERNS.md`
  - General experimental research SOP: `docs/agi/skills/experimental-research-metacognition/SKILL.md`

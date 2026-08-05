@@ -838,7 +838,7 @@ if (require.main === module) {
 |------|------|
 | Data Explorer | `src/ui/controls/` |
 | z-server | `z-server/ui/controls/` |
-| Lab experiments | `src/ui/lab/` |
+| Lab experiments | `jsgui3-experiments/` |
 | Art Playground | `src/ui/server/artPlayground/controls/` |
 | Gazetteer | `src/ui/server/gazetteer/controls/` |
 

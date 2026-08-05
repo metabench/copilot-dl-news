@@ -241,7 +241,7 @@ console.log(control.inspectBindings());
 
 ## Related Files
 
-- `src/ui/lab/experiments/001-color-palette/MVVM_ANALYSIS.md` - Full research notes
+- `jsgui3-experiments/experiments/001-color-palette/MVVM_ANALYSIS.md` - Full research notes
 - `node_modules/jsgui3-html/html-core/Data_Model_View_Model_Control.js` - Source
 - `node_modules/jsgui3-html/html-core/ModelBinder.js` - Binding implementation
 
@@ -249,7 +249,7 @@ console.log(control.inspectBindings());
 
 ## Verification Notes (2026-01-17)
 
-- MVVM lab check: `node src/ui/lab/experiments/023-advanced-mvvm-patterns/check.js`
+- MVVM lab check: `node jsgui3-experiments/experiments/023-advanced-mvvm-patterns/check.js`
 
 ---
 

@@ -63,7 +63,7 @@ This design explicitly embraces that future AI agents will be more capable and w
 ### 1.1 Directory Location
 
 ```
-src/ui/lab/starter-kit/
+jsgui3-experiments/starter-kit/
 ├── .gitignore                    # Standalone .gitignore
 ├── package.json                  # Self-contained dependencies
 ├── README.md                     # Quick start guide
@@ -1024,10 +1024,10 @@ name: Validate Starter Kit
 on:
   push:
     paths:
-      - 'src/ui/lab/starter-kit/**'
+      - 'jsgui3-experiments/starter-kit/**'
   pull_request:
     paths:
-      - 'src/ui/lab/starter-kit/**'
+      - 'jsgui3-experiments/starter-kit/**'
 
 jobs:
   validate:
@@ -1041,15 +1041,15 @@ jobs:
           node-version: '20'
           
       - name: Install dependencies
-        working-directory: src/ui/lab/starter-kit
+        working-directory: jsgui3-experiments/starter-kit
         run: npm install
         
       - name: Run SSR check
-        working-directory: src/ui/lab/starter-kit
+        working-directory: jsgui3-experiments/starter-kit
         run: npm run check
         
       - name: Run E2E check
-        working-directory: src/ui/lab/starter-kit
+        working-directory: jsgui3-experiments/starter-kit
         run: npm run check:e2e
 ```
 
@@ -1544,7 +1544,7 @@ Design bootstrapping for agents we can't fully predict:
 ## Appendix: Reference Materials
 
 ### From This Repo
-- `src/ui/lab/` — Existing lab structure
+- `jsgui3-experiments/` — Existing lab structure
 - `docs/agi/` — AGI documentation patterns
 - `.github/agents/` — Agent file examples
 - `node_modules/jsgui3-server/examples/controls/` — Window examples

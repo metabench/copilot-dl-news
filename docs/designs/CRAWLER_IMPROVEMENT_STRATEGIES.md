@@ -113,7 +113,7 @@ When validation returns `failureType: 'soft'`, the URL should be queued for Pupp
 
 **Experiment 030: Puppeteer Teacher Minimal**
 ```
-Location: src/ui/lab/experiments/030-puppeteer-teacher-minimal/
+Location: jsgui3-experiments/experiments/030-puppeteer-teacher-minimal/
 Purpose: Validate browser pool + SkeletonHash integration
 Scope:
   - Spawn single Puppeteer instance
@@ -173,7 +173,7 @@ The existing confidence is for URL pattern matching. We need content-level confi
 
 **Experiment 031: Confidence Signal Calibration**
 ```
-Location: src/ui/lab/experiments/031-confidence-scoring-calibration/
+Location: jsgui3-experiments/experiments/031-confidence-scoring-calibration/
 Purpose: Test confidence formula against known good/bad articles
 Scope:
   - Select 100 articles from DB (50 high word count, 50 low)
@@ -248,7 +248,7 @@ class StreamingSitemapLoader {
 
 **Experiment 032: Streaming Sitemap Parser**
 ```
-Location: src/ui/lab/experiments/032-streaming-sitemap/
+Location: jsgui3-experiments/experiments/032-streaming-sitemap/
 Purpose: Validate streaming parser against real sitemaps
 Scope:
   - Download sitemap from major news site (BBC, NYT, Guardian)
@@ -319,7 +319,7 @@ state = {
 
 **Experiment 033: Rate Limit Learning Simulator**
 ```
-Location: src/ui/lab/experiments/033-rate-learning-sim/
+Location: jsgui3-experiments/experiments/033-rate-learning-sim/
 Purpose: Validate rate learning algorithm without hitting real sites
 Scope:
   - Create mock server with configurable rate limits
@@ -369,7 +369,7 @@ Success Criteria:
 
 **Experiment 034: Robots.txt Parser Enhancement**
 ```
-Location: src/ui/lab/experiments/034-robots-txt-parser/
+Location: jsgui3-experiments/experiments/034-robots-txt-parser/
 Purpose: Test robots.txt parsing edge cases
 Scope:
   - Collect robots.txt from 20 major news sites
@@ -411,7 +411,7 @@ Success Criteria:
 
 **Experiment 035: Content Hashing Strategies**
 ```
-Location: src/ui/lab/experiments/035-content-hashing/
+Location: jsgui3-experiments/experiments/035-content-hashing/
 Purpose: Compare content hashing approaches
 Scope:
   - Collect 100 article pairs (same content, different URLs)
@@ -460,7 +460,7 @@ aggressive: { maxConcurrency: 20 }
 
 **Experiment 036: Concurrency Feedback Loop**
 ```
-Location: src/ui/lab/experiments/036-adaptive-concurrency/
+Location: jsgui3-experiments/experiments/036-adaptive-concurrency/
 Purpose: Test concurrency controller with mock latencies
 Scope:
   - Create mock fetch with configurable latency distribution
@@ -516,7 +516,7 @@ if (!existing) {
 
 **Experiment 037: SkeletonHash Live Integration**
 ```
-Location: src/ui/lab/experiments/037-skeleton-hash-integration/
+Location: jsgui3-experiments/experiments/037-skeleton-hash-integration/
 Purpose: Integrate SkeletonHash into ArticleProcessor
 Scope:
   - Compute SkeletonHash for every processed article
@@ -626,7 +626,7 @@ Success Criteria:
 
 **Experiment 038: Boolean Signal Profiler**
 ```
-Location: src/ui/lab/experiments/038-boolean-signal-profiler/
+Location: jsgui3-experiments/experiments/038-boolean-signal-profiler/
 Purpose: Profile signal costs and accuracy on real article corpus
 Scope:
   - Select 1000 articles with known is_article labels
@@ -718,7 +718,7 @@ Success Criteria:
 
 **Experiment 039: Puppeteer Pool Memory Profile**
 ```
-Location: src/ui/lab/experiments/039-puppeteer-pool-memory/
+Location: jsgui3-experiments/experiments/039-puppeteer-pool-memory/
 Purpose: Validate memory stability under sustained load
 Scope:
   - Create pool with 2 browsers, 5 pages each
@@ -842,7 +842,7 @@ CSS provides signals that SkeletonHash misses:
 
 **Experiment 040: CSS Signal Value Assessment**
 ```
-Location: src/ui/lab/experiments/040-css-signal-value/
+Location: jsgui3-experiments/experiments/040-css-signal-value/
 Purpose: Determine if CSS analysis provides actionable signals
 Scope:
   - Fetch CSS from 20 major news sites
@@ -1074,7 +1074,7 @@ ctx.bb = {
 
 **Experiment 041: Config-Driven ArticleSignals**
 ```
-Location: src/ui/lab/experiments/041-config-driven-signals/
+Location: jsgui3-experiments/experiments/041-config-driven-signals/
 Purpose: Validate config-driven pattern matching without breaking production
 Scope:
   - Create isolated test harness
@@ -1089,7 +1089,7 @@ Success Criteria:
 
 **Experiment 042: Decision Audit Performance**
 ```
-Location: src/ui/lab/experiments/042-decision-audit-perf/
+Location: jsgui3-experiments/experiments/042-decision-audit-perf/
 Purpose: Validate audit logging doesn't slow down crawl
 Scope:
   - Benchmark insert performance (10K entries)
@@ -1103,7 +1103,7 @@ Success Criteria:
 
 **Experiment 043: Decision Tree Editor Canvas**
 ```
-Location: src/ui/lab/experiments/043-decision-tree-editor/
+Location: jsgui3-experiments/experiments/043-decision-tree-editor/
 Purpose: Prototype interactive tree editing with jsgui3
 Scope:
   - Drag-and-drop node creation
@@ -1306,7 +1306,7 @@ Based on validation results:
 | Advanced Planning Docs | `docs/ADVANCED_PLANNING_SUITE.md` |
 | sitemap.js | `src/crawler/sitemap.js` |
 | layoutMasks queries | `src/db/sqlite/v1/queries/layoutMasks.js` |
-| Lab experiments | `src/ui/lab/experiments/` |
+| Lab experiments | `jsgui3-experiments/experiments/` |
 | **Place Hubs Queries (NEW)** | `src/db/sqlite/v1/queries/ui/placeHubs.js` |
 | **Place Hubs Table Control (NEW)** | `src/ui/controls/PlaceHubsTable.js` |
 | **Crawl Live CLI (metrics)** | `tools/dev/crawl-live.js` |

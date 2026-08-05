@@ -33,7 +33,7 @@ Non-goals:
 
 1) Start from a lab repro (preferred)
 - Use experiment 020 as the known-good baseline:
-  - `node src/ui/lab/experiments/020-jsgui3-server-activation/check.js`
+  - `node jsgui3-experiments/experiments/020-jsgui3-server-activation/check.js`
 
 2) Confirm SSR emits the bridge attributes
 - In SSR HTML, find:
@@ -116,12 +116,12 @@ activate() {
 
 ## Validation
 
-- Primary: `node src/ui/lab/experiments/020-jsgui3-server-activation/check.js`
+- Primary: `node jsgui3-experiments/experiments/020-jsgui3-server-activation/check.js`
 - If you modify client-side controls/bundles: `npm run ui:client-build`
 
 ## References
 
-- Experiment repro: `src/ui/lab/experiments/020-jsgui3-server-activation/`
+- Experiment repro: `jsgui3-experiments/experiments/020-jsgui3-server-activation/`
 - Guide: `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` (Client-Side Activation Flow)
 - Upstream runtime (read-only reference in installed packages):
   - `node_modules/jsgui3-client/client.js`

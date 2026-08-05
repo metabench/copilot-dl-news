@@ -800,7 +800,7 @@ module.exports = { MyControl };
 - **Compositional model (`comp`)**: `new Control({ comp: [TitleControl, ['subtitle', TextSpan, { text: 'world' }]] })` builds children immediately and stores named references in `_ctrl_fields.subtitle` while rendering the composed HTML.
 - **Registration helper**: `register_this_and_subcontrols()` fills `context.map_controls` for the control tree so activation can resolve `dom.el` without manual map wiring.
 - **Persisted fields hydration**: constructing a control with `el` that carries `data-jsgui-fields` JSON hydrates `_persisted_fields` (e.g., `{ foo: 'bar', count: 3 }`) alongside `data-jsgui-id/type` for client pickups.
-- **Validation**: All shortcuts are verified in lab experiment 002 (`src/ui/lab/experiments/002-platform-helpers/check.js`).
+- **Validation**: All shortcuts are verified in lab experiment 002 (`jsgui3-experiments/experiments/002-platform-helpers/check.js`).
 
 ---
 

@@ -79,9 +79,9 @@ showContextMenu(x, y) {
 ## Validation
 Run the lab experiment to verify the pattern behavior:
 ```bash
-node src/ui/lab/experiments/019-context-menu-patterns/check.js
+node jsgui3-experiments/experiments/019-context-menu-patterns/check.js
 ```
 
 ## References
-- `src/ui/lab/experiments/019-context-menu-patterns/` - Reference implementation and test.
+- `jsgui3-experiments/experiments/019-context-menu-patterns/` - Reference implementation and test.
 - `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` - UI Architecture context.

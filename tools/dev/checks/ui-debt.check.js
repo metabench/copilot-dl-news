@@ -58,7 +58,15 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // topic/place pages, misclassified as a page by c171's grep (which missed
 // relative requires) — the supervised boot was what exposed it. 497 +4 −1
 // (colorSelector orphan check) −12 (parity deletions) = 488.
-const CEILING = 488;
+// c208 (owner ruling, ratchet RESUMED after ~40 stalled cycles): 488 → 361.
+// The jsgui3 research lab (src/ui/lab, 131 files — a quarter of the whole
+// number) moved out to the new sibling repo ../jsgui3-experiments. It was
+// never operational UI bound for news-crawler-ui; it is library research,
+// and it is the cited evidence base for four SKILL.md files and a dozen
+// pattern guides, so deleting it was never an option either. Living docs
+// were repointed at the new repo; dated session records were deliberately
+// left as historical record. See ../jsgui3-experiments/ORIGIN.md.
+const CEILING = 361;
 
 function trackedFiles(prefix) {
   const out = execFileSync('git', ['ls-files', prefix], { cwd: ROOT, encoding: 'utf8' });

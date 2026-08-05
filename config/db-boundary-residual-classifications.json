@@ -82,11 +82,11 @@
       "category": "ui-lab-fixture-or-check",
       "reason": "UI/lab checks and fixture code outside DB ownership. Review before promoting to active runtime.",
       "paths": [
-        "src/ui/lab/run-lab-checks.js",
-        "src/ui/lab/experiments/020-jsgui3-server-activation/check.js",
-        "src/ui/lab/experiments/026-activation-contract-lab/check.js",
-        "src/ui/lab/experiments/029-mixed-builtins-custom-activation/check.js",
-        "src/ui/lab/experiments/047-svg-comment-context/src/client.js",
+        "jsgui3-experiments/run-lab-checks.js",
+        "jsgui3-experiments/experiments/020-jsgui3-server-activation/check.js",
+        "jsgui3-experiments/experiments/026-activation-contract-lab/check.js",
+        "jsgui3-experiments/experiments/029-mixed-builtins-custom-activation/check.js",
+        "jsgui3-experiments/experiments/047-svg-comment-context/src/client.js",
         "src/ui/server/artPlayground/isomorphic/controls/CanvasControl.js"
       ]
     },

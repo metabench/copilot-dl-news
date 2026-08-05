@@ -212,7 +212,7 @@ class VirtualListControl extends jsgui.Control {
 
 ## Verification Notes (2026-01-17)
 
-- Performance lab check: `node src/ui/lab/experiments/041-jsgui3-live-graph-perf/check.js --nodes 250 --ms 800 --tick 20 --mode batch`
+- Performance lab check: `node jsgui3-experiments/experiments/041-jsgui3-live-graph-perf/check.js --nodes 250 --ms 800 --tick 20 --mode batch`
 
 ---
 
