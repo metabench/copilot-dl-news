@@ -16,6 +16,23 @@
  * (the tech-tree board stays in copilot-dl-news — it is the improvement loop's
  * own instrument, coupled to this repo's ledger and probes).
  *
+ * AUDITED 2026-08-07 (cycle 227), owner-directed — READ THIS BEFORE TREATING
+ * THE NUMBER AS A BACKLOG. Of the 351 files counted, only FIVE are code that
+ * nothing references. 249 are wired (a package script, or required from
+ * outside src/ui); of the 63 referenced nowhere by basename, 36 are
+ * *.check.js / *.test.js ENTRY POINTS invoked by path (the c209/c211 rule:
+ * never call those dead on basename evidence) and 21 are screenshots. So ~1.4%
+ * of this number is rot. It measures HOW MUCH UI LIVES IN THE MONOREPO —
+ * migration progress — not debt.
+ *
+ * AND THE TWO WAYS DOWN BELOW NOW CONTRADICT THE OWNER'S STRATEGY. The owner
+ * directed extraction BY REFERENCE, keeping the monorepo functional. If the
+ * monorepo keeps consuming an extracted UI from the package, the local file
+ * count does not fall — so a SUCCESSFUL extraction registers as zero progress
+ * here. That, plus only five retire-able files remaining, is why this has not
+ * moved in nine cycles and cannot move again as defined. Options are in
+ * docs/decisions/2026-08-07-ui-debt-audit.md; it needs an owner decision.
+ *
  * Both legal ways DOWN are wins, and both count:
  *   - a UI moves to news-crawler-ui and the monorepo copy is DELETED
  *     (a migration is done when the old thing is gone — cycle 161), or
@@ -98,6 +115,11 @@ function main() {
 
   console.log(`ui-debt: ${debt.length} operational-UI files in the monorepo (ceiling ${ceiling})`);
   console.log('         projectStatus excluded (stays by design: the loop\'s own instrument)');
+  console.log('         NOT A DEBT MEASURE — audited 2026-08-07 (cycle 227): of 351 files only');
+  console.log('         FIVE are code referenced nowhere. 249 are wired, 36 are *.check.js/*.test.js');
+  console.log('         entry points invoked BY PATH, 21 are screenshots. This tracks MIGRATION');
+  console.log('         PROGRESS, not rot. See docs/decisions/2026-08-07-ui-debt-audit.md —');
+  console.log('         the definition needs an owner decision before this number can move again.');
 
   if (debt.length > ceiling) {
     console.error(`FAIL: ui-debt ${debt.length} exceeds ceiling ${ceiling}.`);
