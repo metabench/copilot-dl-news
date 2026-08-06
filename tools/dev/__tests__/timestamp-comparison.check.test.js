@@ -1,6 +1,6 @@
 'use strict';
 
-const { findBareComparisons } = require('../checks/timestamp-comparison.check');
+const { findBareComparisons, recommendedFix } = require('../checks/timestamp-comparison.check');
 
 describe('timestamp-comparison findBareComparisons', () => {
   test('flags a bare column compared to datetime(now) and calls it EXPIRY', () => {
@@ -62,5 +62,37 @@ describe('timestamp-comparison findBareComparisons', () => {
   test('empty and null input never throw', () => {
     expect(findBareComparisons('')).toEqual([]);
     expect(findBareComparisons(null)).toEqual([]);
+  });
+});
+
+describe('timestamp-comparison recommendedFix', () => {
+  // c222 measured the live db EXACTLY (counting every non-null value, not
+  // sampling) and the fix is NOT the same for every column.
+
+  test('a MIXED column must be wrapped — binding a threshold would be wrong', () => {
+    // urls.created_at is 870,754 ISO + 925,136 sqlite. A bound ISO threshold
+    // silently misjudges the sqlite-format half.
+    expect(recommendedFix("created_at < datetime('now', '-7 day')")).toMatch(/wrap in datetime/);
+    expect(recommendedFix("fetched_at >= datetime('now', '-1 day')")).toMatch(/BOTH formats/);
+  });
+
+  test('a uniformly-ISO column can bind a threshold and keep its index', () => {
+    // links.discovered_at: 4,874,880 rows, all ISO — the one place where the
+    // sargable fix is both correct and worth it.
+    expect(recommendedFix("discovered_at > datetime('now', ?)")).toMatch(/bind an ISO threshold/);
+  });
+
+  test('a uniformly-SQLITE column is NOT a defect at all', () => {
+    // content_analysis.analyzed_at: 89,532 rows, zero ISO. Reporting this as
+    // something to fix would be crying wolf forever.
+    expect(recommendedFix("ca.analyzed_at > datetime('now', '-30 days')")).toMatch(/NOT A DEFECT/);
+  });
+
+  test('an empty table is a free latent fix', () => {
+    expect(recommendedFix("computed_at < datetime('now', '-1 day')")).toMatch(/free latent fix/);
+  });
+
+  test('an unknown column says so rather than guessing', () => {
+    expect(recommendedFix("some_unmeasured_at < datetime('now', '-1 day')")).toMatch(/unmeasured/);
   });
 });

@@ -30,24 +30,49 @@
  * So severity depends on the threshold: a TTL against 'now' can be a full
  * extra day of staleness; an age-window is a one-day boundary error.
  *
- * SCOPE. 64 columns in the live db hold ISO values, including the largest
- * tables (links.discovered_at 4.9M rows, queue_events.ts 1.7M, urls 1.8M).
- * Several are MIXED — urls.created_at sampled 164 ISO / 36 SQLite — so the
- * same query can be right for one row and wrong for the next.
+ * SCOPE. Timestamp columns in the live db hold ISO values on the largest
+ * tables (links.discovered_at 4.9M rows, queue_events.ts 1.7M) and BOTH
+ * formats on fifteen others — so the same query can be right for one row and
+ * wrong for the next. Exact numbers below.
  *
- * THE RULE THIS CHECKS. A column compared against datetime('now'…) must be
- * wrapped in datetime() so both sides are normalized. Wrapping is harmless
- * when the column is already in SQLite format, so the rule is safe to apply
- * everywhere and needs no per-column knowledge.
+ * THE RULE THIS CHECKS. A column compared against datetime('now'…) must have
+ * both sides in the same format. What that means per column is NOT uniform,
+ * which is why this file carries a measured census rather than a blanket
+ * rule — see the next section.
  *
- * THE COST, STATED HONESTLY. datetime(col) is not sargable — it defeats an
- * index on col. On small tables that is free; on links (4.9M rows) or
- * queue_events (1.7M) it is not. The index-preserving alternative is to bind
- * a threshold computed in the SAME format the column stores, e.g.
- * `WHERE discovered_at > ?` with an ISO string parameter. Prefer that on hot,
- * indexed paths; prefer datetime() wrapping for correctness elsewhere. Either
- * satisfies this check — a bound parameter has no datetime('now') in the SQL
- * at all.
+ * WHICH FIX, AND WHY IT DEPENDS ON THE COLUMN (measured 2026-08-06, c222).
+ * There are two candidate fixes and they are NOT interchangeable:
+ *
+ *   datetime(col) > datetime(threshold)   correct for BOTH formats, but not
+ *                                         sargable — defeats an index on col
+ *   col > ?  (bound, column's own format) keeps the index, but is correct
+ *                                         ONLY if the column is 100% one
+ *                                         format
+ *
+ * Proved rather than assumed. Two rows at 15:00, threshold 12:00 same day,
+ * both genuinely newer:
+ *
+ *   bound ISO threshold          ISO=1  SQLITE=0   <- wrong for the sqlite row
+ *   datetime(col) vs datetime()  ISO=1  SQLITE=1   <- correct for both
+ *
+ * That matters because an EXACT census of the live db (counting every
+ * non-null value, not sampling) found FIFTEEN columns holding BOTH formats:
+ *
+ *   urls.created_at              870,754 ISO + 925,136 sqlite
+ *   urls.last_seen_at            849,939 ISO + 927,181 sqlite
+ *   http_responses.fetched_at    221,731 ISO +  93,278 sqlite
+ *   fetches.fetched_at             4,640 ISO +  49,812 sqlite
+ *   errors.at                      4,028 ISO +   2,775 sqlite
+ *   … and ten more
+ *
+ * (c221 sampled these with LIMIT 200 and called several of them "all ISO".
+ * LIMIT without ORDER BY reads the oldest rowids, so the sample was biased;
+ * fetches.fetched_at sampled as 100% ISO and is actually 8.5%.)
+ *
+ * So: bind a threshold on a UNIFORM column — including the two biggest,
+ * links.discovered_at (4.9M, all ISO) and queue_events.ts (1.7M, all ISO),
+ * where the index matters most. Use datetime() on a MIXED column and accept
+ * the scan, until the stored data is normalised.
  */
 
 const fs = require('fs');
@@ -64,6 +89,57 @@ const SEARCH_ROOTS = [
 // A comparison operator, then datetime('now' ... ). We capture what sits
 // immediately left of the operator to decide whether it is already wrapped.
 const COMPARISON = /([A-Za-z_][\w.]*(?:\s*\)\s*)?)\s*(<=|>=|<|>)\s*datetime\(\s*'now'(\s*\))?/g;
+
+/**
+ * Stored format per column, from an EXACT census of the live db (every
+ * non-null value counted) on 2026-08-06. Keyed by bare column name because
+ * that is all a SQL snippet reliably gives us — where one name spans tables
+ * with different verdicts, MIXED wins, since it is the conservative fix.
+ *
+ * Re-measure with a full COUNT/CASE query, never LIMIT-and-eyeball: the c221
+ * sample called fetches.fetched_at "all ISO" when it is 8.5%.
+ */
+const COLUMN_FORMAT = {
+  // uniform ISO — safe to fix by binding an ISO threshold, keeps the index
+  discovered_at: 'iso',
+  last_seen: 'iso',
+  checked_at: 'iso',
+  // MIXED — only datetime() on both sides is correct
+  created_at: 'mixed',
+  last_seen_at: 'mixed',
+  fetched_at: 'mixed',
+  request_started_at: 'mixed',
+  started_at: 'mixed',
+  ended_at: 'mixed',
+  at: 'mixed',
+  verified_at: 'mixed',
+  added_at: 'mixed',
+  // `ts` is all-ISO on the big event tables but has one stray sqlite value in
+  // crawl_milestones, so it is treated as mixed.
+  ts: 'mixed',
+  // uniformly SQLITE format — these comparisons are ALREADY CORRECT and are
+  // not defects. content_analysis.analyzed_at: 89,532 rows, 0 ISO. Recording
+  // it stops the check reporting working code forever.
+  analyzed_at: 'sqlite',
+  // tables that exist but hold no rows: nothing can be misjudged today, and
+  // wrapping costs nothing, so these are cheap latent fixes.
+  snapshot_time: 'empty',
+  computed_at: 'empty',
+  last_crawl_at: 'empty',
+  timestamp: 'empty'
+};
+
+/** Recommended fix for a site, given the column it compares. */
+function recommendedFix(snippet) {
+  const col = /([A-Za-z_]\w*)\s*(?:\)|\s)*(?:<=|>=|<|>)/.exec(String(snippet || ''));
+  const name = col ? col[1] : null;
+  const fmt = name ? COLUMN_FORMAT[name] : undefined;
+  if (fmt === 'sqlite') return 'NOT A DEFECT — column is uniformly sqlite format, the comparison is already correct';
+  if (fmt === 'iso') return 'bind an ISO threshold (keeps the index)';
+  if (fmt === 'mixed') return 'wrap in datetime() — column holds BOTH formats, binding would be wrong';
+  if (fmt === 'empty') return 'wrap in datetime() — table is empty, so this is a free latent fix';
+  return 'unmeasured column — census it before choosing';
+}
 
 // --- pure core ---------------------------------------------------------------
 
@@ -192,8 +268,17 @@ function main() {
       console.log('');
     }
     if (windowed.length) {
-      console.log('  window:');
-      for (const f of windowed) console.log(`    ${f.file}:${f.line}  ${f.snippet}`);
+      console.log('  window (grouped by the fix the measured column actually needs):');
+      const byFix = new Map();
+      for (const f of windowed) {
+        const fix = recommendedFix(f.snippet);
+        if (!byFix.has(fix)) byFix.set(fix, []);
+        byFix.get(fix).push(f);
+      }
+      for (const [fix, group] of byFix) {
+        console.log(`\n    ${group.length} site(s) -> ${fix}`);
+        for (const f of group) console.log(`      ${f.file}:${f.line}  ${f.snippet}`);
+      }
     }
     if (!findings.length) console.log('  none — every comparison normalizes both sides or binds a formatted threshold.');
     console.log(`\nFix: wrap the column in datetime(), or bind a threshold in the column's own`);
@@ -209,4 +294,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { findBareComparisons };
+module.exports = { findBareComparisons, recommendedFix };
