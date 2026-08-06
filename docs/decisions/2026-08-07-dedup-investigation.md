@@ -1,7 +1,45 @@
 # Dedup investigation: the scoring is the small problem
 
 **Date:** 2026-08-07 (cycle 228)
-**Status:** investigation complete — **recommendation below needs an owner decision**
+**Status:** investigation complete. **Steps 1 and 3 SHIPPED in cycle 229**
+(qid guard + bounded tie-break). **Step 2 — which scoring policy — still needs
+an owner decision**, and is now measurable on an honest population.
+
+## Cycle 229 outcome
+
+**The qid guard shipped** in all three grouping paths
+(`listDuplicateNameGroups`, which `gazetteer-cleanup` and `populate-gazetteer`
+share; `legacy-gazetteer-deduplication`'s own grouping; and
+`mergeDuplicateCapitals`). Measured against the live gazetteer, read-only:
+
+```
+duplicate groups WITHOUT the qid guard : 964
+duplicate groups WITH    the qid guard :  31
+groups now protected from merging      : 933 (96.8%)
+places protected                       : 6,733
+```
+
+**C's tie-break was bounded** — `(10000 - id)` moved out of the score and into
+the comparator, so it applies only on an exact tie, and ncdb's documented
+coords-first policy is now true in practice.
+
+**A prediction of mine was wrong and is corrected here.** Step 2 below
+predicted the A-vs-C divergence "will likely shrink" once the grouping was
+honest and the tie-break bounded. Measured on the 31 guarded groups:
+
+```
+C with the unbounded (10000 - id) term : 13 (41.9%)
+C with id as a real tie-break          : 12 (38.7%)
+```
+
+It barely moved. The divergence was never mostly an artifact of the id term —
+on genuine duplicates, A (qid first) and C (coords first) simply disagree about
+what makes a place record better. That is the real decision, and it is now
+measured on a population where merging is actually correct.
+
+---
+
+*Original cycle-228 investigation follows.*
 **Owner instruction:** "Investigate and recommend" — measure how often the three
 scoring policies disagree, then advise.
 **Method:** read-only measurement against the live gazetteer (14,544 places).
