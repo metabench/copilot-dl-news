@@ -1,7 +1,10 @@
 # The `urls` table has eight insert shapes across two repos
 
 **Date:** 2026-08-05 (cycle 219)
-**Status:** two writers fixed; the wider divergence is OPEN
+**Status:** two writers fixed; ✅ **host BACKFILL APPROVED (cycle 223)** for the
+91,013 host-less rows — scheduled for cycle 224. The wider question of whether
+`ensureUrlId` becomes the single enforced entry point across both repos is
+still OPEN.
 **Measured on:** live `data/news.db`, read-only
 
 ## The measurement

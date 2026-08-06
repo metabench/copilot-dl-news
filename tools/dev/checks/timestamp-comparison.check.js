@@ -91,54 +91,152 @@ const SEARCH_ROOTS = [
 const COMPARISON = /([A-Za-z_][\w.]*(?:\s*\)\s*)?)\s*(<=|>=|<|>)\s*datetime\(\s*'now'(\s*\))?/g;
 
 /**
- * Stored format per column, from an EXACT census of the live db (every
- * non-null value counted) on 2026-08-06. Keyed by bare column name because
- * that is all a SQL snippet reliably gives us — where one name spans tables
- * with different verdicts, MIXED wins, since it is the conservative fix.
+ * Stored format per TABLE.COLUMN, from an EXACT census of the live db (every
+ * non-null value counted), 2026-08-06 / 2026-08-07.
+ *
+ * KEYED BY TABLE, not by bare column name, and that is not fussiness. c222
+ * keyed this by column alone and recorded `discovered_at: 'iso'` from
+ * links (4,874,880 rows, all ISO). The only site comparing a `discovered_at`
+ * is hubGapAnalysis, which reads **site_url_patterns** — 72 rows, 100% SQLITE
+ * format, i.e. already correct. The tool therefore recommended binding an ISO
+ * threshold on a query where that would have BROKEN it. One name, two tables,
+ * opposite answers.
  *
  * Re-measure with a full COUNT/CASE query, never LIMIT-and-eyeball: the c221
  * sample called fetches.fetched_at "all ISO" when it is 8.5%.
  */
 const COLUMN_FORMAT = {
-  // uniform ISO — safe to fix by binding an ISO threshold, keeps the index
-  discovered_at: 'iso',
-  last_seen: 'iso',
-  checked_at: 'iso',
+  // uniform ISO — binding an ISO threshold is correct AND keeps the index
+  'links.discovered_at': 'iso',
+  'queue_events.ts': 'iso',
+  'queue_events_enhanced.ts': 'iso',
+  'discovery_events.discovered_at': 'iso',
+  'task_events.ts': 'iso',
+  'url_aliases.checked_at': 'iso',
+  'problem_clusters.last_seen': 'iso',
+  'hub_validations.expires_at': 'iso',
+
   // MIXED — only datetime() on both sides is correct
-  created_at: 'mixed',
-  last_seen_at: 'mixed',
-  fetched_at: 'mixed',
-  request_started_at: 'mixed',
-  started_at: 'mixed',
-  ended_at: 'mixed',
-  at: 'mixed',
-  verified_at: 'mixed',
-  added_at: 'mixed',
-  // `ts` is all-ISO on the big event tables but has one stray sqlite value in
-  // crawl_milestones, so it is treated as mixed.
-  ts: 'mixed',
-  // uniformly SQLITE format — these comparisons are ALREADY CORRECT and are
-  // not defects. content_analysis.analyzed_at: 89,532 rows, 0 ISO. Recording
-  // it stops the check reporting working code forever.
-  analyzed_at: 'sqlite',
-  // tables that exist but hold no rows: nothing can be misjudged today, and
-  // wrapping costs nothing, so these are cheap latent fixes.
-  snapshot_time: 'empty',
-  computed_at: 'empty',
-  last_crawl_at: 'empty',
-  timestamp: 'empty'
+  'urls.created_at': 'mixed',
+  'urls.last_seen_at': 'mixed',
+  'http_responses.fetched_at': 'mixed',
+  'http_responses.request_started_at': 'mixed',
+  'fetches.fetched_at': 'mixed',
+  'fetches.request_started_at': 'mixed',
+  'crawl_jobs.started_at': 'mixed',
+  'crawl_jobs.ended_at': 'mixed',
+  'errors.at': 'mixed',
+  'crawl_milestones.ts': 'mixed',
+  'place_page_mappings.last_seen_at': 'mixed',
+  'place_page_mappings.verified_at': 'mixed',
+  'crawl_runs.ended_at': 'mixed',
+  'news_websites.added_at': 'mixed',
+  'place_hub_audit.created_at': 'mixed',
+
+  'latest_fetch.ts': 'mixed',            // 2,998 ISO + 49,777 sqlite (a view)
+
+  // uniformly SQLITE format — ALREADY CORRECT, not defects. Recording these
+  // stops the check reporting working code forever.
+  'content_analysis.analyzed_at': 'sqlite',   // 89,532 rows, 0 ISO
+  'site_url_patterns.discovered_at': 'sqlite', // 72 rows, 0 ISO
+  'url_classification_patterns.updated_at': 'sqlite', // 1,811 rows, 0 ISO
+  'urls.fetched_at': 'sqlite',                // 165,990 rows, 0 ISO
+  'content_storage.created_at': 'sqlite',     // 205,942 rows, 0 ISO
+
+  // exist but hold no rows: nothing can be misjudged today and wrapping is
+  // free, so these are cheap latent fixes
+  'coverage_snapshots.snapshot_time': 'empty',
+  'user_events.timestamp': 'empty',
+  'rate_limits.updated_at': 'empty',
+  'recommendations.computed_at': 'empty',
+  'crawl_schedules.last_crawl_at': 'empty',
+  'user_sessions.expires_at': 'empty',
+  'audit_log.created_at': 'empty',
+
+  // table does not exist in the live schema at all — the code path is dead.
+  // These are NOT timestamp debt; they are a separate finding about how much
+  // of the ncdb adapter surface targets tables this deployment never created.
+  'alert_history.sent_at': 'absent',
+  'breaking_news.expires_at': 'absent',
+  'test_results.timestamp': 'absent',
+  'crawl_jobs.created_at': 'absent',
+  'content_analysis.created_at': 'absent',
+  'billing_events.created_at': 'absent',
+  'healing_events.created_at': 'absent',
+  'workspace_activity.created_at': 'absent',
+  'user_push_subscriptions.created_at': 'absent',
+  'user_notifications.created_at': 'absent'
 };
 
-/** Recommended fix for a site, given the column it compares. */
-function recommendedFix(snippet) {
+/**
+ * Is this finding actually actionable? A comparison on a uniformly-sqlite
+ * column is already correct, and one against a table the live schema does not
+ * have cannot misjudge anything. Counting those as debt inflates the number
+ * exactly the way the raw ncdb-debt total did before c217 split it.
+ */
+function isActionable(finding) {
+  const fix = recommendedFix(finding.snippet, finding.table);
+  return !/NOT A DEFECT|DEAD PATH/.test(fix);
+}
+
+/**
+ * Recommended fix for a site. `table` comes from resolveTable() and may be
+ * null when the SQL could not be attributed — in which case the tool says so
+ * rather than guessing from the column name, which is exactly the mistake
+ * that produced a wrong recommendation in c222.
+ */
+function recommendedFix(snippet, table) {
   const col = /([A-Za-z_]\w*)\s*(?:\)|\s)*(?:<=|>=|<|>)/.exec(String(snippet || ''));
   const name = col ? col[1] : null;
-  const fmt = name ? COLUMN_FORMAT[name] : undefined;
+  if (!name) return 'could not parse the column — inspect by hand';
+  if (!table) return `unattributed table for "${name}" — find the table, then census it`;
+
+  const fmt = COLUMN_FORMAT[`${table}.${name}`];
   if (fmt === 'sqlite') return 'NOT A DEFECT — column is uniformly sqlite format, the comparison is already correct';
+  if (fmt === 'absent') return 'DEAD PATH — the table does not exist in the live schema';
   if (fmt === 'iso') return 'bind an ISO threshold (keeps the index)';
   if (fmt === 'mixed') return 'wrap in datetime() — column holds BOTH formats, binding would be wrong';
   if (fmt === 'empty') return 'wrap in datetime() — table is empty, so this is a free latent fix';
-  return 'unmeasured column — census it before choosing';
+  return `unmeasured: ${table}.${name} — census it exactly before choosing`;
+}
+
+/**
+ * Resolve which table a comparison at `start` reads, by scanning backwards for
+ * the nearest FROM / JOIN / UPDATE / DELETE FROM and honouring table aliases
+ * (`FROM http_responses hr` … `hr.fetched_at`).
+ *
+ * Returns null when it cannot tell. Null is a useful answer — see
+ * recommendedFix, which refuses to guess rather than repeating the c222 error.
+ */
+function resolveTable(src, start, snippet) {
+  const text = String(src || '').slice(Math.max(0, start - 2000), start);
+  const aliases = new Map();
+  let order = [];
+  const re = /\b(?:FROM|JOIN|UPDATE|INTO)\s+([A-Za-z_]\w*)(?:\s+(?:AS\s+)?([A-Za-z_]\w*))?/gi;
+  let m;
+  while ((m = re.exec(text))) {
+    const table = m[1];
+    const alias = m[2];
+    // Skip SQL keywords that can follow FROM-like words in these queries.
+    if (/^(SELECT|WHERE|SET|VALUES|ON|AND|OR)$/i.test(table)) continue;
+    order.push(table);
+    if (alias && !/^(WHERE|SET|ON|GROUP|ORDER|LIMIT|HAVING|AND|OR|VALUES|AS)$/i.test(alias)) {
+      aliases.set(alias.toLowerCase(), table);
+    }
+  }
+  if (!order.length) return null;
+
+  // Alias-qualified column: `hv.expires_at` -> whatever hv was bound to.
+  const qualified = /([A-Za-z_]\w*)\.([A-Za-z_]\w*)\s*(?:\)|\s)*(?:<=|>=|<|>)/.exec(String(snippet || ''));
+  if (qualified) {
+    const prefix = qualified[1].toLowerCase();
+    if (aliases.has(prefix)) return aliases.get(prefix);
+    // The prefix may itself be a table name rather than an alias.
+    const direct = order.find((t) => t.toLowerCase() === prefix);
+    if (direct) return direct;
+    return null; // qualified by something we cannot resolve — do not guess
+  }
+  return order[order.length - 1];
 }
 
 // --- pure core ---------------------------------------------------------------
@@ -211,7 +309,12 @@ function findBareComparisons(text) {
     // response cache). With a modifier — datetime('now','-7 day') — only rows
     // landing on the boundary date are misclassified.
     const closedImmediately = Boolean(m[3]);
-    hits.push({ line, snippet, severity: closedImmediately ? 'expiry' : 'window' });
+    hits.push({
+      line,
+      snippet,
+      severity: closedImmediately ? 'expiry' : 'window',
+      table: resolveTable(src, start, snippet)
+    });
   }
   return hits;
 }
@@ -258,8 +361,11 @@ function main() {
       total: findings.length, expiry: expiry.length, window: windowed.length, max, findings
     }, null, 2));
   } else {
+    const act = findings.filter(isActionable);
     console.log(`\n== timestamp-comparison check (the c220 defect class) ==`);
-    console.log(`${findings.length} bare column-vs-datetime('now') comparisons:`);
+    console.log(`${findings.length} bare column-vs-datetime('now') comparisons, of which ${act.length} are ACTIONABLE.`);
+    console.log(`(${findings.length - act.length} are already correct — uniformly sqlite columns — or target tables this schema does not have.)`);
+    console.log(`${findings.length} raw hits by threshold severity:`);
     console.log(`  ${expiry.length} EXPIRY  — threshold is 'now' exactly; anything expiring today reads as still-valid`);
     console.log(`  ${windowed.length} window  — threshold has a modifier; only the boundary date is misclassified\n`);
     if (expiry.length) {
@@ -271,13 +377,13 @@ function main() {
       console.log('  window (grouped by the fix the measured column actually needs):');
       const byFix = new Map();
       for (const f of windowed) {
-        const fix = recommendedFix(f.snippet);
+        const fix = recommendedFix(f.snippet, f.table);
         if (!byFix.has(fix)) byFix.set(fix, []);
         byFix.get(fix).push(f);
       }
       for (const [fix, group] of byFix) {
         console.log(`\n    ${group.length} site(s) -> ${fix}`);
-        for (const f of group) console.log(`      ${f.file}:${f.line}  ${f.snippet}`);
+        for (const f of group) console.log(`      ${f.file}:${f.line}  [${f.table || '?'}]  ${f.snippet}`);
       }
     }
     if (!findings.length) console.log('  none — every comparison normalizes both sides or binds a formatted threshold.');
@@ -286,12 +392,20 @@ function main() {
     console.log(`is not sargable and will defeat an index.`);
   }
 
-  if (max != null && findings.length > max) {
-    console.error(`\nCHECK FAILED: ${findings.length} bare timestamp comparisons > ceiling ${max}. A new one leaked in — see the header of this file for why it is wrong.`);
+  // The ratchet guards ACTIONABLE findings, not the raw count.
+  //
+  // Changed 2026-08-07 (cycle 223), deliberately, for the reason c218 re-aimed
+  // the ncdb ratchet: of 62 raw hits, 17 were on columns that are uniformly
+  // sqlite format (already correct) and 17 targeted tables the live schema
+  // does not have. Guarding the raw total would have counted 34 non-problems
+  // as debt and made "fixing" working code look like progress.
+  const actionable = findings.filter(isActionable);
+  if (max != null && actionable.length > max) {
+    console.error(`\nCHECK FAILED: ${actionable.length} ACTIONABLE bare timestamp comparisons > ceiling ${max} (raw hits ${findings.length}). A new one leaked in — see the header of this file for why it is wrong.`);
     process.exit(1);
   }
 }
 
 if (require.main === module) main();
 
-module.exports = { findBareComparisons, recommendedFix };
+module.exports = { findBareComparisons, recommendedFix, resolveTable };

@@ -1,6 +1,6 @@
 'use strict';
 
-const { findBareComparisons, recommendedFix } = require('../checks/timestamp-comparison.check');
+const { findBareComparisons, recommendedFix, resolveTable } = require('../checks/timestamp-comparison.check');
 
 describe('timestamp-comparison findBareComparisons', () => {
   test('flags a bare column compared to datetime(now) and calls it EXPIRY', () => {
@@ -65,34 +65,85 @@ describe('timestamp-comparison findBareComparisons', () => {
   });
 });
 
+describe('timestamp-comparison resolveTable', () => {
+  // c223: keying the census by bare COLUMN name gave a wrong recommendation.
+  // `discovered_at` is all-ISO on links (4.9M rows) but uniformly sqlite on
+  // site_url_patterns (72 rows) — and the only site comparing one reads
+  // site_url_patterns. The tool told me to "bind an ISO threshold", which
+  // would have broken a working query. Resolution is by table now.
+  const q = (sql) => {
+    const hits = findBareComparisons(sql);
+    return hits.length ? hits[0].table : null;
+  };
+
+  test('resolves the table from a plain FROM', () => {
+    expect(q("SELECT COUNT(*) FROM site_url_patterns WHERE discovered_at > datetime('now', ?)"))
+      .toBe('site_url_patterns');
+  });
+
+  test('the SAME column in another table resolves differently', () => {
+    expect(q("SELECT * FROM links WHERE discovered_at > datetime('now', '-7 day')"))
+      .toBe('links');
+  });
+
+  test('and the two get OPPOSITE advice — the c223 regression', () => {
+    expect(recommendedFix("discovered_at > datetime('now', ?)", 'site_url_patterns'))
+      .toMatch(/NOT A DEFECT/);
+    expect(recommendedFix("discovered_at > datetime('now', ?)", 'links'))
+      .toMatch(/bind an ISO threshold/);
+  });
+
+  test('an alias-qualified column resolves through its alias', () => {
+    expect(q("SELECT * FROM http_responses hr WHERE hr.fetched_at < datetime('now', '-1 day')"))
+      .toBe('http_responses');
+  });
+
+  test('DELETE FROM resolves too', () => {
+    expect(q("DELETE FROM rate_limits WHERE updated_at < datetime('now', '-30 days')"))
+      .toBe('rate_limits');
+  });
+
+  test('an unresolvable table yields null, and the advice refuses to guess', () => {
+    expect(recommendedFix("some_col > datetime('now')", null)).toMatch(/unattributed/);
+  });
+});
+
 describe('timestamp-comparison recommendedFix', () => {
   // c222 measured the live db EXACTLY (counting every non-null value, not
   // sampling) and the fix is NOT the same for every column.
 
+  // c223: the signature takes the resolved TABLE as well, because the column
+  // name alone gave opposite-and-wrong advice for site_url_patterns.
+
   test('a MIXED column must be wrapped — binding a threshold would be wrong', () => {
     // urls.created_at is 870,754 ISO + 925,136 sqlite. A bound ISO threshold
     // silently misjudges the sqlite-format half.
-    expect(recommendedFix("created_at < datetime('now', '-7 day')")).toMatch(/wrap in datetime/);
-    expect(recommendedFix("fetched_at >= datetime('now', '-1 day')")).toMatch(/BOTH formats/);
+    expect(recommendedFix("created_at < datetime('now', '-7 day')", 'urls')).toMatch(/wrap in datetime/);
+    expect(recommendedFix("fetched_at >= datetime('now', '-1 day')", 'fetches')).toMatch(/BOTH formats/);
   });
 
   test('a uniformly-ISO column can bind a threshold and keep its index', () => {
-    // links.discovered_at: 4,874,880 rows, all ISO — the one place where the
-    // sargable fix is both correct and worth it.
-    expect(recommendedFix("discovered_at > datetime('now', ?)")).toMatch(/bind an ISO threshold/);
+    // links.discovered_at: 4,874,880 rows, all ISO — the sargable fix is both
+    // correct and worth it there.
+    expect(recommendedFix("discovered_at > datetime('now', ?)", 'links')).toMatch(/bind an ISO threshold/);
   });
 
   test('a uniformly-SQLITE column is NOT a defect at all', () => {
-    // content_analysis.analyzed_at: 89,532 rows, zero ISO. Reporting this as
-    // something to fix would be crying wolf forever.
-    expect(recommendedFix("ca.analyzed_at > datetime('now', '-30 days')")).toMatch(/NOT A DEFECT/);
+    // content_analysis.analyzed_at: 89,532 rows, zero ISO. urls.fetched_at:
+    // 165,990 rows, zero ISO. Reporting these would be crying wolf forever.
+    expect(recommendedFix("ca.analyzed_at > datetime('now', '-30 days')", 'content_analysis')).toMatch(/NOT A DEFECT/);
+    expect(recommendedFix("fetched_at >= datetime('now', ?)", 'urls')).toMatch(/NOT A DEFECT/);
+  });
+
+  test('a table the live schema does not have is a DEAD PATH, not debt', () => {
+    expect(recommendedFix("sent_at >= datetime('now', ?)", 'alert_history')).toMatch(/DEAD PATH/);
   });
 
   test('an empty table is a free latent fix', () => {
-    expect(recommendedFix("computed_at < datetime('now', '-1 day')")).toMatch(/free latent fix/);
+    expect(recommendedFix("computed_at < datetime('now', '-1 day')", 'recommendations')).toMatch(/free latent fix/);
   });
 
-  test('an unknown column says so rather than guessing', () => {
-    expect(recommendedFix("some_unmeasured_at < datetime('now', '-1 day')")).toMatch(/unmeasured/);
+  test('an unknown table.column says so rather than guessing', () => {
+    expect(recommendedFix("whatever_at < datetime('now', '-1 day')", 'some_table')).toMatch(/unmeasured/);
   });
 });

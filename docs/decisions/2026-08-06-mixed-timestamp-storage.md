@@ -1,7 +1,10 @@
 # Fifteen columns store timestamps in BOTH formats — normalise, or keep patching?
 
 **Date:** 2026-08-06 (cycle 222)
-**Status:** OWNER DECISION REQUESTED
+**Status:** ✅ **APPROVED (cycle 223)** — owner authorised option 1, normalise
+the stored data. NOT yet executed: a ~870k-row rewrite of the busiest table
+should start a cycle, not end one, and the two guarded backups must be
+verified present first. Scheduled for cycle 224.
 **Measured on:** live `data/news.db`, read-only, **exact counts** (every
 non-null value, no sampling)
 

@@ -1,8 +1,10 @@
 # 15,061 orphaned `content_storage` rows — measured, not attributed
 
 **Date:** 2026-08-05 (cycle 220)
-**Status:** ANSWERED in cycle 221 — **no live producer exists**; the reclaim is
-safe to schedule whenever the owner wants it
+**Status:** ✅ **RECLAIM APPROVED (cycle 223)** — c221 established there is no
+live producer; the owner has authorised the delete + VACUUM. Not executed yet:
+scheduled for cycle 224 alongside the other two approved live-db writes, with
+the guarded backups verified first.
 **Measured on:** live `data/news.db`, read-only
 
 ## Cycle 221: the producer hunt, and why it came back empty
