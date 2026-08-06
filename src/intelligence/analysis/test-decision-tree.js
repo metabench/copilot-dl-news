@@ -5,9 +5,14 @@
 
 const { DecisionTreeEngine, DecisionJustification } = require('./decisionTreeEngine');
 const path = require('path');
+const { findProjectRoot } = require('../../shared/utils/project-root');
 
-// Load the page-categories configuration
-const configPath = path.join(__dirname, '../../config/decision-trees/page-categories.json');
+// c226: this was `path.join(__dirname, '../../config/…')`, which resolves to
+// src/config — one level short, because __dirname is src/intelligence/analysis.
+// The script therefore died with ENOENT and the engine could not be exercised
+// at all. Resolved from the project root instead, so it survives the file
+// moving.
+const configPath = path.join(findProjectRoot(__dirname), 'config', 'decision-trees', 'page-categories.json');
 const engine = DecisionTreeEngine.fromFile(configPath);
 
 console.log('='.repeat(70));
