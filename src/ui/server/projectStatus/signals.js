@@ -21,6 +21,14 @@
  * data/ — a click is not history until the cycle that answers it lands in the
  * ledger). Append-only JSONL, one record per line:
  *   { id, tech, requested, at, status: 'pending'|'done', ackAt?, ackNote? }
+ *
+ * READING IT BY HAND: the log is APPEND-ONLY, so acknowledging a signal writes
+ * a SECOND record with the same `id` and status 'done' — it does not modify
+ * the original. A record is open only when no later record shares its id. Any
+ * ad-hoc parse that tests each line for `ackAt` will report every request line
+ * as pending: cycle 233 did exactly that, read 9 open signals against the
+ * probe's 0, and briefly suspected the owner's lever had come disconnected.
+ * The probe was right. Pair by id, or just call pending() from here.
  */
 
 const fs = require('fs');
