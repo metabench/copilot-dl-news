@@ -153,19 +153,37 @@ class GazetteerAwareReasonerPlugin {
     }
 
     try {
-      // Query places table for countries with highest importance
+      // Query places for the highest-ranked countries.
+      //
+      // c230: this query could never have run. It selected `name` and
+      // `importance` from `places`, and NEITHER column exists — names live in
+      // place_names, and there is no importance column at all. It also passed
+      // this.maxCountryProposals to .all() against SQL with no placeholder
+      // (LIMIT was hardcoded 50), which better-sqlite3 rejects outright. All
+      // three errors landed in the catch below, which logs and falls back, so
+      // this plugin has ALWAYS used _getDefaultCountries() and has never once
+      // read the gazetteer — while 249 country rows sat there, 248 of them
+      // with a population.
+      //
+      // Fixed: name joined from place_names (canonical first, any name as a
+      // fallback), population used as the ranking signal since that is what
+      // the data actually has, and maxCountryProposals bound to LIMIT — which
+      // is evidently what the stray argument was always meant for.
       const countries = dbAdapter.db.prepare(`
-        SELECT 
-          name,
-          country_code as code,
-          COALESCE(importance, 0) as importance,
-          wikidata_qid
-        FROM places
-        WHERE kind = 'country'
-          AND name IS NOT NULL
-          AND country_code IS NOT NULL
+        SELECT
+          COALESCE(cn.name, pn.name) AS name,
+          p.country_code AS code,
+          COALESCE(p.population, 0) AS importance,
+          p.wikidata_qid
+        FROM places p
+        LEFT JOIN place_names cn ON cn.id = p.canonical_name_id
+        LEFT JOIN place_names pn ON pn.place_id = p.id
+        WHERE p.kind = 'country'
+          AND p.country_code IS NOT NULL
+          AND COALESCE(cn.name, pn.name) IS NOT NULL
+        GROUP BY p.id
         ORDER BY importance DESC, name ASC
-        LIMIT 50
+        LIMIT ?
       `).all(this.maxCountryProposals);
 
       if (countries && countries.length > 0) {
