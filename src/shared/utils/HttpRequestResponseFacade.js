@@ -34,7 +34,17 @@
 
 const crypto = require('crypto');
 const { compress, decompress, getCompressionType } = require('./CompressionFacade');
-const { ensureUrlId } = require('news-crawler-db');
+// c219: url rows. c220: the http_responses + content_storage lifecycle.
+// Cache-key generation, TTL policy, compression-preset choice and response
+// assembly stay here; only table access moved.
+const {
+  ensureUrlId,
+  insertHttpResponseCacheEntry,
+  insertCachedContent,
+  findCachedResponse,
+  touchCacheEntry,
+  deleteExpiredCacheEntries
+} = require('news-crawler-db');
 
 // Configuration constants
 const CACHE_CONFIG = {
@@ -138,15 +148,22 @@ class HttpRequestResponseFacade {
       const cached = await this._findCachedResponse(db, cacheKey, category);
 
       if (!cached || cached.length === 0) {
+        // c220: a miss is where the expired rows live — the finder excludes
+        // them in SQL, so this is the only point at which they can be seen.
+        // Eviction failing must not turn a cache miss into an error.
+        try {
+          await this._evictExpiredEntries(db, cacheKey, category);
+        } catch (evictError) {
+          console.warn('[HttpRequestResponseFacade] Failed to evict expired entries:', evictError.message);
+        }
         return null;
       }
 
       const latest = cached[0];
 
-      // Check if expired
+      // Belt-and-braces: the finder already excludes expired rows in SQL.
       if (this._isExpired(latest.cache_expires_at)) {
-        // Optionally clean up expired entries
-        await this._cleanupExpiredEntry(db, latest.http_response_id);
+        await this._evictExpiredEntries(db, cacheKey, category);
         return null;
       }
 
@@ -241,37 +258,24 @@ class HttpRequestResponseFacade {
   static async _insertHttpResponse(db, urlId, request, response, category, cacheKey, ttlMs) {
     const expiresAt = new Date(Date.now() + ttlMs).toISOString();
 
-    const result = db.prepare(`
-      INSERT INTO http_responses (
-        url_id, request_started_at, fetched_at, http_status, content_type,
-        content_encoding, etag, last_modified, redirect_chain,
-        ttfb_ms, download_ms, total_ms, bytes_downloaded, transfer_kbps,
-        request_method,
-        cache_category, cache_key, cache_created_at, cache_expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      urlId,
-      new Date().toISOString(), // request_started_at
-      new Date().toISOString(), // fetched_at
-      response.status,
-      response.headers?.['content-type'] || null,
-      response.headers?.['content-encoding'] || null,
-      response.headers?.etag || null,
-      response.headers?.['last-modified'] || null,
-      null, // redirect_chain
-      null, // ttfb_ms
-      null, // download_ms
-      null, // total_ms
-      response.body ? Buffer.byteLength(JSON.stringify(response.body), 'utf8') : 0,
-      null, // transfer_kbps
-      request.method || 'GET',
-      category,
-      cacheKey,
-      new Date().toISOString(),
-      expiresAt
-    );
+    const now = new Date().toISOString();
 
-    return result.lastInsertRowid;
+    return insertHttpResponseCacheEntry(db, {
+      urlId,
+      requestStartedAt: now,
+      fetchedAt: now,
+      httpStatus: response.status,
+      contentType: response.headers?.['content-type'] || null,
+      contentEncoding: response.headers?.['content-encoding'] || null,
+      etag: response.headers?.etag || null,
+      lastModified: response.headers?.['last-modified'] || null,
+      bytesDownloaded: response.body ? Buffer.byteLength(JSON.stringify(response.body), 'utf8') : 0,
+      requestMethod: request.method || 'GET',
+      cacheCategory: category,
+      cacheKey,
+      cacheCreatedAt: now,
+      cacheExpiresAt: expiresAt
+    });
   }
 
   /**
@@ -297,51 +301,22 @@ class HttpRequestResponseFacade {
       level: compressionType.level
     });
 
-    const result = db.prepare(`
-      INSERT INTO content_storage (
-        http_response_id, storage_type, compression_type_id,
-        bucket_entry_key, content_blob, content_sha256,
-        uncompressed_size, compressed_size, compression_ratio,
-        content_category, content_subtype
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    return insertCachedContent(db, {
       httpResponseId,
-      'db_inline',
-      compressionType.id,
-      null, // bucket_entry_key
-      compressed.compressed,
-      compressed.sha256,
-      compressed.uncompressedSize,
-      compressed.compressedSize,
-      compressed.ratio,
-      category,
-      contentTypeInfo.subtype
-    );
-
-    return result.lastInsertRowid;
+      storageType: 'db_inline',
+      compressionTypeId: compressionType.id,
+      contentBlob: compressed.compressed,
+      contentSha256: compressed.sha256,
+      uncompressedSize: compressed.uncompressedSize,
+      compressedSize: compressed.compressedSize,
+      compressionRatio: compressed.ratio,
+      contentCategory: category,
+      contentSubtype: contentTypeInfo.subtype
+    });
   }
 
   static async _findCachedResponse(db, cacheKey, category) {
-    const result = db.prepare(`
-      SELECT
-        hr.id as http_response_id,
-        hr.http_status,
-        hr.content_type,
-        hr.cache_expires_at,
-        cs.content_blob,
-        cs.compression_type_id,
-        cs.uncompressed_size,
-        cs.compressed_size,
-        cs.content_category,
-        ct.algorithm
-      FROM http_responses hr
-      LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
-      LEFT JOIN compression_types ct ON cs.compression_type_id = ct.id
-      WHERE hr.cache_key = ? AND hr.cache_category = ? AND hr.cache_expires_at > datetime('now')
-      ORDER BY hr.fetched_at DESC
-    `).all(cacheKey, category);
-
-    return result;
+    return findCachedResponse(db, cacheKey, category);
   }
 
   /**
@@ -360,22 +335,24 @@ class HttpRequestResponseFacade {
   static async _recordCacheHit(db, httpResponseId) {
     // For now, just update the fetched_at timestamp
     // In the future, we could add hit counting
-    db.prepare(`
-      UPDATE http_responses
-      SET fetched_at = datetime('now')
-      WHERE id = ?
-    `).run(httpResponseId);
+    touchCacheEntry(db, httpResponseId);
   }
 
   /**
-   * Clean up expired cache entry
+   * Evict expired cache entries for one key + category.
+   *
+   * c220: this replaces _cleanupExpiredEntry, which was UNREACHABLE. It was
+   * called only from the `_isExpired(latest)` branch of
+   * getCachedHttpResponse, but _findCachedResponse filters expired rows out
+   * in SQL — so `latest` was never expired and nothing was ever evicted. The
+   * live db showed the consequence: all 33 cache rows expired, all 33 still
+   * present. Eviction now runs on the MISS path, where the expired rows
+   * actually are, and is bounded to the key being looked up so it never
+   * becomes a full-table sweep.
    * @private
    */
-  static async _cleanupExpiredEntry(db, httpResponseId) {
-    // Remove content storage
-    db.prepare('DELETE FROM content_storage WHERE http_response_id = ?').run(httpResponseId);
-    // Remove HTTP response
-    db.prepare('DELETE FROM http_responses WHERE id = ?').run(httpResponseId);
+  static async _evictExpiredEntries(db, cacheKey, category) {
+    return deleteExpiredCacheEntries(db, cacheKey, category);
   }
 
   /**

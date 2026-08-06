@@ -71,12 +71,12 @@
     },
     {
       "id": "ncdb-debt-ratchet",
-      "description": "DELEGATABLE raw-SQL signatures outside ncdb do not exceed the ceiling — RATCHETED DOWN as delegations land (269 baseline → 258 → 249 schema-introspection helpers out of validate-url-normalization → 241 same helpers reused in normalize-fetches + normalize-place-hubs, 2026-07-21 → … → 195). SEMANTICS CHANGED 2026-08-05 (cycle 218), deliberately: the ceiling guarded the RAW total, which could be satisfied by DELETING code — c217's retirement of one unreachable file dropped it 195→182 and c218's owner-directed removal of three spent migrations took another 30, neither of which moved one query into ncdb. The guarded number is now the scan's DELEGATABLE count (reachable, non-excluded files: the SQL that could actually move), which held at 118 across both of those cleanups. Ceiling set to 118 = the measured delegatable count at the changeover, NOT a loosening. Lower it only when a delegation reduces the count; raise only deliberately. 118 → 112 (cycle 219): UrlResolver + HttpRequestResponseFacade both repointed onto ncdb's existing ensureUrlId — the first drop under the new semantics, and a real delegation rather than a deletion",
+      "description": "DELEGATABLE raw-SQL signatures outside ncdb do not exceed the ceiling — RATCHETED DOWN as delegations land (269 baseline → 258 → 249 schema-introspection helpers out of validate-url-normalization → 241 same helpers reused in normalize-fetches + normalize-place-hubs, 2026-07-21 → … → 195). SEMANTICS CHANGED 2026-08-05 (cycle 218), deliberately: the ceiling guarded the RAW total, which could be satisfied by DELETING code — c217's retirement of one unreachable file dropped it 195→182 and c218's owner-directed removal of three spent migrations took another 30, neither of which moved one query into ncdb. The guarded number is now the scan's DELEGATABLE count (reachable, non-excluded files: the SQL that could actually move), which held at 118 across both of those cleanups. Ceiling set to 118 = the measured delegatable count at the changeover, NOT a loosening. Lower it only when a delegation reduces the count; raise only deliberately. 118 → 112 (cycle 219): UrlResolver + HttpRequestResponseFacade both repointed onto ncdb's existing ensureUrlId — the first drop under the new semantics, and a real delegation rather than a deletion. 112 → 106 (cycle 220): the facade's remaining six sites moved to ncdb legacy-httpResponseCache, which also made the two-table delete atomic and fixed an expiry comparison that read expired entries as fresh",
       "cmd": "node",
       "args": [
         "tools/dev/ncdb-debt-scan.js",
         "--max",
-        "112"
+        "106"
       ],
       "needsServer": false,
       "timeoutMs": 20000
