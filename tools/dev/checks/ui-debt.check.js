@@ -48,6 +48,7 @@
 
 const { execFileSync } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 
@@ -111,15 +112,41 @@ function main() {
 
   const all = trackedFiles('src/ui');
   const stays = new Set(trackedFiles('src/ui/server/projectStatus'));
-  const debt = all.filter((f) => !stays.has(f));
+  const tracked = all.filter((f) => !stays.has(f));
 
-  console.log(`ui-debt: ${debt.length} operational-UI files in the monorepo (ceiling ${ceiling})`);
+  // REDEFINED 2026-08-07 (cycle 235), by owner decision: the number counts
+  // files NOT YET SOURCED FROM news-crawler-ui.
+  //
+  // The old definition counted every tracked file under src/ui, and a win
+  // required DELETING the monorepo copy. The owner's instruction is to extract
+  // BY REFERENCE, keeping the monorepo functional — under which the file count
+  // never falls, so a successful extraction registered as zero progress. The
+  // c227 audit found the metric could not move at all: only 5 of 351 files
+  // were dead, and the other route to a win contradicted the strategy.
+  //
+  // A file is now EXTRACTED once it consumes news-crawler-ui — it may remain
+  // on disk as a thin re-export, which is exactly what by-reference extraction
+  // produces. So the number falls as extraction happens, without requiring
+  // deletion.
+  const sourcedFromPackage = tracked.filter((f) => {
+    try {
+      return /require\(['"]news-crawler-ui|from ['"]news-crawler-ui/.test(
+        fs.readFileSync(path.join(ROOT, f), 'utf8')
+      );
+    } catch (_) { return false; }
+  });
+  const extracted = new Set(sourcedFromPackage);
+  const debt = tracked.filter((f) => !extracted.has(f));
+
+  console.log(`ui-debt: ${debt.length} UI files not yet sourced from news-crawler-ui (ceiling ${ceiling})`);
+  console.log(`         ${tracked.length} tracked under src/ui; ${extracted.size} already consume the package`);
   console.log('         projectStatus excluded (stays by design: the loop\'s own instrument)');
-  console.log('         NOT A DEBT MEASURE — audited 2026-08-07 (cycle 227): of 351 files only');
-  console.log('         FIVE are code referenced nowhere. 249 are wired, 36 are *.check.js/*.test.js');
-  console.log('         entry points invoked BY PATH, 21 are screenshots. This tracks MIGRATION');
-  console.log('         PROGRESS, not rot. See docs/decisions/2026-08-07-ui-debt-audit.md —');
-  console.log('         the definition needs an owner decision before this number can move again.');
+  console.log('         REDEFINED c235 by owner decision — extraction BY REFERENCE now counts.');
+  console.log('         A file leaves this number when it sources from news-crawler-ui, whether');
+  console.log('         or not a local copy remains. The old definition required DELETING the');
+  console.log('         copy, which the by-reference strategy never does, so it could not move.');
+  console.log('         Audit evidence: docs/decisions/2026-08-07-ui-debt-audit.md (only 5 of');
+  console.log('         351 files are dead — this tracks migration, not rot).');
 
   if (debt.length > ceiling) {
     console.error(`FAIL: ui-debt ${debt.length} exceeds ceiling ${ceiling}.`);

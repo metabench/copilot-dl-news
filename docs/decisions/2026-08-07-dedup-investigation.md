@@ -1,9 +1,51 @@
 # Dedup investigation: the scoring is the small problem
 
 **Date:** 2026-08-07 (cycle 228)
-**Status:** investigation complete. **Steps 1 and 3 SHIPPED in cycle 229**
-(qid guard + bounded tie-break). **Step 2 — which scoring policy — still needs
-an owner decision**, and is now measurable on an honest population.
+**Status:** ✅ **CLOSED in cycle 235. The scoring question is MOOT — there are
+no genuine duplicates left to score.**
+
+## Cycle 235: the answer, and why it is not A or C
+
+The owner chose "investigate further first" rather than picking a policy. That
+was the right call. Reading the 12 groups where A and C disagree shows that
+**none of them are duplicates**:
+
+```
+Landkreis Kusel      vs Landkreis Kassel        grouped by Persian  "کسل"
+province de Lérida   vs província de Girona     grouped by Armenian "Կիրոնա"
+Ain / Aisne / Yonne / Gers / Cher               Greek, Hebrew, Cyrillic, Japanese
+West Lothian         vs East Lothian            grouped by Telugu
+```
+
+The grouping matches on `place_names.normalized` across **every** alternate
+name, including transliterations into other scripts. Two different French
+departments each carry a Greek or Hebrew alternate that normalises to the same
+string, so they collide. No scoring policy can make merging them correct.
+
+None of these carry a `wikidata_qid`, which is why the c229 guard let them
+through — it can only protect places that have one.
+
+**All 31 survivors carried CONFLICTING EXTERNAL IDS**, so a second guard on the
+same principle closes the gap:
+
+```
+live gazetteer merge candidates:  964  →  31 (qid guard, c229)  →  0 (ext-id guard, c235)
+```
+
+The schema makes this guard strong: `place_external_ids` has
+`UNIQUE(source, ext_id)`, so two places cannot share an id — if both carry one
+from the same source, those ids necessarily differ and the places are
+necessarily different. That fact is pinned by its own test.
+
+**So the live gazetteer contains zero genuine duplicate groups.** The dedup
+tools have nothing legitimate to merge, and the choice between qid-first and
+coords-first has no cases left to decide. If real duplicates appear later, the
+question can be re-measured on that population; c228's recommendation of policy
+A stands as the default should it ever be needed.
+
+---
+
+*Cycle 229 outcome and the original cycle-228 investigation follow.*
 
 ## Cycle 229 outcome
 
