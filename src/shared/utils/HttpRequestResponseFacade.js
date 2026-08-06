@@ -34,6 +34,7 @@
 
 const crypto = require('crypto');
 const { compress, decompress, getCompressionType } = require('./CompressionFacade');
+const { ensureUrlId } = require('news-crawler-db');
 
 // Configuration constants
 const CACHE_CONFIG = {
@@ -222,18 +223,15 @@ class HttpRequestResponseFacade {
    * @private
    */
   static async _ensureUrlId(db, url) {
-    // Try to get existing URL ID
-    let urlRow = db.prepare('SELECT id FROM urls WHERE url = ?').get(url);
-    if (urlRow) return urlRow.id;
-
-    // URL doesn't exist, insert it
-    const urlObj = new URL(url);
-    const result = db.prepare(`
-      INSERT INTO urls (url, host, created_at, last_seen_at)
-      VALUES (?, ?, datetime('now'), datetime('now'))
-    `).run(url, urlObj.hostname);
-
-    return result.lastInsertRowid;
+    // c219: delegated to ncdb's ensureUrlId, which UrlResolver now also uses
+    // — this repo had two url-row writers with different column lists (this
+    // one set host + last_seen_at, UrlResolver set neither), against a table
+    // with eight insert shapes across the two repos.
+    //
+    // Two behaviour changes, both deliberate: the host is lowercased, and a
+    // malformed url now yields a row with a null host instead of `new URL()`
+    // throwing out of a cache write.
+    return ensureUrlId(db, url);
   }
 
   /**

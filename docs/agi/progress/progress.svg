@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 1274" width="980" height="1274" role="img" aria-label="AGI loop progress dashboard">
 <rect width="980" height="1274" fill="#101216"/>
 <text x="28" y="44" font-family="Segoe UI, system-ui, sans-serif" font-size="20" fill="#e8e4d8" font-weight="600">AGI loop progress — copilot-dl-news ecosystem</text>
-<text x="28" y="66" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#8a8778" >generated from IMPROVEMENT_LEDGER.md cycle stanzas · 177 cycles · data through 2026-08-05</text>
+<text x="28" y="66" font-family="Segoe UI, system-ui, sans-serif" font-size="12" fill="#8a8778" >generated from IMPROVEMENT_LEDGER.md cycle stanzas · 178 cycles · data through 2026-08-05</text>
 <rect x="28" y="84" width="173.6" height="78" rx="6" fill="#171a20" stroke="#232833"/>
 <text x="40" y="106" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#8a8778" >Cycles tracked</text>
-<text x="40" y="136" font-family="Segoe UI, system-ui, sans-serif" font-size="24" fill="#e8e4d8" font-weight="600">177</text>
+<text x="40" y="136" font-family="Segoe UI, system-ui, sans-serif" font-size="24" fill="#e8e4d8" font-weight="600">178</text>
 <rect x="215.6" y="84" width="173.6" height="78" rx="6" fill="#171a20" stroke="#232833"/>
 <text x="227.6" y="106" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#8a8778" >Verified improvements</text>
-<text x="227.6" y="136" font-family="Segoe UI, system-ui, sans-serif" font-size="24" fill="#e8e4d8" font-weight="600">463</text>
+<text x="227.6" y="136" font-family="Segoe UI, system-ui, sans-serif" font-size="24" fill="#e8e4d8" font-weight="600">470</text>
 <text x="227.6" y="154" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" >cumulative</text>
 <rect x="403.2" y="84" width="173.6" height="78" rx="6" fill="#171a20" stroke="#232833"/>
 <text x="415.2" y="106" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#8a8778" >Defects caught pre-ship</text>
-<text x="415.2" y="136" font-family="Segoe UI, system-ui, sans-serif" font-size="24" fill="#e8e4d8" font-weight="600">178/251</text>
+<text x="415.2" y="136" font-family="Segoe UI, system-ui, sans-serif" font-size="24" fill="#e8e4d8" font-weight="600">179/252</text>
 <text x="415.2" y="154" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" >71% before landing</text>
 <rect x="590.8" y="84" width="173.6" height="78" rx="6" fill="#171a20" stroke="#232833"/>
 <text x="602.8" y="106" font-family="Segoe UI, system-ui, sans-serif" font-size="11" fill="#8a8778" >Corrections issued</text>
@@ -26,13 +26,13 @@
 <line x1="64" y1="386" x2="952" y2="386" stroke="#232833" stroke-width="1"/>
 <text x="56" y="390" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" text-anchor="end">0</text>
 <line x1="64" y1="341.5" x2="952" y2="341.5" stroke="#232833" stroke-width="1"/>
-<text x="56" y="345.5" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" text-anchor="end">116</text>
+<text x="56" y="345.5" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" text-anchor="end">118</text>
 <line x1="64" y1="297" x2="952" y2="297" stroke="#232833" stroke-width="1"/>
-<text x="56" y="301" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" text-anchor="end">233</text>
+<text x="56" y="301" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" text-anchor="end">235</text>
 <line x1="64" y1="252.5" x2="952" y2="252.5" stroke="#232833" stroke-width="1"/>
-<text x="56" y="256.5" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" text-anchor="end">349</text>
+<text x="56" y="256.5" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" text-anchor="end">353</text>
 <line x1="64" y1="208" x2="952" y2="208" stroke="#232833" stroke-width="1"/>
-<text x="56" y="212" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" text-anchor="end">465</text>
+<text x="56" y="212" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" text-anchor="end">470</text>
 <line x1="64" y1="208" x2="64" y2="386" stroke="#232833" stroke-width="1" opacity="0.6"/>
 <text x="91.8" y="400" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">07-21</text>
 <line x1="119.5" y1="208" x2="119.5" y2="386" stroke="#232833" stroke-width="1" opacity="0.6"/>
@@ -58,11 +58,11 @@
 <text x="868.8" y="400" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">08-04</text>
 <line x1="896.5" y1="208" x2="896.5" y2="386" stroke="#232833" stroke-width="1" opacity="0.6"/>
 <text x="924.3" y="400" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">08-05</text>
-<path d="M65.2,386 L65.2,385.2 L67.5,384.5 L69.8,384.1 L72.1,383.7 L74.4,383.3 L76.7,382.9 L79,382.6 L81.3,382.2 L83.7,381.8 L86,378.3 L88.3,376.4 L90.6,376 L92.9,375.7 L95.2,375.3 L97.5,374.9 L99.8,374.5 L102.2,374.1 L104.5,373.8 L106.8,373.4 L109.1,372.6 L111.4,371.5 L113.7,370.3 L116,368.8 L118.3,368 L121.6,367.2 L125.9,366.5 L130.2,365.7 L134.4,364.6 L138.7,364.2 L143,363.4 L147.3,362.6 L151.5,362.3 L155.8,361.9 L160.1,361.5 L164.3,361.1 L168.6,360.7 L172.9,360.4 L179,360 L186.9,359.6 L194.8,359.2 L202.8,358.8 L210.7,358.4 L218.6,358.1 L226.5,357.7 L292.9,357.7 L306.8,357.7 L320.7,357.3 L334.6,356.9 L342.5,356.5 L344.5,356.1 L346.5,355.8 L348.4,355.8 L350.4,355.4 L352.4,355 L354.4,354.6 L356.4,354.2 L358.3,353.8 L360.3,353.8 L362.3,353.5 L364.3,353.5 L366.3,353.5 L368.3,353.1 L370.2,352.7 L372.2,352.3 L374.2,351.9 L376.2,351.5 L378.2,351.2 L380.2,350.8 L382.1,350.8 L384.1,350.4 L386.1,350 L388.1,350 L390.1,349.6 L392,349.3 L394,348.9 L396,348.5 L398.4,347.3 L401.2,346.6 L403.9,346.2 L406.7,345.8 L409.5,345.4 L412.3,344.7 L415,344.3 L417.8,343.5 L420.6,343.1 L423.4,342.4 L426.1,341.6 L428.9,340.8 L431.7,339.7 L434.5,338.9 L437.2,338.2 L440,337.4 L442.8,336.6 L445.6,336.2 L448.3,335.1 L451.1,334.3 L455,333.9 L460.1,332.8 L465.1,331.6 L470.2,330.9 L475.2,330.5 L480.3,330.1 L485.3,329.7 L490.3,328.6 L495.4,327.4 L500.4,326.7 L505.5,325.9 L521.9,324.8 L549.6,324 L566,322.8 L571.1,321.7 L576.1,320.5 L581.2,320.2 L586.2,319.8 L591.3,319 L596.3,318.2 L601.3,317.1 L606.4,315.6 L611.4,314.4 L616.5,312.9 L646.8,312.5 L702.3,311.4 L743.9,309.8 L771.6,308.7 L791.1,307.5 L802.2,306.4 L813.3,305.2 L824.4,304.8 L835.5,304.5 L842.2,302.9 L844.6,302.2 L847,301.4 L849.4,300.3 L851.9,299.1 L854.3,298 L856.7,296.8 L859.1,295.7 L861.5,294.5 L863.9,293.4 L866.3,291.8 L868.8,289.9 L871.2,288 L873.6,285.7 L876,283.8 L878.4,282.3 L880.8,280.7 L883.2,279.6 L885.6,277.7 L888.1,275.8 L890.5,272.7 L892.9,270.4 L895.3,269.6 L897.6,267.7 L899.8,266.2 L902.1,265 L904.3,261.6 L906.5,259.7 L908.7,257.4 L910.9,253.9 L913.2,250.9 L915.4,248.2 L917.6,244.7 L919.8,243.2 L922,239.4 L924.3,236.3 L926.5,234.4 L928.7,232.9 L930.9,229.4 L933.1,226.4 L935.4,223.7 L937.6,221.8 L939.8,219.5 L942,216.8 L944.2,214.9 L946.5,213.4 L948.7,211.1 L950.9,208.8 L950.9,386 Z" fill="#b8862e" opacity="0.12"/>
-<path d="M65.2,385.2 L67.5,384.5 L69.8,384.1 L72.1,383.7 L74.4,383.3 L76.7,382.9 L79,382.6 L81.3,382.2 L83.7,381.8 L86,378.3 L88.3,376.4 L90.6,376 L92.9,375.7 L95.2,375.3 L97.5,374.9 L99.8,374.5 L102.2,374.1 L104.5,373.8 L106.8,373.4 L109.1,372.6 L111.4,371.5 L113.7,370.3 L116,368.8 L118.3,368 L121.6,367.2 L125.9,366.5 L130.2,365.7 L134.4,364.6 L138.7,364.2 L143,363.4 L147.3,362.6 L151.5,362.3 L155.8,361.9 L160.1,361.5 L164.3,361.1 L168.6,360.7 L172.9,360.4 L179,360 L186.9,359.6 L194.8,359.2 L202.8,358.8 L210.7,358.4 L218.6,358.1 L226.5,357.7 L292.9,357.7 L306.8,357.7 L320.7,357.3 L334.6,356.9 L342.5,356.5 L344.5,356.1 L346.5,355.8 L348.4,355.8 L350.4,355.4 L352.4,355 L354.4,354.6 L356.4,354.2 L358.3,353.8 L360.3,353.8 L362.3,353.5 L364.3,353.5 L366.3,353.5 L368.3,353.1 L370.2,352.7 L372.2,352.3 L374.2,351.9 L376.2,351.5 L378.2,351.2 L380.2,350.8 L382.1,350.8 L384.1,350.4 L386.1,350 L388.1,350 L390.1,349.6 L392,349.3 L394,348.9 L396,348.5 L398.4,347.3 L401.2,346.6 L403.9,346.2 L406.7,345.8 L409.5,345.4 L412.3,344.7 L415,344.3 L417.8,343.5 L420.6,343.1 L423.4,342.4 L426.1,341.6 L428.9,340.8 L431.7,339.7 L434.5,338.9 L437.2,338.2 L440,337.4 L442.8,336.6 L445.6,336.2 L448.3,335.1 L451.1,334.3 L455,333.9 L460.1,332.8 L465.1,331.6 L470.2,330.9 L475.2,330.5 L480.3,330.1 L485.3,329.7 L490.3,328.6 L495.4,327.4 L500.4,326.7 L505.5,325.9 L521.9,324.8 L549.6,324 L566,322.8 L571.1,321.7 L576.1,320.5 L581.2,320.2 L586.2,319.8 L591.3,319 L596.3,318.2 L601.3,317.1 L606.4,315.6 L611.4,314.4 L616.5,312.9 L646.8,312.5 L702.3,311.4 L743.9,309.8 L771.6,308.7 L791.1,307.5 L802.2,306.4 L813.3,305.2 L824.4,304.8 L835.5,304.5 L842.2,302.9 L844.6,302.2 L847,301.4 L849.4,300.3 L851.9,299.1 L854.3,298 L856.7,296.8 L859.1,295.7 L861.5,294.5 L863.9,293.4 L866.3,291.8 L868.8,289.9 L871.2,288 L873.6,285.7 L876,283.8 L878.4,282.3 L880.8,280.7 L883.2,279.6 L885.6,277.7 L888.1,275.8 L890.5,272.7 L892.9,270.4 L895.3,269.6 L897.6,267.7 L899.8,266.2 L902.1,265 L904.3,261.6 L906.5,259.7 L908.7,257.4 L910.9,253.9 L913.2,250.9 L915.4,248.2 L917.6,244.7 L919.8,243.2 L922,239.4 L924.3,236.3 L926.5,234.4 L928.7,232.9 L930.9,229.4 L933.1,226.4 L935.4,223.7 L937.6,221.8 L939.8,219.5 L942,216.8 L944.2,214.9 L946.5,213.4 L948.7,211.1 L950.9,208.8" fill="none" stroke="#b8862e" stroke-width="2" stroke-linejoin="round"/>
-<path d="M376.2,346.5 L381.2,351.5 L376.2,356.5 L371.2,351.5 Z" fill="#b34d4d" stroke="#101216" stroke-width="1.5"><title>cycle 110: correction/retraction issued</title></path>
-<path d="M380.2,345.8 L385.2,350.8 L380.2,355.8 L375.2,350.8 Z" fill="#b34d4d" stroke="#101216" stroke-width="1.5"><title>cycle 112: correction/retraction issued</title></path>
-<path d="M392,344.3 L397,349.3 L392,354.3 L387,349.3 Z" fill="#b34d4d" stroke="#101216" stroke-width="1.5"><title>cycle 118: correction/retraction issued</title></path>
+<path d="M65.2,386 L65.2,385.2 L67.5,384.5 L69.8,384.1 L72.1,383.7 L74.4,383.3 L76.7,383 L79,382.6 L81.3,382.2 L83.7,381.8 L86,378.4 L88.3,376.5 L90.6,376.2 L92.9,375.8 L95.2,375.4 L97.5,375 L99.8,374.6 L102.2,374.3 L104.5,373.9 L106.8,373.5 L109.1,372.7 L111.4,371.6 L113.7,370.5 L116,369 L118.3,368.2 L121.6,367.4 L125.9,366.7 L130.2,365.9 L134.4,364.8 L138.7,364.4 L143,363.7 L147.3,362.9 L151.5,362.5 L155.8,362.1 L160.1,361.8 L164.3,361.4 L168.6,361 L172.9,360.6 L179,360.2 L186.9,359.9 L194.8,359.5 L202.8,359.1 L210.7,358.7 L218.6,358.4 L226.5,358 L292.9,358 L306.8,358 L320.7,357.6 L334.6,357.2 L342.5,356.8 L344.5,356.5 L346.5,356.1 L348.4,356.1 L350.4,355.7 L352.4,355.3 L354.4,354.9 L356.4,354.6 L358.3,354.2 L360.3,354.2 L362.3,353.8 L364.3,353.8 L366.3,353.8 L368.3,353.4 L370.2,353.1 L372.2,352.7 L374.2,352.3 L376.2,351.9 L378.2,351.5 L380.2,351.2 L382.1,351.2 L384.1,350.8 L386.1,350.4 L388.1,350.4 L390.1,350 L392,349.6 L394,349.3 L396,348.9 L398.4,347.7 L401.2,347 L403.9,346.6 L406.7,346.2 L409.5,345.9 L412.3,345.1 L415,344.7 L417.8,344 L420.6,343.6 L423.4,342.8 L426.1,342.1 L428.9,341.3 L431.7,340.2 L434.5,339.4 L437.2,338.7 L440,337.9 L442.8,337.1 L445.6,336.8 L448.3,335.6 L451.1,334.9 L455,334.5 L460.1,333.4 L465.1,332.2 L470.2,331.5 L475.2,331.1 L480.3,330.7 L485.3,330.3 L490.3,329.2 L495.4,328.1 L500.4,327.3 L505.5,326.5 L521.9,325.4 L549.6,324.6 L566,323.5 L571.1,322.4 L576.1,321.2 L581.2,320.9 L586.2,320.5 L591.3,319.7 L596.3,319 L601.3,317.8 L606.4,316.3 L611.4,315.2 L616.5,313.7 L646.8,313.3 L702.3,312.1 L743.9,310.6 L771.6,309.5 L791.1,308.4 L802.2,307.2 L813.3,306.1 L824.4,305.7 L835.5,305.3 L842.2,303.8 L844.6,303.1 L847,302.3 L849.4,301.2 L851.9,300 L854.3,298.9 L856.7,297.8 L859.1,296.6 L861.5,295.5 L863.9,294.3 L866.3,292.8 L868.8,290.9 L871.2,289 L873.6,286.8 L876,284.9 L878.4,283.4 L880.8,281.9 L883.2,280.7 L885.6,278.8 L888.1,276.9 L890.5,273.9 L892.9,271.6 L895.3,270.9 L897.6,269 L899.7,267.5 L901.8,266.3 L904,262.9 L906.1,261 L908.2,258.7 L910.4,255.3 L912.5,252.3 L914.6,249.7 L916.8,246.3 L918.9,244.7 L921,240.9 L923.2,237.9 L925.3,236 L927.5,234.5 L929.6,231.1 L931.7,228.1 L933.9,225.4 L936,223.5 L938.1,221.3 L940.3,218.6 L942.4,216.7 L944.5,215.2 L946.7,212.9 L948.8,210.7 L950.9,208 L950.9,386 Z" fill="#b8862e" opacity="0.12"/>
+<path d="M65.2,385.2 L67.5,384.5 L69.8,384.1 L72.1,383.7 L74.4,383.3 L76.7,383 L79,382.6 L81.3,382.2 L83.7,381.8 L86,378.4 L88.3,376.5 L90.6,376.2 L92.9,375.8 L95.2,375.4 L97.5,375 L99.8,374.6 L102.2,374.3 L104.5,373.9 L106.8,373.5 L109.1,372.7 L111.4,371.6 L113.7,370.5 L116,369 L118.3,368.2 L121.6,367.4 L125.9,366.7 L130.2,365.9 L134.4,364.8 L138.7,364.4 L143,363.7 L147.3,362.9 L151.5,362.5 L155.8,362.1 L160.1,361.8 L164.3,361.4 L168.6,361 L172.9,360.6 L179,360.2 L186.9,359.9 L194.8,359.5 L202.8,359.1 L210.7,358.7 L218.6,358.4 L226.5,358 L292.9,358 L306.8,358 L320.7,357.6 L334.6,357.2 L342.5,356.8 L344.5,356.5 L346.5,356.1 L348.4,356.1 L350.4,355.7 L352.4,355.3 L354.4,354.9 L356.4,354.6 L358.3,354.2 L360.3,354.2 L362.3,353.8 L364.3,353.8 L366.3,353.8 L368.3,353.4 L370.2,353.1 L372.2,352.7 L374.2,352.3 L376.2,351.9 L378.2,351.5 L380.2,351.2 L382.1,351.2 L384.1,350.8 L386.1,350.4 L388.1,350.4 L390.1,350 L392,349.6 L394,349.3 L396,348.9 L398.4,347.7 L401.2,347 L403.9,346.6 L406.7,346.2 L409.5,345.9 L412.3,345.1 L415,344.7 L417.8,344 L420.6,343.6 L423.4,342.8 L426.1,342.1 L428.9,341.3 L431.7,340.2 L434.5,339.4 L437.2,338.7 L440,337.9 L442.8,337.1 L445.6,336.8 L448.3,335.6 L451.1,334.9 L455,334.5 L460.1,333.4 L465.1,332.2 L470.2,331.5 L475.2,331.1 L480.3,330.7 L485.3,330.3 L490.3,329.2 L495.4,328.1 L500.4,327.3 L505.5,326.5 L521.9,325.4 L549.6,324.6 L566,323.5 L571.1,322.4 L576.1,321.2 L581.2,320.9 L586.2,320.5 L591.3,319.7 L596.3,319 L601.3,317.8 L606.4,316.3 L611.4,315.2 L616.5,313.7 L646.8,313.3 L702.3,312.1 L743.9,310.6 L771.6,309.5 L791.1,308.4 L802.2,307.2 L813.3,306.1 L824.4,305.7 L835.5,305.3 L842.2,303.8 L844.6,303.1 L847,302.3 L849.4,301.2 L851.9,300 L854.3,298.9 L856.7,297.8 L859.1,296.6 L861.5,295.5 L863.9,294.3 L866.3,292.8 L868.8,290.9 L871.2,289 L873.6,286.8 L876,284.9 L878.4,283.4 L880.8,281.9 L883.2,280.7 L885.6,278.8 L888.1,276.9 L890.5,273.9 L892.9,271.6 L895.3,270.9 L897.6,269 L899.7,267.5 L901.8,266.3 L904,262.9 L906.1,261 L908.2,258.7 L910.4,255.3 L912.5,252.3 L914.6,249.7 L916.8,246.3 L918.9,244.7 L921,240.9 L923.2,237.9 L925.3,236 L927.5,234.5 L929.6,231.1 L931.7,228.1 L933.9,225.4 L936,223.5 L938.1,221.3 L940.3,218.6 L942.4,216.7 L944.5,215.2 L946.7,212.9 L948.8,210.7 L950.9,208" fill="none" stroke="#b8862e" stroke-width="2" stroke-linejoin="round"/>
+<path d="M376.2,346.9 L381.2,351.9 L376.2,356.9 L371.2,351.9 Z" fill="#b34d4d" stroke="#101216" stroke-width="1.5"><title>cycle 110: correction/retraction issued</title></path>
+<path d="M380.2,346.2 L385.2,351.2 L380.2,356.2 L375.2,351.2 Z" fill="#b34d4d" stroke="#101216" stroke-width="1.5"><title>cycle 112: correction/retraction issued</title></path>
+<path d="M392,344.6 L397,349.6 L392,354.6 L387,349.6 Z" fill="#b34d4d" stroke="#101216" stroke-width="1.5"><title>cycle 118: correction/retraction issued</title></path>
 <line x1="372.2" y1="206" x2="372.2" y2="386" stroke="#b8862e" stroke-width="1" stroke-dasharray="3,3" opacity="0.55"/>
 <text x="376.2" y="220" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" >108 · Concurrency default 3 shipped</text>
 <line x1="392" y1="206" x2="392" y2="386" stroke="#b8862e" stroke-width="1" stroke-dasharray="3,3" opacity="0.55"/>
@@ -79,176 +79,177 @@
 <text x="56" y="522" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" text-anchor="end">4</text>
 <line x1="64" y1="452" x2="952" y2="452" stroke="#232833" stroke-width="1"/>
 <text x="56" y="456" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" text-anchor="end">7</text>
-<rect x="69.9" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 47: 1 pre-ship</title></rect>
-<rect x="125.1" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 58: 1 pre-ship</title></rect>
-<rect x="130.1" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 59: 3 pre-ship</title></rect>
-<rect x="135.1" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 60: 2 pre-ship</title></rect>
-<rect x="145.1" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 62: 1 post-ship</title></rect>
-<rect x="150.1" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 63: 1 pre-ship</title></rect>
-<rect x="160.2" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 65: 4 pre-ship</title></rect>
-<rect x="170.2" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 67: 1 pre-ship</title></rect>
-<rect x="175.2" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 68: 3 pre-ship</title></rect>
-<rect x="180.2" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 69: 1 post-ship</title></rect>
-<rect x="185.3" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 70: 2 post-ship</title></rect>
-<rect x="190.3" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 71: 1 pre-ship</title></rect>
-<rect x="195.3" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 72: 4 pre-ship</title></rect>
-<rect x="200.3" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 73: 3 pre-ship</title></rect>
-<rect x="205.3" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 73.5: 2 pre-ship</title></rect>
-<rect x="210.3" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 74: 3 pre-ship</title></rect>
-<rect x="215.4" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 75: 2 pre-ship</title></rect>
-<rect x="230.4" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 78: 1 pre-ship</title></rect>
-<rect x="230.4" y="560" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 78: 1 post-ship</title></rect>
-<rect x="235.4" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 79: 2 pre-ship</title></rect>
-<rect x="240.4" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 80: 3 pre-ship</title></rect>
-<rect x="245.5" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 81: 1 pre-ship</title></rect>
-<rect x="250.5" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 82: 2 pre-ship</title></rect>
-<rect x="255.5" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 83: 3 pre-ship</title></rect>
-<rect x="260.5" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 84: 2 pre-ship</title></rect>
-<rect x="265.5" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 85: 2 pre-ship</title></rect>
-<rect x="265.5" y="516" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 85: 2 post-ship</title></rect>
-<rect x="270.5" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 86: 2 pre-ship</title></rect>
-<rect x="270.5" y="516" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 86: 2 post-ship</title></rect>
-<rect x="275.6" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 87: 1 pre-ship</title></rect>
-<rect x="285.6" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 89: 1 pre-ship</title></rect>
-<rect x="290.6" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 90: 2 pre-ship</title></rect>
-<rect x="295.6" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 91: 3 pre-ship</title></rect>
-<rect x="300.6" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 92: 1 pre-ship</title></rect>
-<rect x="310.7" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 94: 3 pre-ship</title></rect>
-<rect x="315.7" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 95: 1 pre-ship</title></rect>
-<rect x="320.7" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 96: 2 pre-ship</title></rect>
-<rect x="320.7" y="538" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 96: 1 post-ship</title></rect>
-<rect x="325.7" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 97: 2 pre-ship</title></rect>
-<rect x="330.8" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 98: 4 pre-ship</title></rect>
-<rect x="330.8" y="494" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 98: 1 post-ship</title></rect>
-<rect x="335.8" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 99: 3 pre-ship</title></rect>
-<rect x="340.8" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 100: 3 pre-ship</title></rect>
-<rect x="345.8" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 101: 4 pre-ship</title></rect>
-<rect x="345.8" y="494" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 101: 1 post-ship</title></rect>
-<rect x="350.8" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 102: 3 pre-ship</title></rect>
-<rect x="355.8" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 103: 2 pre-ship</title></rect>
-<rect x="360.9" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 104: 4 pre-ship</title></rect>
-<rect x="365.9" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 105: 2 pre-ship</title></rect>
-<rect x="365.9" y="538" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 105: 1 post-ship</title></rect>
-<rect x="370.9" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 106: 2 pre-ship</title></rect>
-<rect x="375.9" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 107: 2 pre-ship</title></rect>
-<rect x="380.9" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 108: 1 pre-ship</title></rect>
-<rect x="385.9" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 109: 1 pre-ship</title></rect>
-<rect x="391" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 110: 1 pre-ship</title></rect>
-<rect x="396" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 111: 2 pre-ship</title></rect>
-<rect x="401" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 112: 2 pre-ship</title></rect>
-<rect x="406" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 113: 3 pre-ship</title></rect>
-<rect x="411" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 114: 4 pre-ship</title></rect>
-<rect x="416" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 115: 2 pre-ship</title></rect>
-<rect x="421.1" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 116: 3 pre-ship</title></rect>
-<rect x="426.1" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 117: 4 pre-ship</title></rect>
-<rect x="431.1" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 118: 2 pre-ship</title></rect>
-<rect x="446.1" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 121: 2 pre-ship</title></rect>
-<rect x="446.1" y="538" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 121: 1 post-ship</title></rect>
-<rect x="451.2" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 122: 2 pre-ship</title></rect>
-<rect x="471.2" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 126: 1 post-ship</title></rect>
-<rect x="476.2" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 127: 1 pre-ship</title></rect>
-<rect x="481.3" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 128: 1 pre-ship</title></rect>
-<rect x="486.3" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 128.5: 1 post-ship</title></rect>
-<rect x="516.4" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 134: 1 pre-ship</title></rect>
-<rect x="521.4" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 135: 2 pre-ship</title></rect>
-<rect x="566.5" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 144: 1 post-ship</title></rect>
-<rect x="571.6" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 145: 1 pre-ship</title></rect>
-<rect x="591.6" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 149: 2 pre-ship</title></rect>
-<rect x="596.6" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 150: 1 post-ship</title></rect>
-<rect x="601.7" y="452" width="3.3" height="154" rx="1.5" fill="#55a377"><title>cycle 151: 7 pre-ship</title></rect>
-<rect x="616.7" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 154: 3 pre-ship</title></rect>
-<rect x="621.7" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 155: 1 pre-ship</title></rect>
-<rect x="626.8" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 156: 1 pre-ship</title></rect>
-<rect x="631.8" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 157: 1 post-ship</title></rect>
-<rect x="636.8" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 158: 1 pre-ship</title></rect>
-<rect x="651.8" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 161: 2 pre-ship</title></rect>
-<rect x="656.9" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 162: 1 pre-ship</title></rect>
-<rect x="661.9" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 163: 2 pre-ship</title></rect>
-<rect x="666.9" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 164: 2 pre-ship</title></rect>
-<rect x="671.9" y="540" width="3.3" height="66" rx="1.5" fill="#b34d4d"><title>cycle 165: 3 post-ship</title></rect>
-<rect x="676.9" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 166: 1 pre-ship</title></rect>
-<rect x="676.9" y="538" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 166: 2 post-ship</title></rect>
-<rect x="681.9" y="540" width="3.3" height="66" rx="1.5" fill="#b34d4d"><title>cycle 167: 3 post-ship</title></rect>
-<rect x="692" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 169: 2 pre-ship</title></rect>
-<rect x="697" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 170: 1 pre-ship</title></rect>
-<rect x="707" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 172: 1 pre-ship</title></rect>
-<rect x="712" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 173: 2 post-ship</title></rect>
-<rect x="717.1" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 174: 1 post-ship</title></rect>
-<rect x="727.1" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 176: 2 pre-ship</title></rect>
-<rect x="727.1" y="538" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 176: 1 post-ship</title></rect>
-<rect x="732.1" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 177: 2 pre-ship</title></rect>
-<rect x="737.1" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 178: 2 pre-ship</title></rect>
-<rect x="742.1" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 179: 1 pre-ship</title></rect>
-<rect x="742.1" y="560" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 179: 1 post-ship</title></rect>
-<rect x="752.2" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 181: 1 pre-ship</title></rect>
-<rect x="762.2" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 183: 1 pre-ship</title></rect>
-<rect x="767.2" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 184: 3 pre-ship</title></rect>
-<rect x="767.2" y="516" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 184: 1 post-ship</title></rect>
-<rect x="772.2" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 185: 3 pre-ship</title></rect>
-<rect x="777.3" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 186: 1 pre-ship</title></rect>
-<rect x="777.3" y="538" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 186: 2 post-ship</title></rect>
-<rect x="782.3" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 187: 1 post-ship</title></rect>
-<rect x="787.3" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 188: 1 pre-ship</title></rect>
-<rect x="787.3" y="560" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 188: 1 post-ship</title></rect>
-<rect x="797.3" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 190: 2 post-ship</title></rect>
-<rect x="802.3" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 191: 1 post-ship</title></rect>
-<rect x="807.4" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 192: 1 post-ship</title></rect>
-<rect x="812.4" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 193: 1 post-ship</title></rect>
-<rect x="817.4" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 194: 1 pre-ship</title></rect>
-<rect x="827.4" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 196: 1 post-ship</title></rect>
-<rect x="832.4" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 197: 1 pre-ship</title></rect>
-<rect x="837.5" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 198: 1 pre-ship</title></rect>
-<rect x="842.5" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 199: 2 post-ship</title></rect>
-<rect x="847.5" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 200: 1 post-ship</title></rect>
-<rect x="852.5" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 201: 1 post-ship</title></rect>
-<rect x="857.5" y="518" width="3.3" height="88" rx="1.5" fill="#b34d4d"><title>cycle 202: 4 post-ship</title></rect>
-<rect x="862.5" y="540" width="3.3" height="66" rx="1.5" fill="#b34d4d"><title>cycle 203: 3 post-ship</title></rect>
-<rect x="867.6" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 204: 1 post-ship</title></rect>
-<rect x="872.6" y="540" width="3.3" height="66" rx="1.5" fill="#b34d4d"><title>cycle 205: 3 post-ship</title></rect>
-<rect x="882.6" y="540" width="3.3" height="66" rx="1.5" fill="#b34d4d"><title>cycle 207: 3 post-ship</title></rect>
-<rect x="887.6" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 208: 2 post-ship</title></rect>
-<rect x="892.6" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 209: 2 post-ship</title></rect>
-<rect x="897.7" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 210: 1 post-ship</title></rect>
-<rect x="902.7" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 211: 2 post-ship</title></rect>
-<rect x="907.7" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 212: 2 post-ship</title></rect>
-<rect x="912.7" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 213: 2 post-ship</title></rect>
-<rect x="922.8" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 215: 1 post-ship</title></rect>
-<rect x="942.8" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 219: 1 pre-ship</title></rect>
-<rect x="947.8" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 220: 1 pre-ship</title></rect>
+<rect x="69.8" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 47: 1 pre-ship</title></rect>
+<rect x="124.7" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 58: 1 pre-ship</title></rect>
+<rect x="129.7" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 59: 3 pre-ship</title></rect>
+<rect x="134.7" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 60: 2 pre-ship</title></rect>
+<rect x="144.7" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 62: 1 post-ship</title></rect>
+<rect x="149.7" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 63: 1 pre-ship</title></rect>
+<rect x="159.6" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 65: 4 pre-ship</title></rect>
+<rect x="169.6" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 67: 1 pre-ship</title></rect>
+<rect x="174.6" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 68: 3 pre-ship</title></rect>
+<rect x="179.6" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 69: 1 post-ship</title></rect>
+<rect x="184.6" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 70: 2 post-ship</title></rect>
+<rect x="189.6" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 71: 1 pre-ship</title></rect>
+<rect x="194.6" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 72: 4 pre-ship</title></rect>
+<rect x="199.5" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 73: 3 pre-ship</title></rect>
+<rect x="204.5" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 73.5: 2 pre-ship</title></rect>
+<rect x="209.5" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 74: 3 pre-ship</title></rect>
+<rect x="214.5" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 75: 2 pre-ship</title></rect>
+<rect x="229.5" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 78: 1 pre-ship</title></rect>
+<rect x="229.5" y="560" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 78: 1 post-ship</title></rect>
+<rect x="234.5" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 79: 2 pre-ship</title></rect>
+<rect x="239.5" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 80: 3 pre-ship</title></rect>
+<rect x="244.4" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 81: 1 pre-ship</title></rect>
+<rect x="249.4" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 82: 2 pre-ship</title></rect>
+<rect x="254.4" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 83: 3 pre-ship</title></rect>
+<rect x="259.4" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 84: 2 pre-ship</title></rect>
+<rect x="264.4" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 85: 2 pre-ship</title></rect>
+<rect x="264.4" y="516" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 85: 2 post-ship</title></rect>
+<rect x="269.4" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 86: 2 pre-ship</title></rect>
+<rect x="269.4" y="516" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 86: 2 post-ship</title></rect>
+<rect x="274.4" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 87: 1 pre-ship</title></rect>
+<rect x="284.4" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 89: 1 pre-ship</title></rect>
+<rect x="289.3" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 90: 2 pre-ship</title></rect>
+<rect x="294.3" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 91: 3 pre-ship</title></rect>
+<rect x="299.3" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 92: 1 pre-ship</title></rect>
+<rect x="309.3" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 94: 3 pre-ship</title></rect>
+<rect x="314.3" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 95: 1 pre-ship</title></rect>
+<rect x="319.3" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 96: 2 pre-ship</title></rect>
+<rect x="319.3" y="538" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 96: 1 post-ship</title></rect>
+<rect x="324.3" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 97: 2 pre-ship</title></rect>
+<rect x="329.3" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 98: 4 pre-ship</title></rect>
+<rect x="329.3" y="494" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 98: 1 post-ship</title></rect>
+<rect x="334.2" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 99: 3 pre-ship</title></rect>
+<rect x="339.2" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 100: 3 pre-ship</title></rect>
+<rect x="344.2" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 101: 4 pre-ship</title></rect>
+<rect x="344.2" y="494" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 101: 1 post-ship</title></rect>
+<rect x="349.2" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 102: 3 pre-ship</title></rect>
+<rect x="354.2" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 103: 2 pre-ship</title></rect>
+<rect x="359.2" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 104: 4 pre-ship</title></rect>
+<rect x="364.2" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 105: 2 pre-ship</title></rect>
+<rect x="364.2" y="538" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 105: 1 post-ship</title></rect>
+<rect x="369.2" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 106: 2 pre-ship</title></rect>
+<rect x="374.2" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 107: 2 pre-ship</title></rect>
+<rect x="379.1" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 108: 1 pre-ship</title></rect>
+<rect x="384.1" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 109: 1 pre-ship</title></rect>
+<rect x="389.1" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 110: 1 pre-ship</title></rect>
+<rect x="394.1" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 111: 2 pre-ship</title></rect>
+<rect x="399.1" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 112: 2 pre-ship</title></rect>
+<rect x="404.1" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 113: 3 pre-ship</title></rect>
+<rect x="409.1" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 114: 4 pre-ship</title></rect>
+<rect x="414.1" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 115: 2 pre-ship</title></rect>
+<rect x="419.1" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 116: 3 pre-ship</title></rect>
+<rect x="424" y="518" width="3.3" height="88" rx="1.5" fill="#55a377"><title>cycle 117: 4 pre-ship</title></rect>
+<rect x="429" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 118: 2 pre-ship</title></rect>
+<rect x="444" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 121: 2 pre-ship</title></rect>
+<rect x="444" y="538" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 121: 1 post-ship</title></rect>
+<rect x="449" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 122: 2 pre-ship</title></rect>
+<rect x="468.9" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 126: 1 post-ship</title></rect>
+<rect x="473.9" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 127: 1 pre-ship</title></rect>
+<rect x="478.9" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 128: 1 pre-ship</title></rect>
+<rect x="483.9" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 128.5: 1 post-ship</title></rect>
+<rect x="513.8" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 134: 1 pre-ship</title></rect>
+<rect x="518.8" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 135: 2 pre-ship</title></rect>
+<rect x="563.7" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 144: 1 post-ship</title></rect>
+<rect x="568.7" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 145: 1 pre-ship</title></rect>
+<rect x="588.7" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 149: 2 pre-ship</title></rect>
+<rect x="593.7" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 150: 1 post-ship</title></rect>
+<rect x="598.6" y="452" width="3.3" height="154" rx="1.5" fill="#55a377"><title>cycle 151: 7 pre-ship</title></rect>
+<rect x="613.6" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 154: 3 pre-ship</title></rect>
+<rect x="618.6" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 155: 1 pre-ship</title></rect>
+<rect x="623.6" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 156: 1 pre-ship</title></rect>
+<rect x="628.6" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 157: 1 post-ship</title></rect>
+<rect x="633.6" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 158: 1 pre-ship</title></rect>
+<rect x="648.5" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 161: 2 pre-ship</title></rect>
+<rect x="653.5" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 162: 1 pre-ship</title></rect>
+<rect x="658.5" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 163: 2 pre-ship</title></rect>
+<rect x="663.5" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 164: 2 pre-ship</title></rect>
+<rect x="668.5" y="540" width="3.3" height="66" rx="1.5" fill="#b34d4d"><title>cycle 165: 3 post-ship</title></rect>
+<rect x="673.5" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 166: 1 pre-ship</title></rect>
+<rect x="673.5" y="538" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 166: 2 post-ship</title></rect>
+<rect x="678.5" y="540" width="3.3" height="66" rx="1.5" fill="#b34d4d"><title>cycle 167: 3 post-ship</title></rect>
+<rect x="688.4" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 169: 2 pre-ship</title></rect>
+<rect x="693.4" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 170: 1 pre-ship</title></rect>
+<rect x="703.4" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 172: 1 pre-ship</title></rect>
+<rect x="708.4" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 173: 2 post-ship</title></rect>
+<rect x="713.4" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 174: 1 post-ship</title></rect>
+<rect x="723.4" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 176: 2 pre-ship</title></rect>
+<rect x="723.4" y="538" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 176: 1 post-ship</title></rect>
+<rect x="728.4" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 177: 2 pre-ship</title></rect>
+<rect x="733.3" y="562" width="3.3" height="44" rx="1.5" fill="#55a377"><title>cycle 178: 2 pre-ship</title></rect>
+<rect x="738.3" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 179: 1 pre-ship</title></rect>
+<rect x="738.3" y="560" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 179: 1 post-ship</title></rect>
+<rect x="748.3" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 181: 1 pre-ship</title></rect>
+<rect x="758.3" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 183: 1 pre-ship</title></rect>
+<rect x="763.3" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 184: 3 pre-ship</title></rect>
+<rect x="763.3" y="516" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 184: 1 post-ship</title></rect>
+<rect x="768.3" y="540" width="3.3" height="66" rx="1.5" fill="#55a377"><title>cycle 185: 3 pre-ship</title></rect>
+<rect x="773.3" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 186: 1 pre-ship</title></rect>
+<rect x="773.3" y="538" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 186: 2 post-ship</title></rect>
+<rect x="778.2" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 187: 1 post-ship</title></rect>
+<rect x="783.2" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 188: 1 pre-ship</title></rect>
+<rect x="783.2" y="560" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 188: 1 post-ship</title></rect>
+<rect x="793.2" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 190: 2 post-ship</title></rect>
+<rect x="798.2" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 191: 1 post-ship</title></rect>
+<rect x="803.2" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 192: 1 post-ship</title></rect>
+<rect x="808.2" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 193: 1 post-ship</title></rect>
+<rect x="813.2" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 194: 1 pre-ship</title></rect>
+<rect x="823.1" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 196: 1 post-ship</title></rect>
+<rect x="828.1" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 197: 1 pre-ship</title></rect>
+<rect x="833.1" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 198: 1 pre-ship</title></rect>
+<rect x="838.1" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 199: 2 post-ship</title></rect>
+<rect x="843.1" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 200: 1 post-ship</title></rect>
+<rect x="848.1" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 201: 1 post-ship</title></rect>
+<rect x="853.1" y="518" width="3.3" height="88" rx="1.5" fill="#b34d4d"><title>cycle 202: 4 post-ship</title></rect>
+<rect x="858.1" y="540" width="3.3" height="66" rx="1.5" fill="#b34d4d"><title>cycle 203: 3 post-ship</title></rect>
+<rect x="863.1" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 204: 1 post-ship</title></rect>
+<rect x="868" y="540" width="3.3" height="66" rx="1.5" fill="#b34d4d"><title>cycle 205: 3 post-ship</title></rect>
+<rect x="878" y="540" width="3.3" height="66" rx="1.5" fill="#b34d4d"><title>cycle 207: 3 post-ship</title></rect>
+<rect x="883" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 208: 2 post-ship</title></rect>
+<rect x="888" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 209: 2 post-ship</title></rect>
+<rect x="893" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 210: 1 post-ship</title></rect>
+<rect x="898" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 211: 2 post-ship</title></rect>
+<rect x="903" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 212: 2 post-ship</title></rect>
+<rect x="907.9" y="562" width="3.3" height="44" rx="1.5" fill="#b34d4d"><title>cycle 213: 2 post-ship</title></rect>
+<rect x="917.9" y="584" width="3.3" height="22" rx="1.5" fill="#b34d4d"><title>cycle 215: 1 post-ship</title></rect>
+<rect x="937.9" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 219: 1 pre-ship</title></rect>
+<rect x="942.9" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 220: 1 pre-ship</title></rect>
+<rect x="947.9" y="584" width="3.3" height="22" rx="1.5" fill="#55a377"><title>cycle 221: 1 pre-ship</title></rect>
 <text x="66.5" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">46</text>
-<text x="181.9" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">69</text>
-<text x="297.3" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">91</text>
-<text x="412.7" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">114</text>
-<text x="528.1" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">136</text>
-<text x="643.5" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">159</text>
-<text x="758.8" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">182</text>
-<text x="874.2" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">205</text>
-<text x="949.5" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">220</text>
+<text x="181.2" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">69</text>
+<text x="296" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">91</text>
+<text x="410.7" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">114</text>
+<text x="525.5" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">136</text>
+<text x="640.2" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">159</text>
+<text x="754.9" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">182</text>
+<text x="869.7" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">205</text>
+<text x="949.5" y="620" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">221</text>
 <line x1="64" y1="606" x2="952" y2="606" stroke="#2e3440" stroke-width="1"/>
 <text x="28" y="640" font-family="Segoe UI, system-ui, sans-serif" font-size="13" fill="#e8e4d8" font-weight="600">Debt ratchets (normalized to first reading; labels carry current absolutes)</text>
 <text x="720" y="640" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" >x-axis: cycle sequence · flat = stalled</text>
 <line x1="64" y1="792" x2="952" y2="792" stroke="#2e3440" stroke-width="1"/>
-<path d="M631.3,666 L635.6,667.7 L640,668.4 L644.4,671.5 L648.7,678.4 L653.1,680.8 L657.5,684.3 L661.8,689.8 L666.2,691.2 L670.5,695 L674.9,698.4 L679.3,702.9 L683.6,702.9 L688,702.9 L692.4,702.9 L696.7,702.9 L701.1,702.9 L705.5,702.9 L709.8,702.9 L714.2,702.9 L718.5,702.9 L722.9,702.9 L727.3,702.9 L731.6,702.9 L736,702.9 L740.4,702.9 L744.7,702.9 L749.1,702.9 L753.5,702.9 L757.8,702.9 L762.2,702.9 L766.5,702.9 L770.9,702.9 L775.3,702.9 L779.6,702.9 L784,702.9 L788.4,702.9 L792.7,702.9 L797.1,702.9 L801.5,702.9 L805.8,702.9 L810.2,702.9 L814.5,702.9 L818.9,702.9 L823.3,702.9 L827.6,702.9 L832,702.9" fill="none" stroke="#b8862e" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
+<path d="M628.1,666 L632.4,667.7 L636.7,668.4 L641.1,671.5 L645.4,678.4 L649.8,680.8 L654.1,684.3 L658.4,689.8 L662.8,691.2 L667.1,695 L671.5,698.4 L675.8,702.9 L680.1,702.9 L684.5,702.9 L688.8,702.9 L693.2,702.9 L697.5,702.9 L701.8,702.9 L706.2,702.9 L710.5,702.9 L714.8,702.9 L719.2,702.9 L723.5,702.9 L727.9,702.9 L732.2,702.9 L736.5,702.9 L740.9,702.9 L745.2,702.9 L749.6,702.9 L753.9,702.9 L758.2,702.9 L762.6,702.9 L766.9,702.9 L771.3,702.9 L775.6,702.9 L779.9,702.9 L784.3,702.9 L788.6,702.9 L792.9,702.9 L797.3,702.9 L801.6,702.9 L806,702.9 L810.3,702.9 L814.6,702.9 L819,702.9 L823.3,702.9 L827.7,702.9 L832,702.9" fill="none" stroke="#b8862e" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
 <text x="840" y="705.9" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#b8862e" >engine 258</text>
-<path d="M605.1,666 L609.5,666 L613.8,666 L618.2,690.3 L622.5,694.6 L626.9,696.4 L631.3,696.4 L635.6,696.4 L640,696.4 L644.4,696.4 L648.7,696.4 L653.1,696.4 L657.5,696.4 L661.8,696.4 L666.2,696.4 L670.5,696.4 L674.9,696.4 L679.3,696.4 L683.6,696.4 L688,696.4 L692.4,696.4 L696.7,696.4 L701.1,696.4 L705.5,696.4 L709.8,696.4 L714.2,696.4 L718.5,696.4 L722.9,696.4 L727.3,696.4 L731.6,696.4 L736,696.4 L740.4,696.4 L744.7,696.4 L749.1,696.4 L753.5,696.4 L757.8,696.4 L762.2,696.4 L766.5,696.4 L770.9,696.4 L775.3,696.4 L779.6,696.4 L784,721.3 L788.4,721.3 L792.7,721.3 L797.1,721.3 L801.5,722 L805.8,723.2 L810.2,723.2 L814.5,723.2 L818.9,723.2 L823.3,723.2 L827.6,723.2 L832,723.2" fill="none" stroke="#7d9bc0" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
+<path d="M602,666 L606.4,666 L610.7,666 L615.1,690.3 L619.4,694.6 L623.7,696.4 L628.1,696.4 L632.4,696.4 L636.7,696.4 L641.1,696.4 L645.4,696.4 L649.8,696.4 L654.1,696.4 L658.4,696.4 L662.8,696.4 L667.1,696.4 L671.5,696.4 L675.8,696.4 L680.1,696.4 L684.5,696.4 L688.8,696.4 L693.2,696.4 L697.5,696.4 L701.8,696.4 L706.2,696.4 L710.5,696.4 L714.8,696.4 L719.2,696.4 L723.5,696.4 L727.9,696.4 L732.2,696.4 L736.5,696.4 L740.9,696.4 L745.2,696.4 L749.6,696.4 L753.9,696.4 L758.2,696.4 L762.6,696.4 L766.9,696.4 L771.3,696.4 L775.6,696.4 L779.9,721.3 L784.3,721.3 L788.6,721.3 L792.9,721.3 L797.3,722 L801.6,723.2 L806,723.2 L810.3,723.2 L814.6,723.2 L819,723.2 L823.3,723.2 L827.7,723.2 L832,723.2" fill="none" stroke="#7d9bc0" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
 <text x="840" y="726.2" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#7d9bc0" >ui 351</text>
-<path d="M64,666 L68.4,666 L72.7,666 L77.1,666 L81.5,666 L85.8,666 L90.2,666 L94.5,670.4 L98.9,674.3 L103.3,674.3 L107.6,674.3 L112,674.3 L116.4,674.3 L120.7,674.3 L125.1,674.3 L129.5,674.3 L133.8,674.3 L138.2,674.3 L142.5,674.3 L146.9,674.3 L151.3,674.3 L155.6,674.3 L160,674.3 L164.4,674.3 L168.7,674.3 L173.1,674.3 L177.5,674.3 L181.8,674.3 L186.2,674.3 L190.5,674.3 L194.9,674.3 L199.3,674.3 L203.6,674.3 L208,674.3 L212.4,674.3 L216.7,674.3 L221.1,674.3 L225.5,674.3 L229.8,674.3 L234.2,674.3 L238.5,674.3 L242.9,674.3 L247.3,674.3 L251.6,674.3 L256,674.3 L260.4,674.3 L264.7,674.3 L269.1,674.3 L273.5,674.3 L277.8,674.3 L282.2,674.3 L286.5,674.3 L290.9,674.3 L295.3,674.3 L299.6,674.3 L304,674.3 L308.4,674.3 L312.7,673.8 L317.1,673.8 L321.5,673.8 L325.8,673.8 L330.2,673.8 L334.5,673.8 L338.9,673.8 L343.3,673.8 L347.6,673.8 L352,673.8 L356.4,673.8 L360.7,673.8 L365.1,673.8 L369.5,673.8 L373.8,673.8 L378.2,673.8 L382.5,673.8 L386.9,673.8 L391.3,673.8 L395.6,673.8 L400,673.8 L404.4,674.3 L408.7,674.3 L413.1,674.3 L417.5,674.3 L421.8,674.3 L426.2,674.3 L430.5,674.3 L434.9,674.3 L439.3,674.3 L443.6,674.3 L448,674.3 L452.4,674.3 L456.7,674.3 L461.1,674.3 L465.5,674.3 L469.8,674.3 L474.2,674.3 L478.5,674.3 L482.9,674.3 L487.3,674.3 L491.6,674.3 L496,674.3 L500.4,674.3 L504.7,674.3 L509.1,674.3 L513.5,674.3 L517.8,674.3 L522.2,674.3 L526.5,674.3 L530.9,674.3 L535.3,674.3 L539.6,674.3 L544,674.3 L548.4,674.3 L552.7,674.3 L557.1,674.3 L561.5,674.3 L565.8,674.3 L570.2,674.3 L574.5,674.3 L578.9,674.3 L583.3,674.3 L587.6,674.3 L592,674.3 L596.4,674.3 L600.7,674.3 L605.1,674.3 L609.5,674.3 L613.8,674.3 L618.2,674.3 L622.5,674.3 L626.9,674.3 L631.3,674.3 L635.6,674.3 L640,674.3 L644.4,674.3 L648.7,674.3 L653.1,674.3 L657.5,674.3 L661.8,674.3 L666.2,674.3 L670.5,674.3 L674.9,674.3 L679.3,674.3 L683.6,674.3 L688,674.3 L692.4,674.3 L696.7,674.3 L701.1,674.3 L705.5,674.3 L709.8,674.3 L714.2,674.3 L718.5,674.3 L722.9,674.3 L727.3,674.3 L731.6,674.3 L736,674.3 L740.4,674.3 L744.7,674.3 L749.1,674.3 L753.5,674.3 L757.8,674.3 L762.2,674.3 L766.5,674.3 L770.9,674.3 L775.3,674.3 L779.6,674.3 L784,674.3 L788.4,674.3 L792.7,678.2 L797.1,678.2 L801.5,678.2 L805.8,678.2 L810.2,678.2 L814.5,689.9 L818.9,696.8 L823.3,696.8 L827.6,703.1 L832,717.8" fill="none" stroke="#a37fb3" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
-<text x="840" y="720.8" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#a37fb3" >ncdb 152</text>
-<path d="M670.5,666 L674.9,673.9 L679.3,659.7 L683.6,659.7 L688,659.7 L692.4,659.7 L696.7,659.7 L701.1,659.7 L705.5,659.7 L709.8,659.7 L714.2,659.7 L718.5,659.7 L722.9,659.7 L727.3,659.7 L731.6,659.7 L736,659.7 L740.4,659.7 L744.7,659.7 L749.1,659.7 L753.5,659.7 L757.8,659.7 L762.2,659.7 L766.5,659.7 L770.9,659.7 L775.3,659.7 L779.6,659.7 L784,659.7 L788.4,659.7 L792.7,659.7 L797.1,659.7 L801.5,659.7 L805.8,659.7 L810.2,659.7 L814.5,659.7 L818.9,659.7 L823.3,659.7 L827.6,659.7 L832,659.7" fill="none" stroke="#55a377" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
+<path d="M64,666 L68.3,666 L72.7,666 L77,666 L81.4,666 L85.7,666 L90,666 L94.4,670.4 L98.7,674.3 L103.1,674.3 L107.4,674.3 L111.7,674.3 L116.1,674.3 L120.4,674.3 L124.7,674.3 L129.1,674.3 L133.4,674.3 L137.8,674.3 L142.1,674.3 L146.4,674.3 L150.8,674.3 L155.1,674.3 L159.5,674.3 L163.8,674.3 L168.1,674.3 L172.5,674.3 L176.8,674.3 L181.2,674.3 L185.5,674.3 L189.8,674.3 L194.2,674.3 L198.5,674.3 L202.8,674.3 L207.2,674.3 L211.5,674.3 L215.9,674.3 L220.2,674.3 L224.5,674.3 L228.9,674.3 L233.2,674.3 L237.6,674.3 L241.9,674.3 L246.2,674.3 L250.6,674.3 L254.9,674.3 L259.3,674.3 L263.6,674.3 L267.9,674.3 L272.3,674.3 L276.6,674.3 L280.9,674.3 L285.3,674.3 L289.6,674.3 L294,674.3 L298.3,674.3 L302.6,674.3 L307,674.3 L311.3,673.8 L315.7,673.8 L320,673.8 L324.3,673.8 L328.7,673.8 L333,673.8 L337.4,673.8 L341.7,673.8 L346,673.8 L350.4,673.8 L354.7,673.8 L359.1,673.8 L363.4,673.8 L367.7,673.8 L372.1,673.8 L376.4,673.8 L380.7,673.8 L385.1,673.8 L389.4,673.8 L393.8,673.8 L398.1,673.8 L402.4,674.3 L406.8,674.3 L411.1,674.3 L415.5,674.3 L419.8,674.3 L424.1,674.3 L428.5,674.3 L432.8,674.3 L437.2,674.3 L441.5,674.3 L445.8,674.3 L450.2,674.3 L454.5,674.3 L458.8,674.3 L463.2,674.3 L467.5,674.3 L471.9,674.3 L476.2,674.3 L480.5,674.3 L484.9,674.3 L489.2,674.3 L493.6,674.3 L497.9,674.3 L502.2,674.3 L506.6,674.3 L510.9,674.3 L515.3,674.3 L519.6,674.3 L523.9,674.3 L528.3,674.3 L532.6,674.3 L536.9,674.3 L541.3,674.3 L545.6,674.3 L550,674.3 L554.3,674.3 L558.6,674.3 L563,674.3 L567.3,674.3 L571.7,674.3 L576,674.3 L580.3,674.3 L584.7,674.3 L589,674.3 L593.4,674.3 L597.7,674.3 L602,674.3 L606.4,674.3 L610.7,674.3 L615.1,674.3 L619.4,674.3 L623.7,674.3 L628.1,674.3 L632.4,674.3 L636.7,674.3 L641.1,674.3 L645.4,674.3 L649.8,674.3 L654.1,674.3 L658.4,674.3 L662.8,674.3 L667.1,674.3 L671.5,674.3 L675.8,674.3 L680.1,674.3 L684.5,674.3 L688.8,674.3 L693.2,674.3 L697.5,674.3 L701.8,674.3 L706.2,674.3 L710.5,674.3 L714.8,674.3 L719.2,674.3 L723.5,674.3 L727.9,674.3 L732.2,674.3 L736.5,674.3 L740.9,674.3 L745.2,674.3 L749.6,674.3 L753.9,674.3 L758.2,674.3 L762.6,674.3 L766.9,674.3 L771.3,674.3 L775.6,674.3 L779.9,674.3 L784.3,674.3 L788.6,678.2 L792.9,678.2 L797.3,678.2 L801.6,678.2 L806,678.2 L810.3,689.9 L814.6,696.8 L819,696.8 L823.3,703.1 L827.7,717.8 L832,720.7" fill="none" stroke="#a37fb3" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
+<text x="840" y="723.7" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#a37fb3" >ncdb 146</text>
+<path d="M667.1,666 L671.5,673.9 L675.8,659.7 L680.1,659.7 L684.5,659.7 L688.8,659.7 L693.2,659.7 L697.5,659.7 L701.8,659.7 L706.2,659.7 L710.5,659.7 L714.8,659.7 L719.2,659.7 L723.5,659.7 L727.9,659.7 L732.2,659.7 L736.5,659.7 L740.9,659.7 L745.2,659.7 L749.6,659.7 L753.9,659.7 L758.2,659.7 L762.6,659.7 L766.9,659.7 L771.3,659.7 L775.6,659.7 L779.9,659.7 L784.3,659.7 L788.6,659.7 L792.9,659.7 L797.3,659.7 L801.6,659.7 L806,659.7 L810.3,659.7 L814.6,659.7 L819,659.7 L823.3,659.7 L827.7,659.7 L832,659.7" fill="none" stroke="#55a377" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
 <text x="840" y="662.7" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#55a377" >phantom 29</text>
-<path d="M674.9,666 L679.3,666 L683.6,663.4 L688,659.7 L692.4,663.4 L696.7,676.3 L701.1,676.3 L705.5,678.9 L709.8,678.9 L714.2,740.6 L718.5,792 L722.9,792 L727.3,792 L731.6,792 L736,792 L740.4,792 L744.7,792 L749.1,792 L753.5,792 L757.8,792 L762.2,792 L766.5,792 L770.9,792 L775.3,792 L779.6,792 L784,792 L788.4,792 L792.7,792 L797.1,792 L801.5,792 L805.8,792 L810.2,792 L814.5,792 L818.9,792 L823.3,792 L827.6,792 L832,792" fill="none" stroke="#b34d4d" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
+<path d="M671.5,666 L675.8,666 L680.1,663.4 L684.5,659.7 L688.8,663.4 L693.2,676.3 L697.5,676.3 L701.8,678.9 L706.2,678.9 L710.5,740.6 L714.8,792 L719.2,792 L723.5,792 L727.9,792 L732.2,792 L736.5,792 L740.9,792 L745.2,792 L749.6,792 L753.9,792 L758.2,792 L762.6,792 L766.9,792 L771.3,792 L775.6,792 L779.9,792 L784.3,792 L788.6,792 L792.9,792 L797.3,792 L801.6,792 L806,792 L810.3,792 L814.6,792 L819,792 L823.3,792 L827.7,792 L832,792" fill="none" stroke="#b34d4d" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
 <text x="840" y="790" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#b34d4d" >known-fail 0</text>
 <text x="64" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">46</text>
-<text x="142.5" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">64</text>
-<text x="221.1" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">81</text>
-<text x="299.6" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">99</text>
-<text x="378.2" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">117</text>
-<text x="456.7" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">134</text>
-<text x="535.3" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">152</text>
-<text x="613.8" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">170</text>
-<text x="692.4" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">188</text>
-<text x="770.9" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">206</text>
-<text x="832" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">220</text>
+<text x="142.1" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">64</text>
+<text x="220.2" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">81</text>
+<text x="298.3" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">99</text>
+<text x="376.4" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">117</text>
+<text x="454.5" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">134</text>
+<text x="532.6" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">152</text>
+<text x="610.7" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">170</text>
+<text x="688.8" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">188</text>
+<text x="766.9" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">206</text>
+<text x="832" y="805" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">221</text>
 <text x="28" y="976" font-family="Segoe UI, system-ui, sans-serif" font-size="13" fill="#e8e4d8" font-weight="600">Repo activity — commits landed per day</text>
 <text x="296" y="976" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" >2026-07-21 → 2026-08-05 · landing date, not work date (bulk catch-up commits cluster)</text>
 <text x="252" y="999" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#e8e4d8" text-anchor="end">copilot-dl-news</text>
@@ -258,7 +259,7 @@
 <rect x="391.4" y="988" width="41.1" height="14" rx="2" fill="#171a20" stroke="#232833" stroke-width="0.5"/>
 <rect x="434.5" y="988" width="41.1" height="14" rx="2" fill="#171a20" stroke="#232833" stroke-width="0.5"/>
 <rect x="477.6" y="988" width="41.1" height="14" rx="2" fill="#171a20" stroke="#232833" stroke-width="0.5"/>
-<rect x="520.8" y="988" width="41.1" height="14" rx="2" fill="#b8862e" opacity="0.8"><title>copilot-dl-news · 2026-07-27 · 22 commits</title></rect>
+<rect x="520.8" y="988" width="41.1" height="14" rx="2" fill="#b8862e" opacity="0.7"><title>copilot-dl-news · 2026-07-27 · 22 commits</title></rect>
 <rect x="563.9" y="988" width="41.1" height="14" rx="2" fill="#b8862e" opacity="0.5"><title>copilot-dl-news · 2026-07-28 · 11 commits</title></rect>
 <rect x="607" y="988" width="41.1" height="14" rx="2" fill="#b8862e" opacity="0.4"><title>copilot-dl-news · 2026-07-29 · 3 commits</title></rect>
 <rect x="650.1" y="988" width="41.1" height="14" rx="2" fill="#b8862e" opacity="0.6"><title>copilot-dl-news · 2026-07-30 · 14 commits</title></rect>
@@ -266,8 +267,8 @@
 <rect x="736.4" y="988" width="41.1" height="14" rx="2" fill="#b8862e" opacity="0.3"><title>copilot-dl-news · 2026-08-01 · 2 commits</title></rect>
 <rect x="779.5" y="988" width="41.1" height="14" rx="2" fill="#b8862e" opacity="0.5"><title>copilot-dl-news · 2026-08-02 · 8 commits</title></rect>
 <rect x="822.6" y="988" width="41.1" height="14" rx="2" fill="#b8862e" opacity="0.5"><title>copilot-dl-news · 2026-08-03 · 8 commits</title></rect>
-<rect x="865.8" y="988" width="41.1" height="14" rx="2" fill="#b8862e" opacity="0.9"><title>copilot-dl-news · 2026-08-04 · 27 commits</title></rect>
-<rect x="908.9" y="988" width="41.1" height="14" rx="2" fill="#b8862e" opacity="1"><title>copilot-dl-news · 2026-08-05 · 34 commits</title></rect>
+<rect x="865.8" y="988" width="41.1" height="14" rx="2" fill="#b8862e" opacity="0.8"><title>copilot-dl-news · 2026-08-04 · 27 commits</title></rect>
+<rect x="908.9" y="988" width="41.1" height="14" rx="2" fill="#b8862e" opacity="1"><title>copilot-dl-news · 2026-08-05 · 35 commits</title></rect>
 <text x="252" y="1015" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#e8e4d8" text-anchor="end">news-crawler-itself</text>
 <rect x="262" y="1004" width="41.1" height="14" rx="2" fill="#171a20" stroke="#232833" stroke-width="0.5"/>
 <rect x="305.1" y="1004" width="41.1" height="14" rx="2" fill="#171a20" stroke="#232833" stroke-width="0.5"/>

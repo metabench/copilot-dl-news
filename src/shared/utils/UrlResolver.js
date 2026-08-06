@@ -9,6 +9,14 @@
  */
 
 const { ensureDb } = require('../../data/db/sqlite/ensureDb');
+// c219: url-row creation is delegated to ncdb's ensureUrlId. This class used
+// to write `INSERT OR IGNORE INTO urls (url, created_at)` — no host, no
+// last_seen_at — while HttpRequestResponseFacade wrote host and last_seen_at
+// for the same table. Eight different insert shapes exist across the two
+// repos, and the live db carries 91,013 host-less url rows (4.9% of
+// 1,867,208). Which writer made which row is not determinable, so no cause is
+// claimed; what is fixed is that this repo's writers now agree.
+const { ensureUrlId } = require('news-crawler-db');
 
 class UrlResolver {
   /**
@@ -25,20 +33,9 @@ class UrlResolver {
    * @private
    */
   _initStatements() {
-    // Insert URL if it doesn't exist
-    this.ensureUrlStmt = this.db.prepare(`
-      INSERT OR IGNORE INTO urls (url, created_at)
-      VALUES (?, datetime('now'))
-    `);
-
-    // Get URL ID by URL string
-    this.getUrlIdStmt = this.db.prepare('SELECT id FROM urls WHERE url = ?');
-
-    // Batch insert URLs
-    this.batchInsertStmt = null; // Created dynamically for each batch
-
-    // Get multiple URL IDs
-    this.batchGetStmt = null; // Created dynamically for each batch
+    // c219: the insert/select pair that used to live here is ncdb's
+    // ensureUrlId, which caches its own statements per-connection. Nothing to
+    // prepare on this side any more.
   }
 
   /**
@@ -51,16 +48,15 @@ class UrlResolver {
       throw new Error('URL must be a non-empty string');
     }
 
-    // Insert if not exists (INSERT OR IGNORE)
-    this.ensureUrlStmt.run(url);
-
-    // Get the ID
-    const row = this.getUrlIdStmt.get(url);
-    if (!row) {
+    // c219: delegated. ncdb derives + lowercases the host, sets created_at
+    // and last_seen_at, and backfills host on a row that predates this fix
+    // (the 91,013 already in production) instead of duplicating it.
+    const id = ensureUrlId(this.db, url);
+    if (id == null) {
       throw new Error(`Failed to resolve URL ID for: ${url}`);
     }
 
-    return row.id;
+    return id;
   }
 
   /**
@@ -78,41 +74,32 @@ class UrlResolver {
       return new Map();
     }
 
-    // Batch insert all URLs
-    const placeholders = uniqueUrls.map(() => '(?, datetime(\'now\'))').join(', ');
-    const insertSql = `INSERT OR IGNORE INTO urls (url, created_at) VALUES ${placeholders}`;
-
-    try {
-      this.db.prepare(insertSql).run(...uniqueUrls);
-    } catch (error) {
-      // If batch insert fails due to SQL parameter limits, fall back to individual inserts
-      if (error.message.includes('too many SQL variables') || uniqueUrls.length > 500) {
-        console.warn('Batch insert failed, falling back to individual inserts');
-        for (const url of uniqueUrls) {
-          try {
-            this.ensureUrlStmt.run(url);
-          } catch (insertError) {
-            console.warn(`Failed to insert URL: ${url}`, insertError.message);
-          }
-        }
-      } else {
-        throw error;
-      }
-    }
-
-    // Batch select all IDs
-    const selectPlaceholders = uniqueUrls.map(() => '?').join(', ');
-    const selectSql = `SELECT id, url FROM urls WHERE url IN (${selectPlaceholders})`;
-
-    const rows = this.db.prepare(selectSql).all(...uniqueUrls);
-
-    // Build result map
+    // c219: this was one multi-row `INSERT OR IGNORE ... VALUES (?,?),(?,?)…`
+    // plus a fallback for SQLite's variable limit plus a second batched
+    // SELECT to read the ids back. All three are gone: ensureUrlId caches its
+    // statements per-connection, so a loop is fast, and it removes the
+    // variable-limit failure mode entirely rather than catching it. Wrapped in
+    // one transaction so a 54,485-row migration batch stays a single commit.
     const result = new Map();
-    for (const row of rows) {
-      result.set(row.url, row.id);
+    const resolveAll = () => {
+      for (const url of uniqueUrls) {
+        try {
+          const id = ensureUrlId(this.db, url);
+          if (id != null) result.set(url, id);
+        } catch (error) {
+          // One bad url must not abort a migration batch — the old code had
+          // the same tolerance via its per-url fallback.
+          console.warn(`Failed to resolve URL: ${url}`, error.message);
+        }
+      }
+    };
+
+    if (typeof this.db.transaction === 'function') {
+      this.db.transaction(resolveAll)();
+    } else {
+      resolveAll();
     }
 
-    // Check for any missing URLs
     const missingUrls = uniqueUrls.filter(url => !result.has(url));
     if (missingUrls.length > 0) {
       console.warn(`Failed to resolve IDs for ${missingUrls.length} URLs:`, missingUrls.slice(0, 5));
