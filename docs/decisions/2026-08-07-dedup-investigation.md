@@ -1,0 +1,109 @@
+# Dedup investigation: the scoring is the small problem
+
+**Date:** 2026-08-07 (cycle 228)
+**Status:** investigation complete — **recommendation below needs an owner decision**
+**Owner instruction:** "Investigate and recommend" — measure how often the three
+scoring policies disagree, then advise.
+**Method:** read-only measurement against the live gazetteer (14,544 places).
+
+## The question asked: how often do the three policies disagree?
+
+Formulas transcribed from source, not from a summary:
+
+| | policy | formula |
+|---|---|---|
+| **A** | `gazetteer-cleanup` | qid 1000 + pop 500 + coords 200 + names×10 + extIds×50 − (restcountries ? 100) |
+| **B** | `populate-gazetteer` | qid 1000 + pop 500 + names×10 − (restcountries ? 100) |
+| **C** | ncdb `legacy-gazetteer-deduplication` | coords 1000 + qid 500 + pop 100 + (extIds>0 ? 50) + **(10000 − id)** |
+
+Across **964** real duplicate groups:
+
+| comparison | disagree on the survivor |
+|---|---:|
+| all three agree | 588 (61.0%) |
+| A vs B | **13 (1.3%)** |
+| A vs C | **368 (38.2%)** |
+| B vs C | **373 (38.7%)** |
+
+So the two copilot policies are effectively the same policy — 1.3% divergence,
+which is documentation-level. **ncdb's disagrees with both on ~38%**, which by
+the owner's own threshold is a correctness problem.
+
+### Why C diverges, measured
+
+`(10000 - p.id)` is commented "Prefer lower IDs (older records)" — written as a
+tie-break. It is not one. Place ids run 1 → 1,003,390, so that term spans
+**1,003,389** while every quality term combined maxes at **1,650** — a **608×**
+difference. C is therefore, in practice, "keep the lowest id", and coords / qid
+/ population / external-ids only matter between places whose ids are within
+1,650 of each other.
+
+That is a defect regardless of which scoring philosophy is preferred: the
+formula does not do what its own comment says.
+
+## The question that turned out to matter more
+
+While grouping the duplicates, the grouping criterion itself — normalized name
++ country + kind, the one all three tools share — proved unsound on this data:
+
+| | groups | places |
+|---|---:|---:|
+| duplicate groups total | 964 | — |
+| **groups whose members carry MORE THAN ONE distinct `wikidata_qid`** | **933 (96.8%)** | **6,733** |
+| …of those, groups with a non-empty normalized name | 730 | — |
+| groups whose normalized name is EMPTY | 203 | 5,163 |
+
+Two distinct failure modes, both real:
+
+**Normalisation strips the distinguishing token.**
+```
+group "province"  AF/region
+   id=1036  Q182493   Paktia Province
+   id=1046  Q165376   Badakhshan Province
+```
+Two different provinces, merged because normalisation reduced both names to
+"province".
+
+**Legitimate homonyms are not duplicates.**
+```
+group "bella-vista"  AR/city
+   id=5502  Q1886737  Bella Vista
+   id=5560  Q55855    Bella Vista
+```
+Two genuinely different Argentinian towns that share a name. No scoring policy
+can make merging them correct.
+
+(A third: `梅塞德斯镇` normalises to `mersedesas` and collides with
+`Mercedes (Buenos Aires)` — a transliteration collision.)
+
+**`wikidata_qid` is the strongest identity evidence in the table, and the
+grouping ignores it entirely.** Running any of the three policies against the
+live gazetteer today would merge thousands of genuinely distinct places, and
+the merge is a cascade delete — names, hierarchy, attributes, external ids.
+
+The damage is prospective, not historical: these duplicates still exist, so the
+cleanup evidently has not been run against the live database.
+
+## Recommendation
+
+**Do not unify the scoring policies yet — that is the 1.3%/38% problem. Fix the
+grouping first, because that is the 96.8% problem.**
+
+1. **Add a qid guard to the grouping**, in all three tools: a group whose
+   members carry two or more distinct `wikidata_qid` values is not a duplicate
+   set and must be skipped (or split by qid). This is a small change with a
+   large protective effect, and it needs no policy decision — two different
+   Wikidata entities are two different places by definition.
+2. **Then** decide the scoring question. With the guard in place the remaining
+   groups are genuine duplicates, and the A-vs-C 38% divergence can be re-measured
+   on that honest population — it will likely shrink, since much of it is C's
+   id-term picking arbitrarily among places that should never have been grouped.
+3. **Independently, fix C's tie-break.** `(10000 - id)` should be a bounded
+   tie-break — e.g. a small constant times a normalised rank, or simply moved
+   to a comparator that only applies on an exact score tie. Its current form
+   makes ncdb's stated policy (coords-first) false in practice.
+
+My recommendation on the eventual scoring choice, for when step 2 arrives:
+**A** (`gazetteer-cleanup`). It is the only one that uses every available
+quality signal, B is a strict subset of it, and C's stated ordering is not what
+it actually does.
