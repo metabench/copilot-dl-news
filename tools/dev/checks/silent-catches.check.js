@@ -92,7 +92,31 @@ function main() {
 // Baseline measured cycle 197 after loud-ening the Cities ingestor's three.
 // Lower by converting bare swallows to loud warns or commented decisions;
 // never by deleting the catch without reading what it guards.
-const CEILING = Number(process.argv.includes('--ceiling') ? process.argv[process.argv.indexOf('--ceiling') + 1] : 103);
+//
+// 103 -> 97 (cycle 232): the drop was incidental, from files retired in
+// earlier cycles rather than from any conversion. Banked because it is real.
+//
+// AND THE TAIL WAS READ, cycle 232 — read this before spending a cycle on it.
+// The remaining bare catches in LIVE code (tests excluded) are dominated by
+// two shapes where swallowing is correct or near-correct:
+//
+//   teardown   db.close(), controller.abort(), res.end(), unwatchFile(),
+//              pool.shutdown(), fs.closeSync() — a failure while closing must
+//              not mask the error that caused the close
+//   logging    PlanArbitrator/DecisionLogger wrap logger.warn/error/log; a
+//              logger that throws would take down the thing it reports on
+//
+// That is NOT the class that produced the known defects. Cycle 230's case was
+// a catch around a PRIMARY OPERATION with a silent fallback: three separate
+// errors in one gazetteer query all landed in one catch, and the plugin served
+// a hardcoded list for months looking healthy. The distinguishing question is
+// "does this catch wrap the work, or the cleanup?" — only the first hides
+// defects.
+//
+// So this number is now a no-regression guard, not a backlog. A NEW bare catch
+// is still worth flagging; grinding the existing 97 down is not where defects
+// are.
+const CEILING = Number(process.argv.includes('--ceiling') ? process.argv[process.argv.indexOf('--ceiling') + 1] : 97);
 
 const bare = main();
 console.log(`silent-catches: ${bare.length} BARE (uncommented) silent catches, both repos (ceiling ${CEILING}); commented swallows are reviewed decisions and not counted`);
