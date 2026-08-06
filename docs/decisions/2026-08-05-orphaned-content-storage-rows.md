@@ -1,10 +1,51 @@
 # 15,061 orphaned `content_storage` rows — measured, not attributed
 
 **Date:** 2026-08-05 (cycle 220)
-**Status:** ✅ **RECLAIM APPROVED (cycle 223)** — c221 established there is no
-live producer; the owner has authorised the delete + VACUUM. Not executed yet:
-scheduled for cycle 224 alongside the other two approved live-db writes, with
-the guarded backups verified first.
+**Status:** ❌ **CANCELLED (cycle 224) — THE PREMISE WAS WRONG.** The reclaim
+was approved on my analysis that these rows were unreachable dead weight. They
+are not. **15,055 of the 15,061 carry `content_analysis` rows**, and only 6 are
+freely deletable. Do not run this.
+
+## Cycle 224: the correction
+
+The delete was attempted with the approval in hand and failed immediately on
+`SQLITE_CONSTRAINT_FOREIGNKEY` — inside a transaction, so nothing was written.
+The cause:
+
+```
+content_analysis.content_id INTEGER NOT NULL REFERENCES content_storage(id)
+```
+
+I had measured reachability from **one direction only** — whether a
+`content_storage` row's parent `http_responses` row still existed. It does
+not. But these rows are reachable from the *other* side, via
+`content_analysis`, and that analysis is substantive: sampled rows carry
+`classification`, `title`, `word_count` and `analysis_json`.
+
+Deleting them would have destroyed the content backing **15,055 analysis rows
+— 16.8% of all `content_analysis`**.
+
+So the earlier description of them as rows "no query can reach" was false, and
+the approval it produced was obtained on bad information. The 7.3% figure is
+still correct as a count; the characterisation was not.
+
+### What these rows actually are
+
+Content blobs whose HTTP response record was deleted while their extracted
+analysis survived. That is a real inconsistency worth understanding — a
+deleter removed `http_responses` rows without removing the content, and the
+content is still doing useful work. But it is emphatically **not reclaimable
+space**, and the right question is now "why was the response row deleted?"
+rather than "how do we free the blobs?".
+
+### Remaining honest options
+
+1. **Leave them.** They cost disk but back live analysis. Default.
+2. **Re-link them** — if the deleted `http_responses` rows can be reconstructed
+   or the FK repointed, the inconsistency goes away without data loss.
+3. **Delete content AND analysis together** — frees the most space, destroys
+   16.8% of the analysis corpus. Needs a separate, explicit decision made with
+   *this* information rather than the earlier framing.
 **Measured on:** live `data/news.db`, read-only
 
 ## Cycle 221: the producer hunt, and why it came back empty

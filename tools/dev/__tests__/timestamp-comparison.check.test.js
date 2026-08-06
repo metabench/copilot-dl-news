@@ -115,11 +115,29 @@ describe('timestamp-comparison recommendedFix', () => {
   // c223: the signature takes the resolved TABLE as well, because the column
   // name alone gave opposite-and-wrong advice for site_url_patterns.
 
-  test('a MIXED column must be wrapped — binding a threshold would be wrong', () => {
-    // urls.created_at is 870,754 ISO + 925,136 sqlite. A bound ISO threshold
-    // silently misjudges the sqlite-format half.
-    expect(recommendedFix("created_at < datetime('now', '-7 day')", 'urls')).toMatch(/wrap in datetime/);
-    expect(recommendedFix("fetched_at >= datetime('now', '-1 day')", 'fetches')).toMatch(/BOTH formats/);
+  test('the MIXED branch still gives wrap-advice — no column is mixed TODAY', () => {
+    // urls.created_at WAS 870,754 ISO + 925,136 sqlite. c224 normalised all
+    // fifteen mixed columns (2,117,429 rows), so nothing in the live census
+    // is mixed any more — but the branch must stay correct, because a new
+    // writer using a different format would recreate the condition.
+    const { COLUMN_FORMAT } = require('../checks/timestamp-comparison.check');
+    expect(Object.values(COLUMN_FORMAT)).not.toContain('mixed');
+
+    COLUMN_FORMAT['synthetic_table.synthetic_at'] = 'mixed';
+    try {
+      expect(recommendedFix("synthetic_at < datetime('now', '-7 day')", 'synthetic_table'))
+        .toMatch(/wrap in datetime/);
+      expect(recommendedFix("synthetic_at < datetime('now', '-7 day')", 'synthetic_table'))
+        .toMatch(/BOTH formats/);
+    } finally {
+      delete COLUMN_FORMAT['synthetic_table.synthetic_at'];
+    }
+  });
+
+  test('the normalised columns are bindable now', () => {
+    // The point of the c224 rewrite: these were the blocked ones.
+    expect(recommendedFix("created_at < datetime('now', '-7 day')", 'urls')).toMatch(/bind an ISO threshold/);
+    expect(recommendedFix("fetched_at >= datetime('now', '-1 day')", 'fetches')).toMatch(/bind an ISO threshold/);
   });
 
   test('a uniformly-ISO column can bind a threshold and keep its index', () => {

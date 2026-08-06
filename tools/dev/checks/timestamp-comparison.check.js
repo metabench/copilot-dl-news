@@ -116,24 +116,33 @@ const COLUMN_FORMAT = {
   'problem_clusters.last_seen': 'iso',
   'hub_validations.expires_at': 'iso',
 
-  // MIXED — only datetime() on both sides is correct
-  'urls.created_at': 'mixed',
-  'urls.last_seen_at': 'mixed',
-  'http_responses.fetched_at': 'mixed',
-  'http_responses.request_started_at': 'mixed',
-  'fetches.fetched_at': 'mixed',
-  'fetches.request_started_at': 'mixed',
-  'crawl_jobs.started_at': 'mixed',
-  'crawl_jobs.ended_at': 'mixed',
-  'errors.at': 'mixed',
-  'crawl_milestones.ts': 'mixed',
-  'place_page_mappings.last_seen_at': 'mixed',
-  'place_page_mappings.verified_at': 'mixed',
-  'crawl_runs.ended_at': 'mixed',
-  'news_websites.added_at': 'mixed',
-  'place_hub_audit.created_at': 'mixed',
+  // NORMALISED in cycle 224 (owner-approved live-db write). These fifteen
+  // held BOTH formats; they hold ISO only now — 2,117,429 rows converted,
+  // instant-preserving, confirmed by an exact re-census reporting zero mixed
+  // columns. They are bindable.
+  //
+  // Direction was ISO, not SQLite's space form, and that is not the obvious
+  // choice: converting the other way would have made every existing
+  // `col > datetime('now')` correct with no code change, but JavaScript
+  // parses "YYYY-MM-DD HH:MM:SS" as LOCAL time, so every value would have
+  // silently shifted by the timezone offset when read back.
+  'urls.created_at': 'iso',
+  'urls.last_seen_at': 'iso',
+  'http_responses.fetched_at': 'iso',
+  'http_responses.request_started_at': 'iso',
+  'fetches.fetched_at': 'iso',
+  'fetches.request_started_at': 'iso',
+  'crawl_jobs.started_at': 'iso',
+  'crawl_jobs.ended_at': 'iso',
+  'errors.at': 'iso',
+  'crawl_milestones.ts': 'iso',
+  'place_page_mappings.last_seen_at': 'iso',
+  'place_page_mappings.verified_at': 'iso',
+  'crawl_runs.ended_at': 'iso',
+  'news_websites.added_at': 'iso',
+  'place_hub_audit.created_at': 'iso',
 
-  'latest_fetch.ts': 'mixed',            // 2,998 ISO + 49,777 sqlite (a view)
+  'latest_fetch.ts': 'iso',              // a VIEW over fetches — followed automatically
 
   // uniformly SQLITE format — ALREADY CORRECT, not defects. Recording these
   // stops the check reporting working code forever.
@@ -408,4 +417,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { findBareComparisons, recommendedFix, resolveTable };
+module.exports = { findBareComparisons, recommendedFix, resolveTable, COLUMN_FORMAT };
