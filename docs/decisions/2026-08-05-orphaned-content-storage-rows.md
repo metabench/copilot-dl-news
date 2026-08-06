@@ -1,8 +1,51 @@
 # 15,061 orphaned `content_storage` rows — measured, not attributed
 
 **Date:** 2026-08-05 (cycle 220)
-**Status:** OPEN — reported, no cause claimed
+**Status:** ANSWERED in cycle 221 — **no live producer exists**; the reclaim is
+safe to schedule whenever the owner wants it
 **Measured on:** live `data/news.db`, read-only
+
+## Cycle 221: the producer hunt, and why it came back empty
+
+c220 recommended finding the producer before reclaiming. That was done, and
+the answer is that **no current code path can create these rows.** Every
+deleter of `http_responses` was censused across both repos:
+
+| deleter | behaviour | verdict |
+|---|---|---|
+| ncdb `remoteCrawler.ts` | selects the response ids per chunk, deletes `content_storage` first, then the responses — all in one transaction | correct |
+| copilot `tools/db/dedup-http-responses.js` | deletes content, then responses | correct |
+| ncdb `legacy-httpResponseCache.ts` | atomic child-then-parent (fixed in c220) | correct |
+| ncdb `crawlerAppDiagnostics.clearCrawlerAppHttpResponses()` | `DELETE FROM http_responses` — **no WHERE, no child cleanup** | would orphan everything, but **has no production callers**: the only references are its own interface declaration and its own test |
+
+And the schema itself blocks the naive case. `content_storage.http_response_id`
+carries `REFERENCES http_responses(id)` with no `ON DELETE` clause, so with
+foreign keys enforced a parent delete *fails* rather than orphaning. Proved
+rather than assumed:
+
+```
+foreign_keys=1: BLOCKED: FOREIGN KEY constraint failed
+foreign_keys=0: SUCCEEDED -> 1 orphan(s) created
+```
+
+`ensureDb` sets `foreign_keys = 1`, so the mainstream connection is protected.
+
+**So the 15,061 rows are historical residue from a period when enforcement was
+off.** Two code paths still disable it deliberately and briefly —
+`legacy-dataMigration` and `legacy-gazetteerClone`, both of which restore it
+afterwards — and those are plausible historical windows. **Which one, or
+whether it was code that no longer exists, is not determinable**, and no
+attribution is claimed.
+
+### What this changes
+
+The c220 advice ("fix the producer first") no longer applies: there is nothing
+to fix. Reclaiming the 15,061 rows plus a VACUUM is a straightforward
+owner-gated live-db write, and it will not silently refill.
+
+---
+
+*Original cycle-220 write-up follows.*
 
 ## The measurement
 

@@ -82,6 +82,18 @@
       "timeoutMs": 20000
     },
     {
+      "id": "timestamp-comparison-ratchet",
+      "description": "no NEW bare column-vs-datetime('now') comparisons (the cycle-220 defect class). This db stores most timestamps as JS ISO-8601 ('2026-08-06T02:03:57.807Z') while datetime('now') yields '2026-08-06 02:04:57'; comparing them is a STRING compare between two formats and 'T' (0x54) sorts above ' ' (0x20), so a value on the SAME CALENDAR DATE as the threshold always reads as the later one. Severity follows the threshold: bare 'now' is expiry semantics and everything expiring today reads as still-valid (this is why the response cache never evicted anything — 33 of 33 rows expired and all 33 still present); with a '-N day' modifier only the boundary date is misclassified. Measured 2026-08-05: 64 columns hold ISO values, some MIXED (urls.created_at sampled 164 ISO / 36 sqlite). All 11 EXPIRY sites were fixed in cycle 221; the ceiling covers the 70 remaining window-severity sites, which are NOT blanket-fixed on purpose — datetime(col) is not sargable and would defeat indexes on links (4.9M rows) and queue_events (1.7M). Fix those by binding a threshold in the column's own format instead. Lower this only as sites are fixed",
+      "cmd": "node",
+      "args": [
+        "tools/dev/checks/timestamp-comparison.check.js",
+        "--max",
+        "70"
+      ],
+      "needsServer": false,
+      "timeoutMs": 30000
+    },
+    {
       "id": "ui-debt-ratchet",
       "description": "operational-UI files in the monorepo do not exceed the ceiling — the news-crawler-ui extraction ratchet (owner directive 2026-08-03, cycle 168; baseline 643 = tracked src/ui minus projectStatus, which stays as the loop's own instrument). Wins that lower it: a UI moved to ../news-crawler-ui with the monorepo copy DELETED, or a stale dir retired in place. Born from the module-ecosystem audit: the one extraction with a probe-enforced number (ncdb-debt) advanced while every prose-only extraction froze — a rule without an instrument decays",
       "cmd": "node",
