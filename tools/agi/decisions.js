@@ -109,13 +109,32 @@ function blockedTechs(list) {
 
 // --- I/O ---------------------------------------------------------------------
 
+/**
+ * Documents in docs/decisions/ that carry NO front-matter.
+ *
+ * These are invisible to the board, and silence about them is dangerous:
+ * AGENTS.md has told agents for months to "record an ADR-lite in
+ * /docs/decisions/ (date, context, options, decision, consequences)" — a prose
+ * format that predates this convention. An agent following that instruction to
+ * the letter writes a decision nobody ever sees. Skipping such a file quietly
+ * would rebuild, one layer up, exactly the invisibility this tool exists to
+ * end, so they are COUNTED and REPORTED instead.
+ */
+function unregisteredDocs(dir = DIR) {
+  let files;
+  try { files = fs.readdirSync(dir).filter((f) => f.endsWith('.md') && f.toLowerCase() !== 'readme.md'); }
+  catch (_) { return []; }
+  return files.sort().filter((f) => !parseFrontMatter(fs.readFileSync(path.join(dir, f), 'utf8')));
+}
+
 function readDecisions(dir = DIR) {
   let files;
   try { files = fs.readdirSync(dir).filter((f) => f.endsWith('.md')); } catch (_) { return []; }
   const out = [];
   for (const f of files.sort()) {
+    if (f.toLowerCase() === 'readme.md') continue;
     const fm = parseFrontMatter(fs.readFileSync(path.join(dir, f), 'utf8'));
-    if (!fm) continue; // prose-only record, not a decision
+    if (!fm) continue; // reported by unregisteredDocs(), never silently dropped
     out.push(normaliseDecision(fm, `docs/decisions/${f}`));
   }
   return out;
@@ -145,8 +164,16 @@ function main() {
   if (!all.length) {
     console.log('  none declared — a decision doc needs front-matter to be counted.');
   }
+
+  const orphans = unregisteredDocs();
+  if (orphans.length) {
+    console.log(`\n  ${orphans.length} document(s) in docs/decisions/ carry NO front-matter and are`);
+    console.log('  INVISIBLE to the board. Add a front-matter block (see the README there)');
+    console.log('  or they will never reach the owner:');
+    for (const f of orphans) console.log(`    docs/decisions/${f}`);
+  }
 }
 
 if (require.main === module) main();
 
-module.exports = { parseFrontMatter, normaliseDecision, readDecisions, openDecisions, blockedTechs, DIR };
+module.exports = { parseFrontMatter, normaliseDecision, readDecisions, unregisteredDocs, openDecisions, blockedTechs, DIR };

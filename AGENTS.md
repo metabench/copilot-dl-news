@@ -38,7 +38,12 @@ Doc topology. Keep this file focused and actionable. Heavier guidance lives in /
 
 /docs/workflows/ – durable how-to playbooks (e.g., "Modularising a DB adapter," "Extracting a service from a module").
 
-/docs/decisions/ – ADR-lite notes: date, context, options, decision, consequences.
+/docs/decisions/ – ADR-lite notes AND the owner's open-decision queue. A doc here
+with front-matter (`decision`, `status: open|answered|closed`, `question`,
+`options`, `blocks`) is READ BY the project-status board and shown under PLAYER
+INPUT REQUIRED. Without front-matter it is invisible to the owner. See
+[docs/decisions/README.md](docs/decisions/README.md); check with
+`node tools/agi/decisions.js`.
 
 **External Modules — the module-ecosystem working model (owner directive 2026-07-22)**:
 Functionality is implemented and tested in dedicated sibling module repos with clearly
@@ -60,7 +65,12 @@ here, ask "which module owns this?" Full map + rules:
   is not part of this ecosystem.
 > See [docs/agents/modules-reference.md](docs/agents/modules-reference.md) for usage guide.
 
-/docs/decisions/ – ADR-lite notes: date, context, options, decision, consequences.
+/docs/decisions/ – ADR-lite notes AND the owner's open-decision queue. A doc here
+with front-matter (`decision`, `status: open|answered|closed`, `question`,
+`options`, `blocks`) is READ BY the project-status board and shown under PLAYER
+INPUT REQUIRED. Without front-matter it is invisible to the owner. See
+[docs/decisions/README.md](docs/decisions/README.md); check with
+`node tools/agi/decisions.js`.
 
 **Guide authorship rule**: After accomplishing a difficult task in a part of the system that lacks a guide, write one in `/docs/guides/`. Include details you did not know when you started but discovered during implementation—these hard-won insights are the most valuable for future agents. Add the new guide to `/docs/INDEX.md`.
 
@@ -154,6 +164,12 @@ Docs to update (AGENTS.md section, specific guides, index).
 Add/refresh JSDoc on public APIs you touched.
 
 Record an ADR-lite in /docs/decisions/ when you trade off options (date, context, options, decision, consequences). Link it from your PR.
+
+**If the choice is the OWNER'S to make** — a live-database write, a policy affecting
+third parties, a trade-off with no technically correct answer — give the doc
+front-matter with `status: open`. That is what puts it on the project-status board;
+a decision recorded any other way does not reach them. `node tools/agi/decisions.js`
+lists what is open and flags any doc in that folder the board cannot see.
 
 If you improved a reusable workflow, update or create a page under /docs/workflows/ and tighten /docs/INDEX.md.
 

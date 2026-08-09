@@ -83,6 +83,12 @@ from that mode). Probe: `ls ../news-crawler-itself` (README + AGENTS.md exist si
   ssr-activation-data-bridge, ui-screenshot-feedback, puppeteer-efficient-ui-verification …).
   9 registry rows are dangling (no SKILL.md) — see reconciliation.
 - [WORKFLOWS.md](WORKFLOWS.md) — canonical Sense→Plan→Act loops.
+- [../decisions/](../decisions/) — the owner's OPEN-DECISION queue, not just history.
+  A doc with front-matter (`status: open`) is projected onto the project-status board
+  under PLAYER INPUT REQUIRED; one without is invisible to the owner. Run
+  `node tools/agi/decisions.js` at orient to see what is blocked on a ruling — four
+  consecutive cycles once stalled on decisions the board was not showing. Format +
+  rationale: [../decisions/README.md](../decisions/README.md).
 - [RESEARCH_BACKLOG.md](RESEARCH_BACKLOG.md) — the live research queue. Each improvement cycle
   advances one item or records why none was actionable.
 - [../plans/2026-07-db-driven-crawling.md](../plans/2026-07-db-driven-crawling.md) — owner-directed
