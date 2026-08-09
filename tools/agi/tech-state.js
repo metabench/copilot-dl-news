@@ -67,6 +67,19 @@ function evaluatePredicate(pred, ctx) {
     const met = ceiling <= pred.atMost;
     return { met, evidence: `ratchet ${pred.ratchet} ceiling ${ceiling} (needs <= ${pred.atMost})` };
   }
+  if (pred.nodeField) {
+    // "do any tech nodes carry this field yet?" — for techs whose completion IS
+    // a new field on the tree (flavor text, typed edges).
+    //
+    // This kind exists because the obvious alternative is a self-referential
+    // trap: a `contains` predicate looking for "flavor" inside tech-tree.json
+    // is ITSELF stored in tech-tree.json, so the file contains the needle the
+    // moment you write the check. It happens to read false today only because
+    // JSON escapes the quotes — correct by accident, which is not correct.
+    const n = (ctx.nodesWithField || (() => 0))(pred.nodeField);
+    const met = n > 0;
+    return { met, evidence: `${n} tech node(s) carry a ${pred.nodeField} field` };
+  }
   if (pred.contains) {
     if (!pred.text) throw new Error('contains predicate needs a text');
     const body = readFile(pred.contains);
@@ -129,7 +142,15 @@ function buildContext() {
     try { return fs.readFileSync(path.resolve(ROOT, rel), 'utf8'); } catch (_) { return null; }
   };
   const exists = (rel) => fs.existsSync(path.resolve(ROOT, rel));
-  return { probeIds, ratchetCeiling, readFile, exists };
+  let spec = { techs: [] };
+  try {
+    spec = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'tech-tree.json'), 'utf8'));
+  } catch (_) {
+    // Reviewed swallow: an unreadable spec means zero nodes carry any field,
+    // which every nodeField predicate reports as NOT met — a visible answer.
+  }
+  const nodesWithField = (field) => (spec.techs || []).filter((t) => t[field] !== undefined).length;
+  return { probeIds, ratchetCeiling, readFile, exists, nodesWithField };
 }
 
 function main() {

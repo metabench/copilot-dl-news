@@ -283,7 +283,7 @@
 <rect x="760.3" y="988" width="36.3" height="14" rx="2" fill="#b8862e" opacity="0.5"><title>copilot-dl-news · 2026-08-03 · 8 commits</title></rect>
 <rect x="798.7" y="988" width="36.3" height="14" rx="2" fill="#b8862e" opacity="0.8"><title>copilot-dl-news · 2026-08-04 · 27 commits</title></rect>
 <rect x="837" y="988" width="36.3" height="14" rx="2" fill="#b8862e" opacity="1"><title>copilot-dl-news · 2026-08-05 · 35 commits</title></rect>
-<rect x="875.3" y="988" width="36.3" height="14" rx="2" fill="#b8862e" opacity="0.6"><title>copilot-dl-news · 2026-08-06 · 15 commits</title></rect>
+<rect x="875.3" y="988" width="36.3" height="14" rx="2" fill="#b8862e" opacity="0.6"><title>copilot-dl-news · 2026-08-06 · 16 commits</title></rect>
 <rect x="913.7" y="988" width="36.3" height="14" rx="2" fill="#171a20" stroke="#232833" stroke-width="0.5"/>
 <text x="252" y="1015" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#e8e4d8" text-anchor="end">news-crawler-itself</text>
 <rect x="262" y="1004" width="36.3" height="14" rx="2" fill="#171a20" stroke="#232833" stroke-width="0.5"/>
@@ -321,7 +321,7 @@
 <rect x="760.3" y="1020" width="36.3" height="14" rx="2" fill="#171a20" stroke="#232833" stroke-width="0.5"/>
 <rect x="798.7" y="1020" width="36.3" height="14" rx="2" fill="#b8862e" opacity="0.3"><title>news-crawler-db · 2026-08-04 · 1 commit</title></rect>
 <rect x="837" y="1020" width="36.3" height="14" rx="2" fill="#b8862e" opacity="0.4"><title>news-crawler-db · 2026-08-05 · 3 commits</title></rect>
-<rect x="875.3" y="1020" width="36.3" height="14" rx="2" fill="#b8862e" opacity="0.4"><title>news-crawler-db · 2026-08-06 · 5 commits</title></rect>
+<rect x="875.3" y="1020" width="36.3" height="14" rx="2" fill="#b8862e" opacity="0.4"><title>news-crawler-db · 2026-08-06 · 6 commits</title></rect>
 <rect x="913.7" y="1020" width="36.3" height="14" rx="2" fill="#171a20" stroke="#232833" stroke-width="0.5"/>
 <text x="252" y="1047" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" text-anchor="end">news-db-pure-analysis</text>
 <rect x="262" y="1036" width="36.3" height="14" rx="2" fill="#171a20" stroke="#232833" stroke-width="0.5"/>
@@ -559,7 +559,7 @@
 <text x="856.2" y="1240" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">08-05</text>
 <text x="932.8" y="1240" font-family="Segoe UI, system-ui, sans-serif" font-size="9" fill="#8a8778" text-anchor="middle">08-07</text>
 <text x="28" y="844" font-family="Segoe UI, system-ui, sans-serif" font-size="13" fill="#e8e4d8" font-weight="600">Research frontier — what is open, per branch</text>
-<text x="318" y="844" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" >6 grown · 18 available · 2 gated · 12 absorbed into the foundations</text>
+<text x="318" y="844" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" >7 grown · 17 available · 2 gated · 12 absorbed into the foundations</text>
 <text x="28" y="874" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#4d9ec8" >AGI</text>
 <rect x="160" y="864" width="171.4" height="11" rx="2" fill="#4d9ec8" opacity="0.55"><title>AGI: 4</title></rect>
 <rect x="332.9" y="864" width="42.9" height="11" rx="2" fill="#4d9ec8" opacity="0.22"><title>AGI: 1</title></rect>
@@ -570,9 +570,9 @@
 <rect x="420.1" y="882" width="42.9" height="11" rx="2" fill="#55a377" opacity="0.22"><title>TECH TREE: 1</title></rect>
 <text x="474" y="892" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" >2 grown · 4 available · 1 gated</text>
 <text x="28" y="910" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#b8862e" >CRAWLER</text>
-<rect x="160" y="900" width="171.4" height="11" rx="2" fill="#b8862e" opacity="1"><title>CRAWLER: 4</title></rect>
-<rect x="332.9" y="900" width="128.6" height="11" rx="2" fill="#b8862e" opacity="0.55"><title>CRAWLER: 3</title></rect>
-<text x="474" y="910" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" >4 grown · 3 available</text>
+<rect x="160" y="900" width="214.3" height="11" rx="2" fill="#b8862e" opacity="1"><title>CRAWLER: 5</title></rect>
+<rect x="375.8" y="900" width="85.7" height="11" rx="2" fill="#b8862e" opacity="0.55"><title>CRAWLER: 2</title></rect>
+<text x="474" y="910" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" >5 grown · 2 available</text>
 <text x="28" y="928" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#a678c8" >TOOL FACTORY</text>
 <rect x="160" y="918" width="300" height="11" rx="2" fill="#a678c8" opacity="0.55"><title>TOOL FACTORY: 7</title></rect>
 <text x="474" y="928" font-family="Segoe UI, system-ui, sans-serif" font-size="10" fill="#8a8778" >0 grown · 7 available</text>

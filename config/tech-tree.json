@@ -383,7 +383,10 @@
         "Every edge must take one of the owner's three verbs: combine (exactly two inputs fuse, keeping the SMAC two-input cap), extend (one input plus a NAMED capability), improve (one input plus a MEASURED axis).",
         "Its prelim notes carry the enforcement rule verbatim: 'an improve claim without a number is not an improve' — the schema probe is to enforce all three disciplines so a lazy edge cannot ship.",
         "The ≤2-prereq cap this formalizes already paid off in the same cycle: the cycle-141 ledger notes the drawn-tree DAG layout was 'almost trivial' precisely because lazy edges had been refused since c138."
-      ]
+      ],
+      "doneWhen": {
+        "nodeField": "edgeVerb"
+      }
     },
     {
       "id": "TECH-WORKORDERS",
@@ -451,7 +454,11 @@
         "All three feeds already run at every orient: the registered probes via run-probes.js (probes.json is the live count), churn-scan.js --json (itself probe-checked, RB-004), and workflow-scorecard.js whose cost-to-catch ratchet (≤4 turns per confirmed catch, ≥5 runs) was bootstrapped in cycle 48 with 13 labeled runs.",
         "Prereqs are TF-PROBES + TR-PAGE; it was adopted 2026-07-28 as one of the five owner-approved cycle-141 factory integrations.",
         "The factory page it would badge was DOM-verified live in cycle 141 by measurement rather than pixels (the pane wasn't compositing): 22 node rects, 10 edge paths, 6 layer positions confirmed the drawn tree."
-      ]
+      ],
+      "doneWhen": {
+        "contains": "src/ui/server/projectStatus/statusData.js",
+        "text": "probes.json"
+      }
     },
     {
       "id": "TECH-APPREVIEW",
@@ -544,14 +551,18 @@
         "AG-HARNESS",
         "CR-FRONTIER"
       ],
-      "state": "available",
+      "state": "done",
       "detail": [
         "The tech's premise is measured, not vibes: RB-009's cycle-133 inventory (tools/dev/ui-check-inventory.js) counted 82 UI self-tests totalling ~10,600 lines, of which 75 (91%) are in-process render + string assertions — blind BY CONSTRUCTION to the cycle-128.5 defect class — and only 4/82 (5%) run in a real browser; even the 3 screenshot checks photograph SSR HTML, not a live page.",
         "The defect class it targets is real: cycle 128.5 found the status page's SSR frozen at publish (SSR said 82 cycles while the API said 84) with the client silently repairing the DOM so every string assertion read as correct; the fix shipped with no guard until RB-011's progress-surface probe converted it to a runnable contract.",
         "Crawl-status is the riskiest page for this class because crawl-status-client.js emits its entire client script from one backtick template literal that eats regex backslashes — a trap that has bitten four distinct ways (backslash-eating → apiBasePath-scope → contrast → phantom rates), banked in the crawl-status-client-template-trap memory.",
         "Live verification has already beaten every static check on this exact page once: the client emitted fine (40,537 chars) and all emitted-text checks passed while the real page was broken — the bug only surfaced in a live browser.",
         "Extra wrinkle for the harness: crawl-status renders inside an iframe at /crawl-status (not the shell page), so puppeteer must target the frame — a lesson from the P4-era screenshot loop; a ui-browser-coverage no-regression floor (raised 4→5 deliberately) already guards browser-check count."
-      ]
+      ],
+      "doneWhen": {
+        "exists": "../news-crawler-ui/checks/console.live.check.js"
+      },
+      "researchedOn": "2026-08-03"
     },
     {
       "id": "TECH-P5AUTO",
@@ -699,7 +710,10 @@
       "prelim": [
         "Source material is the ledger's own lesson sentences — each cycle row ends with a bolded lesson, and the best of them already read like flavor text (\"a gate that refuses on a single instrument inherits that instrument's failure mode\"). The work is curation and attribution, not invention.",
         "SMAC's discipline: one quote per node, attributed, short enough to read in the modal without scrolling. Never borrowed text — the record is the only source, which is also what makes each quote verifiable against a cycle id."
-      ]
+      ],
+      "doneWhen": {
+        "nodeField": "flavor"
+      }
     },
     {
       "id": "TECH-PAGESLIVE",
@@ -826,7 +840,11 @@
         "TF-LOOP",
         "TR-LEDGER"
       ],
-      "state": "available"
+      "state": "available",
+      "doneWhen": {
+        "contains": "tools/agi/tech-state.js",
+        "text": "--promote"
+      }
     }
   ],
   "fogPerBranch": 2

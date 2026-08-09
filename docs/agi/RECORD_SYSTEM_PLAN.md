@@ -44,11 +44,40 @@ contradict it.
 
 ### Next — in this order
 
-**4a. Drive the UNVERIFIED count down** *(18 of 23 curated nodes)*
+**4a. Drive the UNVERIFIED count down** *(now 13 of 23 — was 18)*
 
-The mechanism shipped; most nodes still have no predicate. Run
-`node tools/agi/tech-state.js` for the list. For each, read its `research` text
-and ask what artifact would prove it — then add a `doneWhen`. Two rules:
+Ten nodes carry predicates: 5 verified done, 5 verified pending, 0
+contradictions. The mechanism has already earned its keep — **`TECH-CSLIVE` was
+mislabelled `available` while its own deliverable
+(`news-crawler-ui/checks/console.live.check.js`, the live harness for the
+crawler UI) had shipped on 2026-08-03.** The predicate contradicted the typed
+state, the file was read to confirm, and the node was promoted. That is the
+derived-state loop working end to end.
+
+**Still unverified (13):** TECH-WORKORDERS, TECH-PRODUCTS, TECH-SUGGEST,
+TECH-APPREVIEW, TECH-TREEREVIEW, TECH-L3PROOF, TECH-P5AUTO, TECH-HEADLINE2,
+TECH-ENGINESPLIT, TECH-PAGESLIVE, TECH-OWNERGUIDE, TECH-ARCHREVIEW-TREE,
+TECH-ARCHREVIEW-CRAWLER.
+
+Three of those are known-hard and the reason should be recorded rather than
+forced:
+
+- **TECH-HEADLINE2** — completed as a measured crawl outcome. No file proves it.
+  Leave it.
+- **TECH-P5AUTO** — typed `done`; I could not find the artifact. Guessing a
+  predicate risks a FALSE contradiction, which is worse than none. Needs ledger
+  archaeology to find what it actually shipped.
+- **TECH-ENGINESPLIT** — partial by nature (five of seven clusters home), and a
+  boolean predicate cannot express that. The `engine-debt-ratchet` probe carries
+  no `--max`, so a ratchet predicate has nothing to read; giving it one would
+  make this checkable.
+
+The five review/analysis nodes (APPREVIEW, TREEREVIEW, ARCHREVIEW-*, SUGGEST)
+produce documents or item lists, so an `exists` predicate on their output is
+probably right once someone decides where that output lives.
+
+For each remaining node, read its `research` text and ask what artifact would
+prove it — then add a `doneWhen`. Two rules:
 
 - **Never invent a predicate to clear the count.** `TECH-HEADLINE2` completed as
   a measured crawl outcome and has no file-shaped evidence; leaving it unverified

@@ -35,6 +35,23 @@ describe('evaluatePredicate', () => {
     expect(evaluatePredicate({ ratchet: 'absent', atMost: 1 }, ctx).met).toBe(false);
   });
 
+  test('nodeField: met when any node carries the field', () => {
+    const c = { ...ctx, nodesWithField: (f) => (f === 'flavor' ? 3 : 0) };
+    expect(evaluatePredicate({ nodeField: 'flavor' }, c).met).toBe(true);
+    expect(evaluatePredicate({ nodeField: 'edgeVerb' }, c).met).toBe(false);
+  });
+
+  test('nodeField exists to avoid a SELF-REFERENTIAL contains predicate', () => {
+    // The trap: `{contains: 'config/tech-tree.json', text: '"flavor"'}` is
+    // itself stored in tech-tree.json, so the file gains the needle the moment
+    // the check is written. It reads false today only because JSON escapes the
+    // quotes — correct by accident. nodeField inspects parsed nodes instead, so
+    // writing the predicate cannot satisfy it.
+    const spec = { techs: [{ id: 'A', doneWhen: { nodeField: 'flavor' } }] };
+    const nodesWithField = (f) => spec.techs.filter((t) => t[f] !== undefined).length;
+    expect(evaluatePredicate({ nodeField: 'flavor' }, { ...ctx, nodesWithField }).met).toBe(false);
+  });
+
   test('a MALFORMED predicate throws — that is an authoring error, not a state', () => {
     expect(() => evaluatePredicate({ nonsense: 1 }, ctx)).toThrow(/unrecognised doneWhen/);
     expect(() => evaluatePredicate({ ratchet: 'x' }, ctx)).toThrow(/numeric atMost/);
@@ -101,5 +118,24 @@ describe('the real tech tree — acceptance test against answers already known',
     const unverified = rows.filter((r) => r.verdict === 'unverified');
     expect(unverified.length).toBeGreaterThan(0);
     for (const r of unverified) expect(r.evidence).toBeNull();
+  });
+
+  test('TECH-CSLIVE was mislabelled and the evidence corrected it', () => {
+    // The mechanism's first real catch: typed `available` while
+    // news-crawler-ui/checks/console.live.check.js — its own deliverable, the
+    // live harness for the crawler UI — had shipped on 2026-08-03. Promoted
+    // after reading the file, not after trusting the predicate.
+    const cs = rows.find((r) => r.id === 'TECH-CSLIVE');
+    expect(cs.verdict).toBe('verified-done');
+  });
+
+  test('NO predicate in the real tree is self-referential', () => {
+    // A `contains` predicate pointed at config/tech-tree.json would be stored
+    // in the file it searches. Two were, briefly; both are nodeField now.
+    const spec = JSON.parse(fs.readFileSync(
+      path.resolve(__dirname, '..', '..', '..', 'config', 'tech-tree.json'), 'utf8'));
+    const selfRef = (spec.techs || []).filter(
+      (t) => t.doneWhen && t.doneWhen.contains === 'config/tech-tree.json');
+    expect(selfRef.map((t) => t.id)).toEqual([]);
   });
 });
