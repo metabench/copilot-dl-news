@@ -1,3 +1,10 @@
+---
+decision: DEC-UNREACHABLE-SQL-FILES
+status: answered
+question: What happens to the three unreachable SQL-holding files found by the reachability pass?
+answered: Assessed in cycle 226: two superseded, one an unwired feature. Verdicts in 2026-08-07-unreachable-file-assessment.md.
+---
+
 # Four unreachable SQL-holding files — one retired, three are owner calls
 
 **Date:** 2026-08-05 (cycle 217)

@@ -83,6 +83,17 @@ from that mode). Probe: `ls ../news-crawler-itself` (README + AGENTS.md exist si
   ssr-activation-data-bridge, ui-screenshot-feedback, puppeteer-efficient-ui-verification …).
   9 registry rows are dangling (no SKILL.md) — see reconciliation.
 - [WORKFLOWS.md](WORKFLOWS.md) — canonical Sense→Plan→Act loops.
+> **Design rule for every record type: DERIVED BY DEFAULT.**
+> A record whose state is computed from evidence self-heals; one whose state is
+> typed by hand rots, and rots invisibly. The split in this repo is stark: the
+> three RB-backed tech nodes read their state live from RESEARCH_BACKLOG.md and,
+> as statusData.js puts it, "cannot disagree" — while the 23 hand-typed TECH
+> states drifted until `TECH-ENGINESPLIT` read *available* alongside its own note
+> saying five of seven clusters were already home. Same for `ui-debt`, which
+> pointed at a number that could not move for nine cycles. When adding a record
+> type, ask what evidence decides its state, and compute it. If it must be typed,
+> give it a probe that can contradict it.
+
 - [../decisions/](../decisions/) — the owner's OPEN-DECISION queue, not just history.
   A doc with front-matter (`status: open`) is projected onto the project-status board
   under PLAYER INPUT REQUIRED; one without is invisible to the owner. Run

@@ -1,3 +1,10 @@
+---
+decision: DEC-OWNER-RULINGS-C223
+status: answered
+question: Four decisions put to the owner in cycle 223 — live-db writes, ui-debt, dedup policies, unreachable files
+answered: All four answered; three live-db writes approved, the two pending migrations refused. See the document.
+---
+
 # Owner rulings, cycle 223
 
 Four decisions that had been accumulating for six cycles were put to the owner

@@ -33,7 +33,9 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const DIR = path.join(ROOT, 'docs', 'decisions');
 
-const STATES = new Set(['open', 'answered', 'closed']);
+// 'record' = deliberate history that needs no answer. Without it the unregistered
+// list could never reach zero, and a warning nobody can clear gets ignored.
+const STATES = new Set(['open', 'answered', 'closed', 'record']);
 
 // --- pure core ---------------------------------------------------------------
 
@@ -140,7 +142,70 @@ function readDecisions(dir = DIR) {
   return out;
 }
 
+/**
+ * Scaffold a correctly-formed decision doc.
+ *
+ * The point is that the CORRECT form should be the EASIEST form. Before this,
+ * writing a decision wrongly (prose, no front-matter, invisible to the owner)
+ * took less effort than writing it right — which is exactly why seven
+ * documents in this folder were unregistered when the parser first ran.
+ */
+function scaffold(question, { id, options = [], blocks = [], today } = {}) {
+  const slug = String(question).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48);
+  const date = today || new Date().toISOString().slice(0, 10);
+  const decisionId = id || `DEC-${slug.toUpperCase().replace(/-/g, '').slice(0, 18)}`;
+  const file = `${date}-${slug}.md`;
+  const body = [
+    '---',
+    `decision: ${decisionId}`,
+    'status: open',
+    `question: ${question}`,
+    `options: [${options.join(', ')}]`,
+    `blocks: [${blocks.join(', ')}]`,
+    '---',
+    '',
+    `# ${question}`,
+    '',
+    `**Date:** ${date}`,
+    '',
+    '## What was measured',
+    '',
+    '<!-- the evidence, with numbers. A decision without evidence is a guess. -->',
+    '',
+    '## The options',
+    '',
+    '<!-- what each choice costs and buys. Name the one you recommend, and why. -->',
+    '',
+    '## Why this is the owner\'s call',
+    '',
+    '<!-- live-db write? third-party impact? no technically correct answer? -->',
+    ''
+  ].join('\n');
+  return { file, body, id: decisionId };
+}
+
 function main() {
+  const argv = process.argv.slice(2);
+  const newIdx = argv.indexOf('--new');
+  if (newIdx >= 0) {
+    const question = argv[newIdx + 1];
+    if (!question) {
+      console.error('usage: node tools/agi/decisions.js --new "The question the owner must answer?"');
+      process.exit(2);
+    }
+    const { file, body, id } = scaffold(question);
+    const dest = path.join(DIR, file);
+    if (fs.existsSync(dest)) {
+      console.error(`refusing to overwrite docs/decisions/${file}`);
+      process.exit(1);
+    }
+    fs.writeFileSync(dest, body);
+    console.log(`created docs/decisions/${file}  (${id})`);
+    console.log('It is OPEN, so it now appears on the project-status board.');
+    console.log('Fill in the evidence — a decision without numbers is a guess.');
+    return;
+  }
+
   const all = readDecisions();
   const open = openDecisions(all);
   if (process.argv.includes('--json')) {
@@ -176,4 +241,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { parseFrontMatter, normaliseDecision, readDecisions, unregisteredDocs, openDecisions, blockedTechs, DIR };
+module.exports = { parseFrontMatter, normaliseDecision, readDecisions, unregisteredDocs, openDecisions, blockedTechs, scaffold, DIR };

@@ -1,3 +1,9 @@
+---
+decision: DEC-REMOVE-CRAWLERFACTORY
+status: record
+question: Why CrawlerFactory was replaced by direct constructor injection.
+---
+
 # ADR: Remove CrawlerFactory in Favor of Direct Constructor Injection
 
 **Date**: 2025-12-03  

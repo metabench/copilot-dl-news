@@ -1,3 +1,9 @@
+---
+decision: DEC-DASHBOARD-SNAPSHOT-CACHE
+status: record
+question: How the slow place-hubs dashboard was fixed with a child-render snapshot cache.
+---
+
 # 2026-08-05 — Dashboard HTML snapshot cache (child-process builds)
 
 **Context**: Cycle-205 latency census: /quality 19.1s cold / 9.1s warm,

@@ -1,3 +1,9 @@
+---
+decision: DEC-REPO-SLIMDOWN
+status: record
+question: What was deleted and moved in the 2026-04 repo slim-down.
+---
+
 # ADR — Repo Slim-Down (2026-04-24)
 
 ## Context

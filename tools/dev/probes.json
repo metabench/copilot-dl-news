@@ -82,6 +82,16 @@
       "timeoutMs": 20000
     },
     {
+      "id": "decision-registration",
+      "description": "every document in docs/decisions/ declares itself, so none can be invisible to the owner. Decision docs are projected onto the project-status board under PLAYER INPUT REQUIRED; one without front-matter is not shown, and for months AGENTS.md described a prose-only ADR format predating the convention — so a diligent agent could write a decision the owner would never see. Four consecutive improvement cycles once stalled waiting on decisions the board was not displaying. Pure history stays legitimate, it just has to SAY so with `status: record`: the rule is not 'everything is a decision', it is 'nothing is invisible by accident'. Also fails if a declaration is MALFORMED, because a decision that silently fails to parse is the same failure with extra steps. Ceiling is 0 and should stay 0",
+      "cmd": "node",
+      "args": [
+        "tools/dev/checks/decision-registration.check.js"
+      ],
+      "needsServer": false,
+      "timeoutMs": 20000
+    },
+    {
       "id": "placeholder-arity",
       "description": "no prepared statement binds a different number of values than its SQL asks for. Born from the cycle-225 near-miss: a mechanical edit gave four ncdb statements a `?` their callers never bound, and they would have compared every row against NULL and returned ZERO ROWS FOREVER on a live dashboard — with tsc clean and all 963 tests passing, because neither can see inside a SQL string. Ceiling is 0 and should stay 0. On its first real run it found GazetteerAwareReasonerPlugin passing maxCountryProposals to SQL with no placeholder, which better-sqlite3 rejects outright; that query also selected two columns that do not exist, so the plugin had NEVER read the gazetteer and always fell back to a hardcoded country list. Deliberately silent on interpolated SQL, spread args, named parameters and statements prepared-then-returned — it reports only where both sides are statically knowable, so a finding is a finding",
       "cmd": "node",

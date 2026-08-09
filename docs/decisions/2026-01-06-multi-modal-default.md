@@ -1,3 +1,9 @@
+---
+decision: DEC-MULTIMODAL-DEFAULT
+status: record
+question: Why multi-modal crawl behaviour became the default.
+---
+
 Context: Default crawl behavior needed to prioritize hub discovery + pattern learning, while keeping legacy sequences available.
 
 Options:

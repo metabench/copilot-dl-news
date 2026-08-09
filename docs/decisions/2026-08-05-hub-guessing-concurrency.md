@@ -1,3 +1,9 @@
+---
+decision: DEC-HUBGUESS-CONCURRENCY
+status: record
+question: Hub-guessing concurrency knob was inert; fixed and owner-ruled.
+---
+
 # Hub-guessing worker concurrency: the knob was never connected
 
 **Date:** 2026-08-05 (cycle 208)
