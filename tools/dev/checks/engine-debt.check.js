@@ -140,7 +140,16 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // src/__tests__ as a cross-boundary integration test after months in the
 // known set. hubIdentifier's own test was found ONLY by the post-delete
 // scan (relative require, the c171 blind spot) and travelled green 10/10.
-const CEILING = 271;
+// 271 → 258 (cycle 185, batch 11 — infra cluster): BrowserPoolManager (dead),
+// ProxyManager, RateLimitTracker, RedownloadCooldownGuard and the rest of the
+// 13-file cluster. BANKED LATE, on 2026-08-09 by TECH-ARCHREVIEW-CRAWLER.
+// The extraction was real and its own commit message said "engine-debt 258";
+// cycle 185's stanza records "258 files" too. Only this constant was left at
+// 271, so for five days the ledger and the guard disagreed about the same fact
+// and the engine could have grown back by 13 files without the ratchet making
+// a sound. A ratchet with slack is not a ratchet. Nothing moved to earn this
+// lowering today — it is a bookkeeping correction, not progress.
+const CEILING = 258;
 
 function main() {
   const argv = process.argv.slice(2);

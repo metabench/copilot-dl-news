@@ -140,6 +140,29 @@ function classify(techs, ctx) {
       continue;
     }
     const { met, evidence, stale } = evaluatePredicate(t.doneWhen, ctx);
+
+    // A RECURRING node is `available` forever BY DESIGN — TECH-ARCHREVIEW-CRAWLER's
+    // own prelim says it "never grows and never disappears", because it is always
+    // possible in principle to review an architecture again. So a met predicate
+    // here does NOT mean completion and must not be compared against the typed
+    // state: writing the first review would otherwise instantly contradict a node
+    // that is behaving exactly as specified.
+    //
+    // Caught by the real tree the moment the first review landed. The fixtures
+    // for `reviewOf` all typed the node `done`, so this path was never exercised
+    // — a reminder that a predicate suite passing on invented nodes proves less
+    // than one run against the actual spec.
+    //
+    // What the evidence reports for these is the record's FRESHNESS, in the
+    // three-state vocabulary of docs/agi/reviews/README.md.
+    if (t.recurring) {
+      const verdict = !met ? 'never-recorded' : stale ? 'recorded-STALE' : 'recorded-current';
+      const row = { id, typed: t.state, derived: null, verdict, evidence, recurring: true };
+      if (stale) row.stale = true;
+      out.push(row);
+      continue;
+    }
+
     const typedDone = t.state === 'done';
     const verdict = met === typedDone ? (met ? 'verified-done' : 'verified-pending') : 'CONTRADICTION';
     const row = { id, typed: t.state, derived: met ? 'done' : 'available', verdict, evidence };
@@ -224,13 +247,23 @@ function main() {
   const contradictions = bucket('CONTRADICTION');
   const unverified = bucket('unverified');
 
+  const recurring = rows.filter((r) => r.recurring);
+
   console.log('\n== curated tech state, derived from evidence ==');
   console.log(`${rows.length} curated nodes · ${bucket('verified-done').length} verified done · `
     + `${bucket('verified-pending').length} verified pending · ${unverified.length} UNVERIFIED · `
-    + `${contradictions.length} contradictions\n`);
+    + `${contradictions.length} contradictions`);
+  if (recurring.length) {
+    console.log(`${recurring.length} recurring (reviews) · `
+      + `${bucket('recorded-current').length} current · ${bucket('recorded-STALE').length} stale · `
+      + `${bucket('never-recorded').length} never recorded`);
+  }
+  console.log('');
 
   for (const r of rows.filter((x) => x.evidence)) {
-    const mark = r.verdict === 'CONTRADICTION' ? '!!' : r.verdict === 'verified-done' ? 'ok' : '  ';
+    const mark = r.verdict === 'CONTRADICTION' ? '!!'
+      : r.verdict === 'verified-done' || r.verdict === 'recorded-current' ? 'ok'
+        : r.verdict === 'recorded-STALE' ? '~~' : '  ';
     console.log(`  ${mark} ${r.id.padEnd(22)} typed=${String(r.typed).padEnd(10)} ${r.evidence}`);
   }
 

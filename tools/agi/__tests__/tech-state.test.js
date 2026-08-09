@@ -115,6 +115,50 @@ describe('evaluatePredicate', () => {
     });
   });
 
+  describe('recurring nodes stay `available` by design', () => {
+    // These fixtures ALL typed the node `done`, so this path went unexercised
+    // until the first real review landed and instantly produced a false
+    // CONTRADICTION on a node behaving exactly as specified. A review node is
+    // available forever — its own prelim says it "never grows and never
+    // disappears" — so a met predicate is freshness, not completion.
+    const node = (extra) => [{
+      id: 'R', state: 'available', recurring: true,
+      doneWhen: { record: 'rec.md', reviewOf: 'src/x' }, ...extra
+    }];
+    const dated = (record, subject) => ({
+      ...ctx,
+      exists: (p) => p === 'rec.md',
+      lastCommit: (p) => (p === 'rec.md' ? record : subject)
+    });
+
+    test('a recorded review does NOT contradict its permanent `available`', () => {
+      const rows = classify(node(), dated('2026-08-09T00:00:00Z', '2026-08-04T00:00:00Z'));
+      expect(rows[0].verdict).toBe('recorded-current');
+      expect(rows[0].typed).toBe('available');
+    });
+
+    test('a stale recurring review reports stale, still not a contradiction', () => {
+      const rows = classify(node(), dated('2026-08-01T00:00:00Z', '2026-08-07T00:00:00Z'));
+      expect(rows[0].verdict).toBe('recorded-STALE');
+      expect(rows[0].stale).toBe(true);
+    });
+
+    test('an unwritten recurring review reads never-recorded', () => {
+      const rows = classify(node(), { ...ctx, exists: () => false });
+      expect(rows[0].verdict).toBe('never-recorded');
+    });
+
+    test('NO recurring node can ever be a CONTRADICTION, whatever the dates', () => {
+      const cases = [
+        dated('2026-08-09T00:00:00Z', '2026-08-04T00:00:00Z'),
+        dated('2026-08-01T00:00:00Z', '2026-08-07T00:00:00Z'),
+        { ...ctx, exists: () => true, lastCommit: () => null },
+        { ...ctx, exists: () => false }
+      ];
+      for (const c of cases) expect(classify(node(), c)[0].verdict).not.toBe('CONTRADICTION');
+    });
+  });
+
   test('a MALFORMED predicate throws — that is an authoring error, not a state', () => {
     expect(() => evaluatePredicate({ nonsense: 1 }, ctx)).toThrow(/unrecognised doneWhen/);
     expect(() => evaluatePredicate({ ratchet: 'x' }, ctx)).toThrow(/numeric atMost/);
