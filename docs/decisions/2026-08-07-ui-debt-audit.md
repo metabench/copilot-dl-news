@@ -1,3 +1,10 @@
+---
+decision: DEC-UI-DEBT-METRIC
+status: answered
+question: Redefine ui-debt so by-reference extraction counts, retire it to a floor, or leave it?
+answered: Redefined as "files not yet sourced FROM news-crawler-ui" and shipped in cycle 235.
+---
+
 # ui-debt audit: of 351 files, 5 are dead — the number is not measuring debt
 
 **Date:** 2026-08-07 (cycle 227)

@@ -1,3 +1,11 @@
+---
+decision: DEC-ORPHANED-CONTENT
+status: open
+question: What happens to 15,061 content_storage rows whose parent response is gone but which back 16.8% of content_analysis?
+options: [leave, re-link, delete-content-and-analysis]
+blocks: [CR-DB]
+---
+
 # 15,061 orphaned `content_storage` rows — measured, not attributed
 
 **Date:** 2026-08-05 (cycle 220)

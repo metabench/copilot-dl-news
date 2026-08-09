@@ -1,3 +1,10 @@
+---
+decision: DEC-DEDUP-SCORING
+status: closed
+question: Which scoring policy decides which duplicate place survives a merge?
+answered: Moot — after the qid and external-id guards there are zero genuine duplicate groups left to score (cycle 235).
+---
+
 # Dedup investigation: the scoring is the small problem
 
 **Date:** 2026-08-07 (cycle 228)

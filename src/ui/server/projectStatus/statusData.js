@@ -27,17 +27,35 @@ const { checkEntry } = require(path.join(ROOT, 'tools', 'dev', 'check-repo-scope
 // its main(), so there is no circular-require at load time. Reusing its parser keeps
 // the tech tree and the ▶ candidate list projections of the SAME backlog read.
 const { parseBacklog, remainderOf } = require(path.join(ROOT, 'tools', 'agi', 'next-prompt.js'));
+// Owner decisions as data (cycle 236). Same shape as the backlog→tech-state
+// projection: the DOCUMENT is the source of truth, this is a read of it.
+const { readDecisions, openDecisions, blockedTechs } = require(path.join(ROOT, 'tools', 'agi', 'decisions.js'));
 
 const XP_PER_LEVEL = 10; // improvement-count milestone size for the header progress bar
 
-// v1: the standing owner decisions live in prose (fix-queue doc §3 / module-ecosystem doc).
-// Hardcoded here with that provenance; RB-015 v2 can move them to a manifest.
-// Decisions only the owner can make. Two of the original three were settled in
-// cycle 132 and removed; the survivor stays because an agent must not change a
-// system security setting even with approval — the owner runs it themselves.
-const PLAYER_INPUT_REQUIRED = [
+// Decisions only the owner can make.
+//
+// v2 (cycle 236): DERIVED from docs/decisions/*.md front-matter, replacing the
+// hardcoded array v1 left here with a note that a manifest should take over.
+// The cost of not doing it was measured: twelve decision documents existed,
+// nothing parsed them, this panel showed exactly ONE item, and the improvement
+// loop then stalled for FOUR CONSECUTIVE CYCLES waiting on decisions the board
+// never displayed.
+//
+// The one survivor of v1 stays as a standing entry because it has no document
+// and never will — an agent must not change a system security setting even
+// with approval, so it is the owner's to run, permanently.
+const STANDING_INPUT = [
   'Defender exclusion for the repo tree (~64 s cold-boot lever) — needs an elevated PowerShell run by the owner; agents must not modify security settings'
 ];
+
+function playerInputItems(decisions) {
+  const fromDocs = openDecisions(decisions).map((d) => {
+    const opts = d.options.length ? ` — ${d.options.join(' / ')}` : '';
+    return `${d.question}${opts}  [${d.doc}]`;
+  });
+  return [...fromDocs, ...STANDING_INPUT];
+}
 
 let cache = { at: 0, data: null };
 
@@ -341,6 +359,13 @@ function buildStatus() {
     }
   } catch (_) { /* no annotations yet */ }
 
+  // Owner decisions, read once and used twice: the PLAYER INPUT panel and the
+  // tech tree's gates. A parse failure must not blank the page, but it must not
+  // pass silently either — an unreadable decision is an invisible decision.
+  let decisions = [];
+  let decisionsError = null;
+  try { decisions = readDecisions(); } catch (e) { decisionsError = e.message; }
+
   // tech tree + path ahead — structure in tech-tree.json, states in the backlog,
   // the curated path in roadmap.json (one fact, one field, three files)
   let techTree = { branches: [], absorbed: 0 };
@@ -401,7 +426,7 @@ function buildStatus() {
       date: latest.date || ''
     },
     sideQuests: owed,
-    playerInput: PLAYER_INPUT_REQUIRED,
+    playerInput: playerInputItems(decisions),
     recent,
     party,
     achievements,

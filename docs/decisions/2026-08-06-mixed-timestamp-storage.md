@@ -1,3 +1,10 @@
+---
+decision: DEC-TIMESTAMP-STORAGE
+status: answered
+question: Normalise timestamp storage, patch the 51 call sites, or do nothing?
+answered: Normalise — approved cycle 223, executed cycle 224 (2,117,429 rows converted to ISO).
+---
+
 # Fifteen columns store timestamps in BOTH formats — normalise, or keep patching?
 
 **Date:** 2026-08-06 (cycle 222)

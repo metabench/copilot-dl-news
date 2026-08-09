@@ -1,3 +1,11 @@
+---
+decision: DEC-URLS-WRITERS
+status: open
+question: Should ensureUrlId become the single enforced entry point for url creation across both repos?
+options: [unify-on-ensureUrlId, leave-six-shapes, backfill-only]
+blocks: [CR-DB]
+---
+
 # The `urls` table has eight insert shapes across two repos
 
 **Date:** 2026-08-05 (cycle 219)

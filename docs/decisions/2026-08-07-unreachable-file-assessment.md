@@ -1,3 +1,11 @@
+---
+decision: DEC-ARTICLECOMPRESSION
+status: open
+question: Retire articleCompression.js, or check getArticleCompressionStatus against the compression dashboard first?
+options: [retire, check-dashboard-first, keep]
+blocks: [CR-DB]
+---
+
 # Assessment of the three unreachable SQL files
 
 **Date:** 2026-08-07 (cycle 226)

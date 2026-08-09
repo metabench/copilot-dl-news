@@ -1,3 +1,11 @@
+---
+decision: DEC-PENDING-MIGRATIONS
+status: open
+question: Run the two pending URL migrations? normalize-fetches (54,485 rows) and normalize-place-hub-candidates (673).
+options: [run-both, run-fetches-only, leave-pending]
+blocks: [CR-DB]
+---
+
 # Three URL-normalization migrations are spent — retire them?
 
 **Date:** 2026-08-05 (cycle 216)
