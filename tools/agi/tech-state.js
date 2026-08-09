@@ -42,6 +42,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 
@@ -66,6 +67,35 @@ function evaluatePredicate(pred, ctx) {
     if (ceiling === null) return { met: false, evidence: `ratchet ${pred.ratchet} not found` };
     const met = ceiling <= pred.atMost;
     return { met, evidence: `ratchet ${pred.ratchet} ceiling ${ceiling} (needs <= ${pred.atMost})` };
+  }
+  if (pred.reviewOf) {
+    // A REVIEW node. Reviews recur; `done` does not — a review of the crawler
+    // architecture is worth repeating as the architecture changes, and
+    // done+researchedOn cannot say "done, but stale".
+    //
+    // Resolved by DERIVING staleness rather than declaring it (the BOOT.md
+    // rule): the record is current when it is newer than the last change to
+    // the thing it reviews. Staleness is INFORMATION, not a failure — only a
+    // contradiction between evidence and typed state fails the probe. A repo
+    // under active development would otherwise be permanently red.
+    const { record, reviewOf: subject } = pred;
+    if (!record) throw new Error('reviewOf predicate needs a record path');
+    if (!ctx.exists(record)) {
+      return { met: false, evidence: `${record} — never recorded` };
+    }
+    const recordedAt = (ctx.lastCommit || (() => null))(record);
+    const changedAt = (ctx.lastCommit || (() => null))(subject);
+    if (!recordedAt || !changedAt) {
+      return { met: true, evidence: `${record} exists (dates unavailable)` };
+    }
+    const stale = changedAt > recordedAt;
+    return {
+      met: true,
+      stale,
+      evidence: stale
+        ? `${record} recorded ${recordedAt.slice(0, 10)}, but ${subject} changed ${changedAt.slice(0, 10)} — STALE`
+        : `${record} current as of ${recordedAt.slice(0, 10)}`
+    };
   }
   if (pred.nodeField) {
     // "do any tech nodes carry this field yet?" — for techs whose completion IS
@@ -109,10 +139,12 @@ function classify(techs, ctx) {
       out.push({ id, typed: t.state, verdict: 'unverified', evidence: null });
       continue;
     }
-    const { met, evidence } = evaluatePredicate(t.doneWhen, ctx);
+    const { met, evidence, stale } = evaluatePredicate(t.doneWhen, ctx);
     const typedDone = t.state === 'done';
     const verdict = met === typedDone ? (met ? 'verified-done' : 'verified-pending') : 'CONTRADICTION';
-    out.push({ id, typed: t.state, derived: met ? 'done' : 'available', verdict, evidence });
+    const row = { id, typed: t.state, derived: met ? 'done' : 'available', verdict, evidence };
+    if (stale) row.stale = true;
+    out.push(row);
   }
   return out;
 }
@@ -156,7 +188,27 @@ function buildContext() {
     // which every nodeField predicate reports as NOT met — a visible answer.
   }
   const nodesWithField = (field) => (spec.techs || []).filter((t) => t[field] !== undefined).length;
-  return { probeIds, ratchetCeiling, readFile, exists, nodesWithField };
+
+  // Last commit touching a path, ISO-8601, cached — a review's staleness is
+  // "did the thing I reviewed change after I reviewed it?".
+  const dateCache = new Map();
+  const lastCommit = (rel) => {
+    if (dateCache.has(rel)) return dateCache.get(rel);
+    let out = null;
+    try {
+      const raw = execFileSync('git', ['log', '-1', '--format=%cI', '--', rel],
+        { cwd: ROOT, encoding: 'utf8' }).trim();
+      out = raw || null;
+    } catch (_) {
+      // Reviewed swallow: no git, or a path git has never seen. Both mean "no
+      // date", which evaluatePredicate reports as dates-unavailable rather
+      // than silently calling the review current.
+    }
+    dateCache.set(rel, out);
+    return out;
+  };
+
+  return { probeIds, ratchetCeiling, readFile, exists, nodesWithField, lastCommit };
 }
 
 function main() {
@@ -180,6 +232,13 @@ function main() {
   for (const r of rows.filter((x) => x.evidence)) {
     const mark = r.verdict === 'CONTRADICTION' ? '!!' : r.verdict === 'verified-done' ? 'ok' : '  ';
     console.log(`  ${mark} ${r.id.padEnd(22)} typed=${String(r.typed).padEnd(10)} ${r.evidence}`);
+  }
+
+  const stale = rows.filter((r) => r.stale);
+  if (stale.length) {
+    console.log(`\n  STALE — recorded, but the thing reviewed has changed since:`);
+    for (const r of stale) console.log(`    ${r.id}: ${r.evidence}`);
+    console.log('  Not a failure. Reviews recur; re-run one when its subject moves.');
   }
 
   if (unverified.length) {

@@ -70,17 +70,16 @@ The other five (WORKORDERS, PRODUCTS, L3PROOF, PAGESLIVE, OWNERGUIDE) each
 describe a concrete artifact and should be checkable — read the node's
 `research` text, find or name the artifact, add a `doneWhen`.
 
-### A design question this surfaced
+### The recurring-review question — ✅ decided 2026-08-07
 
-**Reviews recur; `done` does not.** The four review nodes now point at files in
-`copilot-dl-news/docs/agi/reviews/`, which stops them vanishing — the ledger
-shows a "second TECH-APPREVIEW run" that left no artifact at all. But the
-predicate only means *"recorded at least once"*. A review of the crawler
-architecture is worth repeating as the architecture changes, and the model has
-no way to say a `done` node has gone stale.
+**Reviews recur; `done` does not.** Resolved by deriving staleness rather than
+adding a state anyone has to maintain. Review nodes carry
+`{ record, reviewOf }` and `recurring: true`; `tech-state.js` compares git dates
+and reports **never recorded** / **current** / **STALE**.
 
-Expressing that needs a recurring node kind — a change to the tree's model, not
-to a predicate. Worth deciding before adding more review nodes. See
+Stale is *information*, not a failure — only a contradiction fails the probe,
+because a repo under active development would otherwise be permanently red and
+a guard that is always red is a guard nobody reads. Full rationale in
 `copilot-dl-news/docs/agi/reviews/README.md`.
 
 For each remaining node, read its `research` text and ask what artifact would

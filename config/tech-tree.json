@@ -501,8 +501,10 @@
         "The button was deliberately NOT clicked in verification: the signal path is cycle 139's already-proven code, and a second harness click would spend another ack for nothing (the c139 rule: ack your own test click or the button's first real use is burned); verified instead by 13/13 page tests, render smoke, live pane DOM, 17 probes passing."
       ],
       "doneWhen": {
-        "exists": "docs/agi/reviews/tech-tree-app-review.md"
-      }
+        "record": "docs/agi/reviews/tech-tree-app-review.md",
+        "reviewOf": "src/ui/server/projectStatus"
+      },
+      "recurring": true
     },
     {
       "id": "TECH-TREEREVIEW",
@@ -532,8 +534,10 @@
         "Verification for the cycle: 123/123 jest across all three suites including 5 new signal tests (raise/ack roundtrip, double-ack refused, torn-line skipped, runaway note truncated, missing file = no signals), 17 probes pass, c135 live check 5/5."
       ],
       "doneWhen": {
-        "exists": "docs/agi/reviews/tree-and-plans-review.md"
-      }
+        "record": "docs/agi/reviews/tree-and-plans-review.md",
+        "reviewOf": "config/tech-tree.json"
+      },
+      "recurring": true
     },
     {
       "id": "TECH-L3PROOF",
@@ -840,8 +844,10 @@
         "Candidate measured axes for THIS app (seed list, extend per run): route-handler purity violations (progress-surface probe count), template-literal traps (backtick count inside client-script literals), untested client-script branches (jest string-assertions vs real-browser checks ratio, RB-009 floor), cache-exemption coverage (time-sensitive channels outside the 30s memo), SSE client bookkeeping (dead-socket prune rate)."
       ],
       "doneWhen": {
-        "exists": "docs/agi/reviews/architecture-tree-app.md"
-      }
+        "record": "docs/agi/reviews/architecture-tree-app.md",
+        "reviewOf": "src/ui/server/projectStatus"
+      },
+      "recurring": true
     },
     {
       "id": "TECH-ARCHREVIEW-CRAWLER",
@@ -864,8 +870,10 @@
         "Candidate measured axes for the CRAWLER (seed list, extend per run): ncdb-debt (raw SQL outside ncdb — the founding ratchet, currently guarded at 241), event-loop starvation incidents (the c39/c40 class), zombie-state classes without a corroborated transition (the c150 class), per-host politeness overhead vs measured throughput (the c45 scheduling lever), reconciliation blind spots (the redirect_chain class), deploy-gate false-positive rate."
       ],
       "doneWhen": {
-        "exists": "docs/agi/reviews/architecture-crawler.md"
-      }
+        "record": "docs/agi/reviews/architecture-crawler.md",
+        "reviewOf": "src/core/crawler"
+      },
+      "recurring": true
     },
     {
       "id": "TECH-PROMOTE",

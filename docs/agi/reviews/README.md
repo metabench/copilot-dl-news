@@ -22,18 +22,43 @@ so a review that leaves no artifact does not count as performed.
 
 Check with `node tools/agi/tech-state.js`.
 
-## An unresolved design question
+## Reviews recur — decided 2026-08-07
 
-**Reviews recur; `done` does not.** A tech node is `available` or
-`done`+`researchedOn`, which suits a thing you build once. A review of the
-crawler architecture is worth repeating as the architecture changes, so
-"done" is the wrong shape for it.
+A tech node is `available` or `done`+`researchedOn`, which suits a thing you
+build once. A review of the crawler architecture is worth repeating as the
+architecture changes, so `done` was the wrong shape for it.
 
-The current predicate means *"this review has been recorded at least once"* —
-enough to stop them vanishing, not enough to express staleness. If a review
-should expire, the tree needs a recurring node kind, and that is a change to
-the model rather than to a predicate. Recorded in
-`docs/agi/RECORD_SYSTEM_PLAN.md`.
+**Decision: review nodes are `recurring`, and staleness is DERIVED, not
+declared.** Each carries a `reviewOf` predicate naming both its record and the
+subject it reviews:
+
+```json
+"recurring": true,
+"doneWhen": {
+  "record":   "docs/agi/reviews/architecture-crawler.md",
+  "reviewOf": "src/core/crawler"
+}
+```
+
+`tools/agi/tech-state.js` then reports one of three things, from git dates:
+
+| state | meaning |
+|---|---|
+| **never recorded** | the record does not exist — the review has not been done |
+| **current** | the record is newer than the last change to its subject |
+| **STALE** | the review happened, and the thing it reviewed has moved on since |
+
+Two deliberate choices:
+
+- **Derived, not typed** — per the `docs/agi/BOOT.md` rule. Nobody has to
+  remember to mark a review stale; the subject changing does it.
+- **Stale is information, not a failure.** The `tech-state-evidence` probe fails
+  only on a contradiction between evidence and typed state. A repo under active
+  development would otherwise be permanently red, and a guard that is always red
+  is a guard nobody reads.
+
+Re-run a review when its subject moves. Overwrite the file; git keeps the
+previous one.
 
 ## What a review should contain
 

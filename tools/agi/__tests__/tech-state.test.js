@@ -61,6 +61,60 @@ describe('evaluatePredicate', () => {
     expect(evaluatePredicate({ nodeField: 'flavor' }, { ...ctx, nodesWithField }).met).toBe(false);
   });
 
+  describe('reviewOf — reviews recur, `done` does not', () => {
+    const dated = (record, subject) => ({
+      ...ctx,
+      exists: (p) => p === 'rec.md',
+      lastCommit: (p) => (p === 'rec.md' ? record : subject)
+    });
+
+    test('a review never written is NOT met', () => {
+      const r = evaluatePredicate({ record: 'missing.md', reviewOf: 'src/x' }, ctx);
+      expect(r.met).toBe(false);
+      expect(r.evidence).toMatch(/never recorded/);
+    });
+
+    test('a review NEWER than its subject is current', () => {
+      const r = evaluatePredicate({ record: 'rec.md', reviewOf: 'src/x' },
+        dated('2026-08-07T00:00:00Z', '2026-08-01T00:00:00Z'));
+      expect(r.met).toBe(true);
+      expect(r.stale).toBe(false);
+      expect(r.evidence).toMatch(/current as of/);
+    });
+
+    test('a review OLDER than its subject is met but STALE', () => {
+      // The whole point: the review happened, and the thing it reviewed has
+      // moved on. `done` cannot express that; this can.
+      const r = evaluatePredicate({ record: 'rec.md', reviewOf: 'src/x' },
+        dated('2026-08-01T00:00:00Z', '2026-08-07T00:00:00Z'));
+      expect(r.met).toBe(true);
+      expect(r.stale).toBe(true);
+      expect(r.evidence).toMatch(/STALE/);
+    });
+
+    test('staleness does NOT make it a contradiction — it is information', () => {
+      // A repo under active development would otherwise be permanently red.
+      const rows = classify(
+        [{ id: 'R', state: 'done', doneWhen: { record: 'rec.md', reviewOf: 'src/x' } }],
+        dated('2026-08-01T00:00:00Z', '2026-08-07T00:00:00Z')
+      );
+      expect(rows[0].verdict).toBe('verified-done');
+      expect(rows[0].stale).toBe(true);
+    });
+
+    test('missing git dates report unavailable rather than claiming currency', () => {
+      const r = evaluatePredicate({ record: 'rec.md', reviewOf: 'src/x' },
+        { ...ctx, exists: () => true, lastCommit: () => null });
+      expect(r.met).toBe(true);
+      expect(r.stale).toBeUndefined();
+      expect(r.evidence).toMatch(/dates unavailable/);
+    });
+
+    test('a reviewOf without a record path throws', () => {
+      expect(() => evaluatePredicate({ reviewOf: 'src/x' }, ctx)).toThrow(/needs a record path/);
+    });
+  });
+
   test('a MALFORMED predicate throws — that is an authoring error, not a state', () => {
     expect(() => evaluatePredicate({ nonsense: 1 }, ctx)).toThrow(/unrecognised doneWhen/);
     expect(() => evaluatePredicate({ ratchet: 'x' }, ctx)).toThrow(/numeric atMost/);
