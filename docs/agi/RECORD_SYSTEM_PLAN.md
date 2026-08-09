@@ -44,10 +44,11 @@ contradict it.
 
 ### Next — in this order
 
-**4a. Drive the UNVERIFIED count down** *(now 7 of 23 — was 18)*
+**4a. Drive the UNVERIFIED count down** *(now 2 of 23 — was 18)*
 
-Sixteen nodes carry predicates: **5 verified done, 11 verified pending, 0
-contradictions.** The mechanism earned its keep immediately — **`TECH-CSLIVE`
+Twenty-one nodes carry predicates: **5 verified done, 16 verified pending, 0
+contradictions.** Only `TECH-HEADLINE2` and `TECH-P5AUTO` remain unverified, both
+deliberately — see below. **Item 4a is complete as far as it honestly goes.** The mechanism earned its keep immediately — **`TECH-CSLIVE`
 was mislabelled `available` while its own deliverable
 (`news-crawler-ui/checks/console.live.check.js`, the live harness for the
 crawler UI) had shipped on 2026-08-03.** The predicate contradicted the typed
@@ -97,12 +98,32 @@ The tree renderer in
 still reads the typed `state`. Once the unverified count is low, switch it to the
 derived verdict — that is the actual "derived by default" finish line.
 
-**6. Triage `copilot-dl-news/docs/plans/`**
+**6. Triage `copilot-dl-news/docs/plans/`** — ✅ **done 2026-08-07**
 
-Twelve documents, mostly July 2026, several superseded (RB-012's plan is
-delivered end to end), nothing reads them. They are the next `docs/decisions/`
-if left alone. Either give them front-matter with a status, or move the dead
-ones to an archive directory. Decide per document; do not bulk-delete.
+*My earlier description of this was wrong on two counts, and the correction is
+the useful part.* I wrote "twelve documents, mostly July, several superseded,
+nothing reads them". Measured: **fifteen** documents, and `docs/plans/INDEX.md`
+already existed and already declared per-plan status. Most are cited elsewhere
+(the coordination-point migration plan has 33 references). "Nothing reads them"
+was simply false — I had not looked.
+
+What was actually wrong was subtler and worth more: **the index had rotted in
+the same way the tech nodes had.** Its header said *Last Updated: 2026-03-08*
+while the table described July plans; Completed and Archived were both empty
+rows; and `2026-07-db-driven-crawling` was listed as active with "P5 next" while
+`RESEARCH_BACKLOG.md` had recorded RB-012 as **Delivered, P1–P6 all shipped** —
+for eighteen days. Two records, one fact, opposite answers.
+
+Fixed: date corrected, the delivered plan moved to Completed citing RB-012 as
+its authority, and the three genuinely orphaned documents (zero references, all
+predating 2026-03) moved to Archived. Files stay — a dated plan is a record of
+what was believed at the time, and cycle 208 settled that destroying such a
+record to tidy the present is a bad trade.
+
+Plan status is not mechanically derivable, so this index stays typed. The
+obligation that comes with that is written into its header: move a row the day
+its work lands, and cite the authoritative record rather than restating
+progress from memory.
 
 **8. Decisions as first-class UI**, not a text list. Each with its options
 rendered as choices, a link to its document, and what it blocks. Needs no new
