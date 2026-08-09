@@ -437,7 +437,10 @@
         "Its prereqs are TF-PROBES + TECH-TYPEDEDGES — the probe rig and defect-bearing ledger stanzas supply the raw signals, and the typed-edge grammar gives each suggestion its verb.",
         "The improve-candidate heuristic has real fuel: ledger stanzas carry structured defects[] entries (e.g. cycle 90's crawl-rate timezone bug), so a defect-named tool is machine-findable today.",
         "One of the five factory integrations the owner selected all-at-once on 2026-07-28 (cycle 141) after the agent presented the menu — the same scope-elicitation pattern that in cycle 140 saved a rebuild ('eliciting scope cost one question; guessing wrong would have cost a rebuild')."
-      ]
+      ],
+      "doneWhen": {
+        "exists": "tools/agi/suggest.js"
+      }
     },
     {
       "id": "TECH-TOOLHEALTH",
@@ -490,7 +493,10 @@
         "The final prelim note makes the review subject to the discipline it audits: every improvement item it proposes must name its ≤2 foundations before it leaves the fog, and unshipped items become named techs or fog seeds 'so nothing evaporates'.",
         "Building it surfaced a latent hardcoding from cycle 139: the request button's accent was hardcoded ice-blue; it now wears the page's branch accent — verified live as computed border rgb(85,163,119) green on /tech/tree while /tech/agi stays ice — 'a second instance is where hardcodings surface'.",
         "The button was deliberately NOT clicked in verification: the signal path is cycle 139's already-proven code, and a second harness click would spend another ack for nothing (the c139 rule: ack your own test click or the button's first real use is burned); verified instead by 13/13 page tests, render smoke, live pane DOM, 17 probes passing."
-      ]
+      ],
+      "doneWhen": {
+        "exists": "docs/agi/reviews/tech-tree-app-review.md"
+      }
     },
     {
       "id": "TECH-TREEREVIEW",
@@ -518,7 +524,10 @@
         "Its prelim[] block holds 6 curated notes, including the rule that a review's output 'is not a report — it is EDITS', the c129 remainder-quality proxy ('rewrite any node whose text a newcomer could not act on tomorrow'), and an anti-inflation clause: a node that cannot name its two foundations is not ready to leave the fog.",
         "The prelim ranks idea sources by signal strength — ledger second_order slugs first ('every earned rule implies a tool that enforces it') — and names three fog-promotion seeds: probe results rendered on tree nodes, a crawl-quality scoreboard, and generalised signal-driven research queues.",
         "Verification for the cycle: 123/123 jest across all three suites including 5 new signal tests (raise/ack roundtrip, double-ack refused, torn-line skipped, runaway note truncated, missing file = no signals), 17 probes pass, c135 live check 5/5."
-      ]
+      ],
+      "doneWhen": {
+        "exists": "docs/agi/reviews/tree-and-plans-review.md"
+      }
     },
     {
       "id": "TECH-L3PROOF",
@@ -676,7 +685,11 @@
         "First-slice candidates, chosen for clean seams rather than size: ArticleSignalsService (pure URL/content predicates with one dependency-free sibling import, consumed by the unified app, the frontier tools and the console adapter), then the url-signal helpers. The politeness/throttle cluster moves LATE and deliberately: config/gated-surfaces.json's requiredPatterns point at src/core/crawler/DomainThrottleManager.js, so that slice must move the gate config in the same owner-visible commit — the 429 escalation is never weakened and never left unwatched.",
         "Reference discipline carried from the paid-for lessons: every deletion is preceded by a scan that matches the REQUIRE FORM (../X, ./X), not just path-style tokens — c171's grep missed relative requires and c173's first unified-app boot failed on exactly that; and a dir named like a page can be a load-bearing library (hubGuessing), so verdicts come from the graph, not the name.",
         "DONE means: the monorepo's crawl paths (src/crawl.js, the v1 crawl API, the frontier tools) consume the engine from news-crawler-itself via its declared API; src/core/crawler is reduced to thin adapters or gone; engine-debt is a small fraction of 365 with every drop banked in the ceiling; and a real crawl through the console verifies the delegated engine end-to-end — the c173 supervised-session recipe rerun against the extracted engine."
-      ]
+      ],
+      "doneWhen": {
+        "ratchet": "engine-debt-ratchet",
+        "atMost": 0
+      }
     },
     {
       "id": "TECH-DATALINKS",
@@ -808,7 +821,10 @@
         "BUSY-WORK SELF-CHECK before executing any accepted suggestion: run churn-scan (RB-004) on the target files — a target that keeps being 'improved' is a red flag; check the workflow scorecard's cost-to-catch; and if the last two runs of this review produced work whose measured axes did not move, the review must SAY it is idling and pick a materially different lane (a gated decision to surface, a measurement to build, or nothing).",
         "DECLINED IS RECORDED: every suggestion considered and rejected goes in the REVIEW LOG with its reason, so the next run does not re-derive or re-propose it. Nothing evaporates; nothing loops.",
         "Candidate measured axes for THIS app (seed list, extend per run): route-handler purity violations (progress-surface probe count), template-literal traps (backtick count inside client-script literals), untested client-script branches (jest string-assertions vs real-browser checks ratio, RB-009 floor), cache-exemption coverage (time-sensitive channels outside the 30s memo), SSE client bookkeeping (dead-socket prune rate)."
-      ]
+      ],
+      "doneWhen": {
+        "exists": "docs/agi/reviews/architecture-tree-app.md"
+      }
     },
     {
       "id": "TECH-ARCHREVIEW-CRAWLER",
@@ -829,7 +845,10 @@
         "BUSY-WORK SELF-CHECK before executing any accepted suggestion: run churn-scan (RB-004) on the target files — a target that keeps being 'improved' is a red flag; check the workflow scorecard's cost-to-catch; and if the last two runs of this review produced work whose measured axes did not move, the review must SAY it is idling and pick a materially different lane (a gated decision to surface, a measurement to build, or nothing).",
         "DECLINED IS RECORDED: every suggestion considered and rejected goes in the REVIEW LOG with its reason, so the next run does not re-derive or re-propose it. Nothing evaporates; nothing loops.",
         "Candidate measured axes for the CRAWLER (seed list, extend per run): ncdb-debt (raw SQL outside ncdb — the founding ratchet, currently guarded at 241), event-loop starvation incidents (the c39/c40 class), zombie-state classes without a corroborated transition (the c150 class), per-host politeness overhead vs measured throughput (the c45 scheduling lever), reconciliation blind spots (the redirect_chain class), deploy-gate false-positive rate."
-      ]
+      ],
+      "doneWhen": {
+        "exists": "docs/agi/reviews/architecture-crawler.md"
+      }
     },
     {
       "id": "TECH-PROMOTE",

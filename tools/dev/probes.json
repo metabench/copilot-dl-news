@@ -140,7 +140,9 @@
       "description": "crawler-engine files in the monorepo do not exceed the ceiling — the news-crawler-itself extraction ratchet (owner-picked instrument, cycle 174; baseline 365 = tracked src/core/crawler, tests included since they move with their modules). Down = delegation-with-deletion into news-crawler-itself (rule 3: diff return shapes first) or reference-scanned retirement — and the scan must match relative require forms, the c171/c173 lesson. Constraint: the politeness gate points into this tree (DomainThrottleManager requiredPatterns); any slice moving it moves the gate config in the same commit. Born from the audit finding confirmed three times: instrumented extractions advance (ncdb 269→241, ui 643→488), prose-only ones freeze",
       "cmd": "node",
       "args": [
-        "tools/dev/checks/engine-debt.check.js"
+        "tools/dev/checks/engine-debt.check.js",
+        "--ceiling",
+        "271"
       ],
       "needsServer": false,
       "timeoutMs": 20000

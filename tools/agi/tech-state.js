@@ -130,11 +130,17 @@ function buildContext() {
     // over an optional input.
   }
   const probeIds = new Set((probes.probes || []).map((p) => p.id));
+  // Both flags, because the repo uses both: ncdb-debt-scan takes --max while
+  // engine-debt and ui-debt take --ceiling. Reading only one would silently
+  // report "ratchet not found" for half the guards.
   const ratchetCeiling = (id) => {
     const p = (probes.probes || []).find((x) => x.id === id);
     if (!p) return null;
-    const i = (p.args || []).indexOf('--max');
-    return i >= 0 ? Number(p.args[i + 1]) : null;
+    for (const flag of ['--max', '--ceiling']) {
+      const i = (p.args || []).indexOf(flag);
+      if (i >= 0) return Number(p.args[i + 1]);
+    }
+    return null;
   };
   const readFile = (rel) => {
     // Reviewed swallow: "the file is absent" is a legitimate verdict for a

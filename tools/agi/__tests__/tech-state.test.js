@@ -35,6 +35,15 @@ describe('evaluatePredicate', () => {
     expect(evaluatePredicate({ ratchet: 'absent', atMost: 1 }, ctx).met).toBe(false);
   });
 
+  test('ratchet reads BOTH flags — this repo uses --max and --ceiling', () => {
+    // ncdb-debt-scan takes --max; engine-debt and ui-debt take --ceiling.
+    // Reading only one silently reported "ratchet not found" for half the guards.
+    const { buildContext } = require('../tech-state');
+    const real = buildContext();
+    expect(real.ratchetCeiling('ncdb-debt-ratchet')).toBeGreaterThan(0);   // --max
+    expect(real.ratchetCeiling('engine-debt-ratchet')).toBeGreaterThan(0); // --ceiling
+  });
+
   test('nodeField: met when any node carries the field', () => {
     const c = { ...ctx, nodesWithField: (f) => (f === 'flavor' ? 3 : 0) };
     expect(evaluatePredicate({ nodeField: 'flavor' }, c).met).toBe(true);

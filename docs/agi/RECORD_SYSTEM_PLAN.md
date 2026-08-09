@@ -44,37 +44,43 @@ contradict it.
 
 ### Next — in this order
 
-**4a. Drive the UNVERIFIED count down** *(now 13 of 23 — was 18)*
+**4a. Drive the UNVERIFIED count down** *(now 7 of 23 — was 18)*
 
-Ten nodes carry predicates: 5 verified done, 5 verified pending, 0
-contradictions. The mechanism has already earned its keep — **`TECH-CSLIVE` was
-mislabelled `available` while its own deliverable
+Sixteen nodes carry predicates: **5 verified done, 11 verified pending, 0
+contradictions.** The mechanism earned its keep immediately — **`TECH-CSLIVE`
+was mislabelled `available` while its own deliverable
 (`news-crawler-ui/checks/console.live.check.js`, the live harness for the
 crawler UI) had shipped on 2026-08-03.** The predicate contradicted the typed
-state, the file was read to confirm, and the node was promoted. That is the
-derived-state loop working end to end.
+state, the file was read to confirm, and the node was promoted. Frontier went
+6 grown/18 available → 7/17.
 
-**Still unverified (13):** TECH-WORKORDERS, TECH-PRODUCTS, TECH-SUGGEST,
-TECH-APPREVIEW, TECH-TREEREVIEW, TECH-L3PROOF, TECH-P5AUTO, TECH-HEADLINE2,
-TECH-ENGINESPLIT, TECH-PAGESLIVE, TECH-OWNERGUIDE, TECH-ARCHREVIEW-TREE,
-TECH-ARCHREVIEW-CRAWLER.
+**Still unverified (7):** TECH-WORKORDERS, TECH-PRODUCTS, TECH-L3PROOF,
+TECH-P5AUTO, TECH-HEADLINE2, TECH-PAGESLIVE, TECH-OWNERGUIDE.
 
-Three of those are known-hard and the reason should be recorded rather than
-forced:
+Two are known-hard; record the reason rather than forcing a predicate:
 
 - **TECH-HEADLINE2** — completed as a measured crawl outcome. No file proves it.
   Leave it.
-- **TECH-P5AUTO** — typed `done`; I could not find the artifact. Guessing a
-  predicate risks a FALSE contradiction, which is worse than none. Needs ledger
-  archaeology to find what it actually shipped.
-- **TECH-ENGINESPLIT** — partial by nature (five of seven clusters home), and a
-  boolean predicate cannot express that. The `engine-debt-ratchet` probe carries
-  no `--max`, so a ratchet predicate has nothing to read; giving it one would
-  make this checkable.
+- **TECH-P5AUTO** — typed `done`; the artifact was not found. Guessing risks a
+  FALSE contradiction, worse than none. Needs ledger archaeology to find what it
+  actually shipped.
 
-The five review/analysis nodes (APPREVIEW, TREEREVIEW, ARCHREVIEW-*, SUGGEST)
-produce documents or item lists, so an `exists` predicate on their output is
-probably right once someone decides where that output lives.
+The other five (WORKORDERS, PRODUCTS, L3PROOF, PAGESLIVE, OWNERGUIDE) each
+describe a concrete artifact and should be checkable — read the node's
+`research` text, find or name the artifact, add a `doneWhen`.
+
+### A design question this surfaced
+
+**Reviews recur; `done` does not.** The four review nodes now point at files in
+`copilot-dl-news/docs/agi/reviews/`, which stops them vanishing — the ledger
+shows a "second TECH-APPREVIEW run" that left no artifact at all. But the
+predicate only means *"recorded at least once"*. A review of the crawler
+architecture is worth repeating as the architecture changes, and the model has
+no way to say a `done` node has gone stale.
+
+Expressing that needs a recurring node kind — a change to the tree's model, not
+to a predicate. Worth deciding before adding more review nodes. See
+`copilot-dl-news/docs/agi/reviews/README.md`.
 
 For each remaining node, read its `research` text and ask what artifact would
 prove it — then add a `doneWhen`. Two rules:
