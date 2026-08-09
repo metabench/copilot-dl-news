@@ -45,6 +45,9 @@ function extractLessons(ledgerText, field = 'second_order') {
   const out = [];
   for (const m of String(ledgerText || '').matchAll(/<!-- cycle:(\{[\s\S]*?\}) -->/g)) {
     let s;
+    // Reviewed swallow: a stanza that will not parse is already reported by the
+    // stanza-schema probe, which is the instrument for that. Throwing here
+    // would make one bad record hide every lesson in the ledger.
     try { s = JSON.parse(m[1]); } catch (_) { continue; }
     for (const lesson of s[field] || []) {
       if (typeof lesson === 'string' && lesson.trim()) {

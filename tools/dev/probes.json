@@ -82,6 +82,16 @@
       "timeoutMs": 20000
     },
     {
+      "id": "tech-state-evidence",
+      "description": "no curated tech node's evidence contradicts its hand-typed state. config/tech-tree.json holds two kinds of node: RB-backed ones read their state live from RESEARCH_BACKLOG.md and 'cannot disagree', while the 23 curated TECH-* nodes carry a typed `state` — and those rotted, TECH-ENGINESPLIT reading `available` beside its own note saying five of seven clusters were already home. A node may carry an optional `doneWhen` predicate (probe registered / file exists / file contains / ratchet at-or-below); where present, the derived verdict is compared with the typed state and a DISAGREEMENT fails this probe. doneWhen is deliberately OPTIONAL: TECH-HEADLINE2 completed as a measured crawl outcome with no file-shaped evidence, and requiring a predicate everywhere would mean inventing tautologies so the check could pass — a fabricated predicate reads exactly like a real one. Nodes without a predicate are counted as UNVERIFIED and printed; driving that count down is the work. `probe` means REGISTERED not PASSING, so a red bridge-health cannot un-complete a tech",
+      "cmd": "node",
+      "args": [
+        "tools/agi/tech-state.js"
+      ],
+      "needsServer": false,
+      "timeoutMs": 20000
+    },
+    {
       "id": "decision-registration",
       "description": "every document in docs/decisions/ declares itself, so none can be invisible to the owner. Decision docs are projected onto the project-status board under PLAYER INPUT REQUIRED; one without front-matter is not shown, and for months AGENTS.md described a prose-only ADR format predating the convention — so a diligent agent could write a decision the owner would never see. Four consecutive improvement cycles once stalled waiting on decisions the board was not displaying. Pure history stays legitimate, it just has to SAY so with `status: record`: the rule is not 'everything is a decision', it is 'nothing is invisible by accident'. Also fails if a declaration is MALFORMED, because a decision that silently fails to parse is the same failure with extra steps. Ceiling is 0 and should stay 0",
       "cmd": "node",

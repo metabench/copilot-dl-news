@@ -39,33 +39,28 @@ contradict it.
 | 3 | **Registration is enforced.** Every doc in `docs/decisions/` must declare itself; `status: record` covers deliberate history so the list can reach zero. Probe fails on an unregistered OR malformed doc. | `copilot-dl-news/tools/dev/checks/decision-registration.check.js` |
 | 5 | **Design rule written down** — derived by default, with the evidence for why. | `copilot-dl-news/docs/agi/BOOT.md` |
 | 7 | **Lessons are visible.** 639 learned, 409 re-applied, 90 carried into more than one cycle. `--applied` answers the audit skill's question about which judgement actually sticks. | `copilot-dl-news/tools/agi/lessons.js` |
+| 4 | **Tech state derived from evidence.** Optional `doneWhen` predicate per node (probe registered / exists / contains / ratchet); a disagreement with the typed state fails the `tech-state-evidence` probe. Acceptance test passed: 4 verified done, 1 verified pending, **0 contradictions**. | `copilot-dl-news/tools/agi/tech-state.js` |
 | — | Decisions as data; board shows all open ones. | `copilot-dl-news/tools/agi/decisions.js`, `copilot-dl-news/src/ui/server/projectStatus/statusData.js` |
 
 ### Next — in this order
 
-**4. Derive TECH state from evidence** *(the one everything visual depends on)*
+**4a. Drive the UNVERIFIED count down** *(18 of 23 curated nodes)*
 
-23 curated nodes in `copilot-dl-news/config/tech-tree.json` carry a hand-typed
-`state`; 3 RB-backed nodes derive theirs live and "cannot disagree". The typed
-ones rotted — `TECH-ENGINESPLIT` reads *available* beside its own note saying
-five of seven clusters are already home, and `asOf` is stale.
+The mechanism shipped; most nodes still have no predicate. Run
+`node tools/agi/tech-state.js` for the list. For each, read its `research` text
+and ask what artifact would prove it — then add a `doneWhen`. Two rules:
 
-Add a predicate per node and compute state:
+- **Never invent a predicate to clear the count.** `TECH-HEADLINE2` completed as
+  a measured crawl outcome and has no file-shaped evidence; leaving it unverified
+  is the honest answer. A fabricated predicate reads exactly like a real one.
+- **Expect contradictions and welcome them.** `TECH-CSLIVE` and
+  `TECH-ENGINESPLIT` are both suspected mislabelled; a predicate that says so
+  fails the probe until someone resolves it, which is the point.
 
-```json
-"doneWhen": { "probe": "crawl-console-live" }
-"doneWhen": { "ratchet": "ncdb-debt", "atMost": 140 }
-"doneWhen": { "exists": "tools/dev/checks/gate-declaration.check.js" }
-```
-
-*Acceptance test, non-negotiable:* run it against the **six nodes already marked
-`done`** — it must agree on all six before it is trusted on the other seventeen.
-This is `TECH-PROMOTE`'s own research, so it is a node the tree has been
-offering all along, not new scope.
-
-Touches: `copilot-dl-news/config/tech-tree.json`,
-`copilot-dl-news/src/ui/server/projectStatus/statusData.js` (`buildTechTree`).
-Note that builder throws on a bad record by design — keep that.
+The tree renderer in
+`copilot-dl-news/src/ui/server/projectStatus/statusData.js` (`buildTechTree`)
+still reads the typed `state`. Once the unverified count is low, switch it to the
+derived verdict — that is the actual "derived by default" finish line.
 
 **6. Triage `copilot-dl-news/docs/plans/`**
 

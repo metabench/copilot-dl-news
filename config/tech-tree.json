@@ -617,7 +617,10 @@
         "The slice's real home is the remote multi-domain-server route on the Oracle box — the ledger notes \"the controls' real home; latent until the remote-serving lift\" — which is why the tech-tree edge combines CR-ENGINE with TR-PAGE.",
         "The remote target already runs a dashboard-capable server: Oracle's v2 responds \"Multi-Domain Crawl Server v4\" on /api/health, and the documented /status.json health path was found to 404 (deploy drift caught and corrected in cycle 64's unification research).",
         "Cycle 79 also demonstrated the electron-restart-gotcha en route: the first restart probe reported httpOk:false, and the agent verified its own code rendered standalone before blaming it — the failure was transient, banked as its own memory rule."
-      ]
+      ],
+      "doneWhen": {
+        "exists": "src/ui/server/analyticsHub"
+      }
     },
     {
       "id": "TECH-CRAWLCONSOLE",
@@ -638,7 +641,10 @@
         "The rebuild retires a known defect class with the old page: crawl-status-client.js emits its whole client from one ~40KB backtick template literal that eats regex backslashes — the trap that has bitten four distinct ways (banked in the crawl-status-client-template-trap memory). jsgui3 Server({Ctrl}) SSR + activation with one control per file is the projectStatus-proven idiom that dissolves it.",
         "TECH-CSLIVE's live-check goal transfers to the rebuilt console rather than being obsoleted: the c135-style five-point live browser check (activation, on-load fetch, DOM-vs-live-API, console errors, resources) should be born WITH the new page, not retrofitted — take the two techs together.",
         "Anti-freezer gate carried from the 2026-08-03 module-ecosystem audit: news-crawler-ui does not grow beyond design/ until copilot-dl-news wires the dependency from a real code path, and every extraction cycle must move ui-debt down — the ncdb ratchet (269->241, the one extraction that stayed alive) is the working precedent."
-      ]
+      ],
+      "doneWhen": {
+        "probe": "crawl-console-live"
+      }
     },
     {
       "id": "TECH-ENGINESPLIT",
@@ -675,7 +681,10 @@
         "Review verdict 2026-07-28: the c142 modal already serves most reading needs, so this ranked below the shipped slice — it earns its build when a node's record outgrows a dialog.",
         "DELIVERED 2026-07-28 (cycle 148, owner-signalled sig-20260728014356): /tech/node?id=<ID> renders a per-request datalinks page for every node — everything the modal shows plus the LEDGER TRAIL (cycles mentioning the node, mined from the record with zero new bookkeeping) and expanded Preliminary Data; BUILT FROM / UNLOCKS are plain links, so the tree is walkable with no JS. The modal links to it. First curated tech promoted to GROWN via the new done+researchedOn path."
       ],
-      "researchedOn": "2026-07-28"
+      "researchedOn": "2026-07-28",
+      "doneWhen": {
+        "exists": "src/ui/server/projectStatus/controls/detail/Tech_Detail_Panel.js"
+      }
     },
     {
       "id": "TECH-FLAVOR",
@@ -725,7 +734,11 @@
       "prelim": [
         "The hard constraint is progress-svg.js's purity contract (probe-guarded, RB-011/P1): the render reads only COMMITTED inputs, so the tree counts must come from the committed config/tech-tree.json + RESEARCH_BACKLOG.md, never from a live server — the same buildTechTree call the tech-tree-schema probe already runs.",
         "Smallest honest slice: one line per branch in the existing side panel (available/grown), colored with the branch palette. Anything fancier (drawing the tree itself into the SVG) is a different, bigger tech."
-      ]
+      ],
+      "doneWhen": {
+        "contains": "tools/agi/progress-svg.js",
+        "text": "frontier"
+      }
     },
     {
       "id": "TECH-GATEGUARD",
@@ -741,7 +754,10 @@
         "Born from the cycle-154 fix: routing is now mechanical (a declared gate renders a lock), so the remaining hole is a row that IS gated but does not SAY so — exactly RB-007's failure mode, which no unit test can catch because the fixture would have to know the gate too.",
         "The checkable version: config/gated-surfaces.json already enumerates the standing gates (hooks/skills, the backups, Defender, politeness, concurrency). A probe can flag any backlog row whose text names a gated surface while its own remainder omits the gate declaration — cross-referencing two existing records, inventing no new state.",
         "Deliberately a WARN-then-fail ladder: the first run over 15+ rows will surface historical omissions, and turning those into a hard red before they are fixed would make orient unpassable for reasons unrelated to the current cycle."
-      ]
+      ],
+      "doneWhen": {
+        "probe": "gate-declaration"
+      }
     },
     {
       "id": "TECH-OWNERGUIDE",

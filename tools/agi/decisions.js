@@ -124,6 +124,9 @@ function blockedTechs(list) {
  */
 function unregisteredDocs(dir = DIR) {
   let files;
+  // Reviewed swallow: an absent docs/decisions/ means zero unregistered docs,
+  // which is the truthful answer. The registration probe reports the count, so
+  // an empty result is visible rather than silent.
   try { files = fs.readdirSync(dir).filter((f) => f.endsWith('.md') && f.toLowerCase() !== 'readme.md'); }
   catch (_) { return []; }
   return files.sort().filter((f) => !parseFrontMatter(fs.readFileSync(path.join(dir, f), 'utf8')));
@@ -131,6 +134,8 @@ function unregisteredDocs(dir = DIR) {
 
 function readDecisions(dir = DIR) {
   let files;
+  // Reviewed swallow: same as unregisteredDocs — no folder means no decisions,
+  // and the board renders an empty panel rather than an error page.
   try { files = fs.readdirSync(dir).filter((f) => f.endsWith('.md')); } catch (_) { return []; }
   const out = [];
   for (const f of files.sort()) {
