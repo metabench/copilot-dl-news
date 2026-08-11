@@ -1,240 +1,166 @@
 # Architecture review — crawler
 
 **Node:** `TECH-ARCHREVIEW-CRAWLER` · **Subject:** `copilot-dl-news/src/core/crawler`
-**Run:** 1 · **Date:** 2026-08-09 · **Model:** opus-5
+**Run:** 2 · **Date:** 2026-08-11 · **Model:** opus-5
+**Previous run:** 1, 2026-08-09 — `git show 19cca090:docs/agi/reviews/architecture-crawler.md`
 
-Paths are relative to the repos directory and begin with the repo name — there
-are five siblings and a bare `src/core/crawler` is ambiguous.
+Paths are relative to the repos directory and begin with the repo name.
 
-This is the first run. The node's `prelim` records that it has been *performed*
-before without leaving an artifact; there is nothing here to compare against, so
-"since last review" comparisons are made against **git**, not against a prior
-document.
+This run was triggered by the mechanism, not by a schedule: `tools/agi/tech-state.js`
+reported the record **STALE** — recorded 2026-08-11, subject changed 2026-08-11.
+That is the recurring-review convention working as designed, and it is the first
+time it has fired for real.
 
 ## Verdict
 
-**The architecture is in good health. The problem is not its shape — it is that
-the highest-priority owner directive stopped moving five days ago, and that
-nothing has been crawled for twenty-two days.**
+**Run 1's headline finding is resolved. Its most decision-relevant one got worse.**
 
-One improvement cleared the bar and was executed this run (a ratchet carrying
-13 files of slack). Everything else I found is either healthy, or an allocation
-fact rather than an architectural defect. Per the node's convergence contract,
-**no further architectural changes are proposed** — the remaining suggestions I
-considered are recorded as declined, with reasons, so the next run does not
-re-derive them.
+The extraction is no longer stalled — it moved **258 → 164 files in one day**, and
+the endpoint is now measured rather than assumed. But run 1 said the politeness
+rework had never touched a live host, and this run found a second, independent
+reason the first crawl needs watching: **a core service has been broken for seven
+days and nothing could see it.**
 
-## Method
+## What changed since run 1
 
-Every number below is `measured` — from `git`, from the checks, or from a
-read-only query against `data/news.db`. Nothing here is inferred from reading
-code and predicting behaviour; where I could only infer, I say so under
-[what I could not determine](#what-i-could-not-determine).
+Seven commits. **Five touched `src/core/crawler`; one touched the loop's own
+instruments.** That is the inversion of run 1's F3.
 
-## Healthy — measured
-
-**The extraction is real, not bookkeeping.** 107 files left
-`copilot-dl-news/src/core/crawler` and 115 `.js`/`.ts` files exist under
-`news-crawler-itself/src`. The seam is load-bearing: **111 `require()` calls**
-from the monorepo into `news-crawler-itself`, spread across 12 subpaths —
-`fetch-pipeline` (18), `planner` (17), `signals` (7), `crawler-state` (7),
-`crawl-infra` (6), `utils` (5), `playbook` (5), `output-verbosity` (5),
-`politeness` (4), `worker-task-processor` (3), `url-services` (3),
-`text-metrics` (3). Files were *moved*, not deleted.
-
-**The founding ratchet more than halved.** This node's own seed list describes
-ncdb-debt as "currently guarded at 241". It is now **106**.
-
-**The politeness defects the ledger records are fixed.** Measured in code:
-
-| defect | state |
-|---|---|
-| concurrency default 1 | now `default: 3`, `Math.max(1, val)` — at the owner cap |
-| stored `domain_rate_limits` never read | honoured via `storedRateLimitProvider`, combined with the robots crawl-delay by `max()` so it *can only slow us down* |
-| host-key inconsistency | lookup keyed on the **normalised** host, because the table holds both `www.` and bare forms |
-| the fix itself shipped as a silent no-op (cycle 14) | extracted to its own module so the seam is testable against a real adapter; **12 tests pass** |
-
-`DomainThrottleManager` now resolves from `news-crawler-itself/politeness` — the
-politeness subsystem is already fully extracted.
-
-**Guards are green.** 30 probes pass, 1 fails, 1 skips. The single red is
-`bridge-health` (the dev bridge is not running), which is expected while nothing
-is running and is not a crawler fault.
-
-**Test coverage is respectable for an engine mid-extraction:** 64 test files
-against 193 non-test sources across 38 directories.
-
-## Findings
-
-### F1 — the engine-debt ratchet was carrying 13 files of slack `measured` · ACTED ON
-
-`CEILING` was **271**; the actual count has been **258** since `01df1fa6` on
-2026-08-04. The gap was not progress waiting to be banked — it was a guard that
-had quietly stopped guarding.
-
-The detail that makes this worth recording: **cycle 185's own commit message says
-`engine-debt 258`, and its ledger stanza says "258 files".** The extraction was
-real and correctly reported. Only the constant was left behind. For five days the
-ledger and the guard disagreed about the same fact, and the engine could have
-grown back by 13 files without the ratchet making a sound.
-
-This is the same two-records-one-fact failure the plans index had, and the reason
-`copilot-dl-news/docs/agi/BOOT.md` prefers derived state.
-
-- **Axis:** engine-debt ceiling · **Direction:** down · **271 → 258**
-- **Cause named:** cycle 185 batch 11 (BrowserPoolManager — dead, ProxyManager,
-  RateLimitTracker, RedownloadCooldownGuard and the rest of a 13-file cluster).
-- **Nothing moved today to earn this.** It is a bookkeeping correction, not
-  progress, and the check's comment block says so in those words.
-
-### F2 — the extraction stalled on 2026-08-04 `measured`
-
-Eleven slices in a single day took the count 365 → 258. Then it stopped dead:
-
-| date | count |
-|---|---|
-| 2026-07-18 | 349 |
-| 2026-07-27 | 365 *(rising — the engine was still growing in place)* |
-| 2026-08-04 | 365 → 258 across eleven slices |
-| 2026-08-09 | 258 |
-
-**59 commits and 5 days since, with the count unchanged.** `news-crawler-itself`
-last received a commit on 2026-08-05.
-
-`copilot-dl-news/docs/plans/INDEX.md` marks the module-ecosystem plan
-**ACTIVE OWNER DIRECTIVE**, priority *critical*, with "first extraction (remote
-crawler engine + parallel compression) **next**". That is the work that stopped.
-
-- **Axis:** engine-debt count · **Direction:** down · **currently flat at 258**
-
-This is not an architectural defect and I propose no restructuring for it. It is
-a statement of where the directive stands.
-
-### F3 — churn is dominated by the loop's own instruments `measured`
-
-Top 8 files by churn score over 30 days. **Not one is a crawler file:**
-
-| score | commits | file |
+| | run 1 (2026-08-09) | run 2 (2026-08-11) |
 |---|---|---|
-| 636.96 | 115 | `docs/agi/progress/progress.svg` |
-| 481.26 | 126 | `docs/agi/IMPROVEMENT_LEDGER.md` |
-| 419.12 | 107 | `docs/agi/progress/repo-activity.json` |
-| 165.61 | 48 | `docs/sessions/…/LOOP_STATE.md` |
-| 139.15 | 38 | `tools/dev/probes.json` |
-| 92.90 | 23 | `config/tech-tree.json` |
-| 76.22 | 18 | `src/ui/server/unifiedApp/server.js` |
-| 69.49 | 18 | `src/ui/server/projectStatus/statusData.js` |
+| engine files | 258 | **164** (−94, −36%) |
+| ratchet ceiling | 271, carrying 13 files of slack | 164, banked every slice |
+| delegation requires | 111 across 12 subpaths | **191 across 50** |
+| extraction | stalled 5 days | five slices in one day |
+| endpoint | unmeasured, assumed 0 | 105 movable / 59 blocked |
+| last live fetch | 2026-07-18 | **2026-07-18, unchanged** |
 
-Six are the loop's own record-keeping; the remaining two are the status board,
-which is also loop instrumentation. Commit counts (categories overlap — one
-commit can touch both):
+## Findings from run 1, re-measured
 
-| window | commits | touched `src/core/crawler` | touched loop instruments |
-|---|---|---|---|
-| 30 days | 281 | 54 (19%) | 160 (57%) |
-| since 2026-08-04 | 72 | 16 (22%) | 65 (90%) |
+### F1 — ratchet carrying slack · **RESOLVED**
 
-The 16 recent engine commits changed the count not at all — the engine is being
-*maintained*, not *extracted*.
+Banked 271 → 258 in run 1, and every slice since has banked in the same commit:
+258 → 244 → 226 → 213 → 194 → 164. The ledger and the guard no longer disagree.
 
-This is the measured answer to the question the loop-audit skill asks: what
-fraction of cycles improve the product versus the loop's own instrumentation.
+### F2 — the extraction had stalled · **RESOLVED**
 
-### F4 — the politeness rework has never run against a live host `measured`
+Five slices: operation-schemas (14); healing/learning/coordinator/profiler (18);
+pipeline/remote/scheduler (13); the operations core + sequence + telemetry schema
+(19); and thirteen control-primitive directories behind one entry (30).
 
-The single most decision-relevant finding.
+`docs/plans/INDEX.md` still marks the module-ecosystem plan **ACTIVE OWNER
+DIRECTIVE, critical**, and it is now visibly moving.
 
-- Last live fetch: **2026-07-18T16:48:25.952Z**
-- Politeness floor + concurrency-3 default shipped: **2026-07-27**
+### F3 — churn dominated by the loop's own instruments · **INVERTED, and the instrument was partly wrong**
 
-**The repair postdates the last crawl by eight days.** Every claim in the
-"healthy" table above is backed by unit tests and by reading the wiring; none of
-it is backed by a single real request to a real host. Twelve passing tests
-against a stubbed adapter prove the seam is wired, not that the pacing is right.
+By commits since run 1: 5 of 7 touched the engine, 1 touched instruments.
 
-Format census on `fetches` (read-only): 54,452 rows ISO-8601, 33 rows with a
-NULL `fetched_at`, no `sqlite`-format rows — so `MAX()` is trustworthy here. I
-checked because `normalize-fetches` is still an unauthorised pending migration
-and a mixed-format column would have made that `MAX()` lie (the cycle 221 class:
-`T` sorts above space).
+But `churn-scan` still ranks tooling on top for the last two days, and that is a
+**blind spot rather than a contradiction**: moving a file to another repo shows up
+as a *deletion*, not as churn, so extraction work is invisible to it while the
+ratchet file it edits along the way is not. Ninety-four files left the engine and
+churn-scan cannot see any of them.
 
-**This corrects a claim I made myself.** My own continuation prompt said the
-crawler had been idle since 2026-08-04. That was the date the *extraction*
-stalled. The crawler has been idle since **2026-07-18 — twenty-two days**.
+Run 1 used the top-8 churn table as the headline for this finding. That was the
+wrong instrument for extraction-shaped work; the commit-touch counts are the
+honest measure. Recorded so run 3 does not repeat it.
 
-- **Axis:** live requests made under the new pacing · **Direction:** up ·
-  **currently 0**
+### F4 — the politeness rework has never run against a live host · **UNCHANGED, AND NOW WORSE**
 
-### F5 — `NewsCrawler.js` grew for six months `measured`
+Last live fetch remains **2026-07-18T16:48:25.952Z — twenty-four days**. The
+politeness floor and concurrency-3 default shipped 2026-07-27, eight days after
+it. Nothing has exercised them.
 
-**Reversal check performed** (the contract requires it before proposing):
+**And now a second reason.** See F6.
 
-| date | lines |
-|---|---|
-| 2026-01-29 | 2306 |
-| 2026-02-24 | 2401 |
-| 2026-07-11 | 2496 |
-| 2026-07-19 | 2536 |
-| 2026-08-04 | 2549 *(peak)* |
-| 2026-08-09 | 2519 |
+### F5 — `NewsCrawler.js` grew for six months · **UNCHANGED at 2,519 lines, and now explained**
 
-**No oscillation.** The direction was consistently up for six months, and only
-turned on the extraction day. A proposal to shrink it therefore *continues* the
-2026-08-04 direction rather than reversing an earlier one, and is admissible.
+It did not shrink during a day that removed 94 files, because it is one of the 31
+HARD-anchored files: it reaches `optionsBuilder`, `src/data/db/sqlite` and three
+`src/core/orchestration/*` modules. It cannot move until `DEC-ENGINE-BOUNDARY` is
+answered. Run 1 declined to propose a dedicated refactor for it; that still holds,
+and the reason is now sharper — it is blocked, not neglected.
 
-It is also the largest file in the engine by a wide margin (next: the Wikidata
-ingestors at 1490/1488, which are data-mapping code and a different shape of
-large).
+## New findings
 
-- **Axis:** `NewsCrawler.js` line count · **Direction:** down · **2519**
+### F6 — the fetch pipeline was broken for seven days, and nothing could see it `measured`
 
-I am **not** proposing a dedicated refactor. This file shrinks as a *consequence*
-of F2 resuming; a standalone "split the god object" task would compete with the
-extraction for the same lines and risks exactly the preference-shaped churn the
-convergence contract forbids. Recorded here so the next run has the baseline.
+`src/core/crawler/services/groups/ProcessingServices.js` bound the fetch-pipeline
+package's **named bag** as if it were the class:
 
-## Declined — recorded so the next run does not re-derive these
+```js
+const FetchPipeline = require('news-crawler-itself/fetch-pipeline');
+…
+return new FetchPipeline({ … });   // "m is not a constructor"
+```
 
-| suggestion | why declined |
-|---|---|
-| Reorganise the 38 engine subdirectories | No measured axis. Directory count is not a defect measure, and the contract calls "restructure A as B" inadmissible without one. |
-| Raise engine test coverage to a target ratio | 64/193 is a ratio, not a defect trace. No defect this run was attributable to an untested engine file. A coverage number chosen to be hit is a target, not a measurement. |
-| Grind down the remaining 97 silent catches | **Already settled against, and re-proposing would be oscillation.** Cycle 232 read the tail and found it dominated by teardown (`db.close`, `controller.abort`) and logging wrappers, where swallowing is correct. The guard is explicitly a no-regression floor, not a backlog. |
-| Split `NewsCrawler.js` as its own task | Real axis, but it competes with F2 for the same lines. See F5. |
-| Widen the engine-debt scope to `src/core/{orchestration,…}` | The check's own header says widening is a deliberate ceiling-affecting decision, not a drive-by. It would also make the number jump, destroying comparability with 365→258. |
+The surrounding catch re-raises it as `FetchPipeline not available`, so
+`container.get('fetchPipeline')` **failed outright**. Introduced by cycle 178's own
+fetch-cluster extraction on **2026-08-04**.
+
+Why nothing caught it: the require *resolves* — only the use is wrong — so
+`entry-loads` passes. No test covers that container path. And the crawler has not
+run since 2026-07-18, so no execution ever reached it.
+
+**Consequence for the owner's decision:** the first crawl after the politeness
+ruling would have hit a core service that will not resolve. F4 said watch the
+pacing; F6 says the failure would not have been about pacing at all.
+
+- **Axis:** unwrapped bindings onto a bag export · **Direction:** down · **now 0**
+
+### F7 — that defect class is now guarded, because the suite provably cannot see it `measured`
+
+The same shape appeared **three times in one day** — 51 scheduler tests red, then
+nine bindings in the crawl-control slice of which three were production files,
+then this seven-day-old one. Twice it was recorded as a lesson in a comment and
+twice the lesson failed to prevent the next occurrence.
+
+The decisive measurement: the `CrawlerServiceWiring.js` binding was **deliberately
+re-broken**, and `tests/unit/crawler/CrawlerServiceWiring.test.js` still passed
+1/1, as did `entry-loads`. And that call site sits one line above a catch that only
+warns — the c188 quiet-fallback class.
+
+`tools/dev/checks/delegation-bindings.check.js` now guards it, registered as a
+probe (31 pass, was 30). It flags only an unwrapped binding onto a bag that *has*
+that key; a module whose export genuinely is a function is never flagged, so the
+check stays worth reading.
+
+### F8 — the endpoint is measured; zero is not reachable `measured`
+
+`tools/dev/extraction-endpoint.js`: **105 movable, 59 blocked.** The 59 group into
+seven clusters, and four point at `src/core/orchestration`, which the ratchet
+already excludes by design — so `TECH-ENGINESPLIT`'s `atMost: 0` contradicts the
+check's own scope note. Raised as **`DEC-ENGINE-BOUNDARY`**, still open.
+
+The recommendation there — the composition root belongs to the application, not
+the library it composes — was applied in miniature this run: `operations/index.js`
+stayed and became a call-through while its parts left.
 
 ## What I could not determine
 
-- **Whether the 107 files that left are the same 115 that arrived.** I matched
-  magnitudes and confirmed the delegation seam resolves; I did not diff the two
-  trees name-by-name. A file could have been dropped and another written fresh
-  without this review noticing.
-- **Whether all 258 remaining files are extractable.** The check's scope note
-  implies some may legitimately stay. Nobody has written down the target, so
-  `TECH-ENGINESPLIT`'s `atMost: 0` is an assumption about the endpoint, not a
-  measured one. **This is the most useful thing the next run could settle.**
-
-  > **Settled 2026-08-11, and the answer was no.** `tools/dev/extraction-endpoint.js`
-  > measures 200 portable / 26 soft / **31 hard-anchored** files. The 31 group
-  > into seven clusters — the remaining work is a boundary ruling, not thirty-one
-  > chores — and four of them point at `src/core/orchestration`, which the ratchet
-  > already excludes by design, so `atMost: 0` contradicts the check's own scope
-  > note. Raised as `DEC-ENGINE-BOUNDARY` in `copilot-dl-news/docs/decisions/`.
-  > Extraction of the 200 portable files is not blocked by it.
-- **Whether the pacing is actually polite.** See F4 — unit tests only. This
-  cannot be determined without running the crawler, which is owner-gated.
-- **Frontier behaviour.** There is no `frontier/` module; selection is
-  DB-resident (RB-012's "frontier reads") with `QueueManager` in front of it. I
-  read the wiring but did not exercise it, and with the crawler idle there is no
-  runtime evidence to read. The node names "frontier" as in scope; **this run
-  did not cover it properly**, and I would rather say so than write impressions.
+- **Whether anything else is broken the same way F6 was.** `delegation-bindings`
+  now covers one specific shape. The general problem — a delegation that resolves
+  but is used wrongly, behind a catch that only warns — is bounded by nothing
+  except tests that do not exist. **The crawler being idle means every defect of
+  this class is still latent rather than absent.**
+- **Whether the moved code behaves identically under load.** Every slice was
+  proven by structural fingerprint plus the existing suites. That catches lost
+  exports, changed signatures and shape errors. It does not catch a behavioural
+  difference that only appears at runtime, and nothing has run.
+- **Frontier behaviour.** Still not covered, for the same reason as run 1: it is
+  DB-resident and the crawler is idle. Two runs have now declined to review it;
+  that is a gap the record should stop hiding, and it will not close without a
+  crawl.
 
 ## Recommendation
 
-The architecture does not need work. **Resume F2 or answer the politeness
-question behind F4** — both are owner-gated, and both are worth more than any
-change I could make to the engine's shape.
+Unchanged from run 1 in direction, sharper in urgency: **the extraction can
+continue without anyone, and the crawler cannot.**
 
-If the crawler is switched on, F4 says the first run is also the first live test
-of pacing written eight days after the last crawl. Watch it rather than trusting
-the green tests.
+F4 and F6 are now two independent reasons the first run needs watching rather
+than trusting — one about pacing that has never been exercised, one about a core
+service that was silently unusable for a week. Both were invisible precisely
+because nothing runs.
+
+If the crawler is switched on, expect to find more of F6's class before finding
+anything about politeness.
