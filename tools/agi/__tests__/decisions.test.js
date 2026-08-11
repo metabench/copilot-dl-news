@@ -83,11 +83,21 @@ describe('the real corpus — acceptance test against answers already known', ()
     expect(all.length).toBeGreaterThan(0);
   });
 
-  test('the four decisions reported open in cycle 235 are open', () => {
-    const ids = openDecisions(all).map((d) => d.id).sort();
-    expect(ids).toEqual([
-      'DEC-ARTICLECOMPRESSION', 'DEC-ORPHANED-CONTENT', 'DEC-PENDING-MIGRATIONS', 'DEC-URLS-WRITERS'
-    ]);
+  test('the four decisions reported open in cycle 235 are STILL open', () => {
+    // CONTAINMENT, not equality. This was an exact-set assertion until
+    // 2026-08-11, when raising DEC-ENGINE-BOUNDARY turned it red — the system
+    // working exactly as designed (a measurement produced a question, the
+    // scaffold recorded it) failing a test that had frozen the answer.
+    //
+    // What this test is actually for is that none of the four the owner was
+    // told about in c235 quietly DISAPPEARS. New decisions arriving is not a
+    // regression; a `--new` scaffold exists to cause it. Every open decision is
+    // still held to being well-formed by the test below.
+    const ids = openDecisions(all).map((d) => d.id);
+    for (const id of ['DEC-ARTICLECOMPRESSION', 'DEC-ORPHANED-CONTENT',
+      'DEC-PENDING-MIGRATIONS', 'DEC-URLS-WRITERS']) {
+      expect(ids).toContain(id);
+    }
   });
 
   test('decisions the owner already answered are NOT offered again', () => {

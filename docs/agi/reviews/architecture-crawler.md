@@ -213,6 +213,14 @@ convergence contract forbids. Recorded here so the next run has the baseline.
   implies some may legitimately stay. Nobody has written down the target, so
   `TECH-ENGINESPLIT`'s `atMost: 0` is an assumption about the endpoint, not a
   measured one. **This is the most useful thing the next run could settle.**
+
+  > **Settled 2026-08-11, and the answer was no.** `tools/dev/extraction-endpoint.js`
+  > measures 200 portable / 26 soft / **31 hard-anchored** files. The 31 group
+  > into seven clusters — the remaining work is a boundary ruling, not thirty-one
+  > chores — and four of them point at `src/core/orchestration`, which the ratchet
+  > already excludes by design, so `atMost: 0` contradicts the check's own scope
+  > note. Raised as `DEC-ENGINE-BOUNDARY` in `copilot-dl-news/docs/decisions/`.
+  > Extraction of the 200 portable files is not blocked by it.
 - **Whether the pacing is actually polite.** See F4 — unit tests only. This
   cannot be determined without running the crawler, which is owner-gated.
 - **Frontier behaviour.** There is no `frontier/` module; selection is
