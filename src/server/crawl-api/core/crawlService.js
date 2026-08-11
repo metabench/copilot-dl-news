@@ -6,7 +6,7 @@ const {
   SequenceConfigError
 } = require('../../../core/orchestration/SequenceConfigLoader');
 const { runSequenceConfig } = require('../../../core/orchestration/SequenceConfigRunner');
-const { OperationSchemaRegistry } = require('../../../core/crawler/operations/schemas');
+const { OperationSchemaRegistry } = require('news-crawler-itself/operation-schemas');
 
 function buildOperationSummaries(facade, options = {}) {
   const includeSchema = options.includeSchema !== false; // Default to true

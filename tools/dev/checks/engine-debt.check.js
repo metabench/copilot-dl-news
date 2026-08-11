@@ -149,7 +149,16 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // and the engine could have grown back by 13 files without the ratchet making
 // a sound. A ratchet with slack is not a ratchet. Nothing moved to earn this
 // lowering today — it is a bookkeeping correction, not progress.
-const CEILING = 258;
+// 258 → 244 (2026-08-11, first slice after the five-day stall): the whole
+// operations/schemas closure — OperationSchemaRegistry, 11 operation schemas,
+// common.schema and its check — to news-crawler-itself/operation-schemas.
+// Chosen because tools/dev/extraction-endpoint.js measured it as the largest
+// fully self-contained unit: 14 files, ZERO out-of-scope requires, and exactly
+// one real consumer (src/server/crawl-api/core/crawlService.js). Proven a
+// DELEGATION and not a drifted copy by fingerprint diff — every export, every
+// per-operation schema/defaults/basic-options hash and every validator result
+// identical across the boundary.
+const CEILING = 244;
 
 function main() {
   const argv = process.argv.slice(2);
