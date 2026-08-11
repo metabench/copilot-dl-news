@@ -52,16 +52,37 @@ const SIBLING = /^(news-crawler-db|news-crawler-itself)(\/|$)/;
 // --- pure core ---------------------------------------------------------------
 
 /**
+ * Blank out what is not executable code, preserving line numbers so the report
+ * still points at the right line.
+ *
+ * Needed because this check flagged ITSELF on its first tracked run: the wrong
+ * form is written out in its own header comment and again inside a template
+ * literal in its tests. That is the cycle-230 lesson — a new check's first job
+ * is to not report its own fixtures — and it hid here because `git ls-files`
+ * does not see untracked files, so the run before the commit looked clean.
+ *
+ * Strings are NOT stripped: the require specifier lives in one.
+ */
+function stripNonCode(body) {
+  const blank = (s) => s.replace(/[^\n]/g, ' ');
+  return body
+    .replace(/\/\*[\s\S]*?\*\//g, blank)        // block comments
+    .replace(/(^|[^:/])\/\/[^\n]*/g, (m, p) => p + blank(m.slice(p.length)))  // line comments, not http://
+    .replace(/`(?:[^`\\]|\\[\s\S])*`/g, blank); // template literals — test fixtures live here
+}
+
+/**
  * Unwrapped single-identifier requires of a sibling package.
  * Returns [{ name, spec, line }]. A destructure never matches, by design.
  */
 function unwrappedBindings(body) {
+  const code = stripNonCode(body);
   const out = [];
   const re = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*require\(\s*(['"])([^'"]+)\2\s*\)/g;
   let m;
-  while ((m = re.exec(body))) {
+  while ((m = re.exec(code))) {
     if (!SIBLING.test(m[3])) continue;
-    out.push({ name: m[1], spec: m[3], line: body.slice(0, m.index).split('\n').length });
+    out.push({ name: m[1], spec: m[3], line: code.slice(0, m.index).split('\n').length });
   }
   return out;
 }
@@ -123,4 +144,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { unwrappedBindings, isMisbound };
+module.exports = { unwrappedBindings, isMisbound, stripNonCode };

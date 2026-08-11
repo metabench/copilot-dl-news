@@ -1,6 +1,44 @@
 'use strict';
 
-const { unwrappedBindings, isMisbound } = require('../checks/delegation-bindings.check');
+const { unwrappedBindings, isMisbound, stripNonCode } = require('../checks/delegation-bindings.check');
+
+describe('stripNonCode — a check must not report its own fixtures', () => {
+  // This check flagged ITSELF on its first tracked run: the wrong form appears
+  // in its own header comment and in this file's template literals. It looked
+  // clean beforehand only because `git ls-files` cannot see untracked files.
+  const REQ = "const X = require('news-crawler-itself/thing');";
+
+  test('a binding inside a BLOCK comment is not code', () => {
+    expect(unwrappedBindings(`/**\n * ${REQ}\n */\n`)).toEqual([]);
+  });
+
+  test('a binding inside a LINE comment is not code', () => {
+    expect(unwrappedBindings(`// ${REQ}\n`)).toEqual([]);
+  });
+
+  test('a binding inside a TEMPLATE LITERAL is not code — that is where fixtures live', () => {
+    expect(unwrappedBindings('const body = `' + REQ + '`;')).toEqual([]);
+  });
+
+  test('but a REAL binding is still caught — the fix must not just silence it', () => {
+    expect(unwrappedBindings(`/* ${REQ} */\n${REQ}`))
+      .toEqual([{ name: 'X', spec: 'news-crawler-itself/thing', line: 2 }]);
+  });
+
+  test('line numbers survive stripping, so the report still points at the right line', () => {
+    expect(unwrappedBindings(`// pad\n/* a\n b\n c */\n${REQ}`)[0].line).toBe(5);
+  });
+
+  test('a URL in a string is not mistaken for a line comment', () => {
+    // `//` inside http:// must not blank the rest of the line.
+    expect(unwrappedBindings(`const u = 'http://x.test';\n${REQ}`)).toHaveLength(1);
+  });
+
+  test('stripNonCode preserves total line count', () => {
+    const src = `/* a\nb */\n// c\nreal();`;
+    expect(stripNonCode(src).split('\n').length).toBe(src.split('\n').length);
+  });
+});
 
 describe('unwrappedBindings', () => {
   test('finds a single-identifier binding of a sibling package', () => {
