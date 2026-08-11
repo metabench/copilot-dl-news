@@ -219,7 +219,9 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // line above a catch that only warns. Proven the suite cannot see it: the
 // binding was re-broken deliberately and both the wiring test and entry-loads
 // still passed. The new check found a REAL pre-existing instance from cycle
-// 178's own fetch-cluster slice, seven days cold.
+// 178's own fetch-cluster slice, seven days cold. (Scope correction, same day:
+// that instance sits in src/core/crawler/services, which has ZERO non-test
+// consumers — the defect class is real, its blast radius was not.)
 const CEILING = 164;
 
 function main() {

@@ -102,9 +102,25 @@ Why nothing caught it: the require *resolves* — only the use is wrong — so
 `entry-loads` passes. No test covers that container path. And the crawler has not
 run since 2026-07-18, so no execution ever reached it.
 
-**Consequence for the owner's decision:** the first crawl after the politeness
-ruling would have hit a core service that will not resolve. F4 said watch the
-pacing; F6 says the failure would not have been about pacing at all.
+> **CORRECTION, 2026-08-11, same day.** I first wrote here that "the first crawl
+> after the politeness ruling would have hit a core service that will not
+> resolve." **That was wrong, and I repeated it to the owner twice before
+> checking.** Measured since: `src/core/crawler/services/` — `wireServices`,
+> `ProcessingServices`, `PolicyServices`, `StorageServices` — has **zero
+> non-test consumers** anywhere in the repo. `container.get('fetchPipeline')`
+> genuinely would have thrown, but nothing calls it, so no crawl was ever going
+> to reach it.
+>
+> Found by building the e2e crawl test below and running the defect back in as a
+> counterfactual: the crawl passed 5/5 with the binding broken. I could have
+> recorded that as the test being weak. The truthful reading is that the *claim*
+> was weak — the test could not reach the code because nothing does.
+>
+> What survives: the binding was a real defect, the class is real and has now bitten
+> **four** times (linkExtractor c177 and articleProcessor c176 each served a silent
+> shim for an unknown period; scheduler; this one), and `delegation-bindings`
+> catches all four shapes. What does not survive is the severity. This belongs
+> with the unwired-modules finding, not with F4.
 
 - **Axis:** unwrapped bindings onto a bag export · **Direction:** down · **now 0**
 
@@ -152,15 +168,36 @@ stayed and became a call-through while its parts left.
   that is a gap the record should stop hiding, and it will not close without a
   crawl.
 
+### F9 — an unwired layer, larger than first thought `measured`
+
+`src/core/crawler/services/` has **zero non-test consumers**. So does everything
+in the 2026-08-11 leaf slice — `healing`, `learning`, `coordinator`, `profiler` —
+whose injection points in `CrawlerMetricsService` are documented in JSDoc and fed
+by nothing.
+
+This is the honest home for F6: the fetch-pipeline binding was broken in a
+subsystem nothing calls. It also explains why the e2e crawl test cannot catch
+that defect, and why no test ever did.
+
+**Whether these should exist is an owner call, not a review's.** Deleting a
+built-but-unwired subsystem on this evidence is a bigger decision than any
+extraction slice, and the measurement is now recorded for whoever makes it.
+
+- **Axis:** engine subsystems with zero production consumers · **Direction:**
+  down · **currently at least 5** (services, healing, learning, coordinator, profiler)
+
 ## Recommendation
 
-Unchanged from run 1 in direction, sharper in urgency: **the extraction can
-continue without anyone, and the crawler cannot.**
+Unchanged from run 1 in direction: **the extraction can continue without anyone,
+and the crawler cannot.**
 
-F4 and F6 are now two independent reasons the first run needs watching rather
-than trusting — one about pacing that has never been exercised, one about a core
-service that was silently unusable for a week. Both were invisible precisely
-because nothing runs.
+F4 stands on its own and is the reason to watch a first run: the politeness
+rework shipped eight days after the last fetch and has still never touched a live
+host. F6 does **not** add to that, per the correction above — it is an unwired-code
+finding, not a crawl-blocking one.
 
-If the crawler is switched on, expect to find more of F6's class before finding
-anything about politeness.
+The new e2e delegation test (`tests/e2e-features/engine-delegation.e2e.test.js`)
+narrows the gap this review has now flagged twice: 152 files inside the extracted
+package are provably executed by a real crawl in about eight seconds. It proves
+the delegation is live. It does not prove behaviour under load, and it cannot
+reach code that nothing calls.
