@@ -158,7 +158,20 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // DELEGATION and not a drifted copy by fingerprint diff — every export, every
 // per-operation schema/defaults/basic-options hash and every validator result
 // identical across the boundary.
-const CEILING = 244;
+// 244 → 226 (2026-08-11, second slice): four leaf closures — healing (5),
+// learning (5), coordinator (4), profiler (4) — to news-crawler-itself as
+// self-healing, domain-learning, crawl-coordinator and crawl-profiler. All four
+// measured fully movable by tools/dev/extraction-endpoint.js, and their ONLY
+// consumers were their own tests, which are re-pointed at the package and pass
+// 237/237 against the new location.
+//
+// Worth recording: nothing in production requires any of the four. The single
+// non-test mention is JSDoc in metrics/CrawlerMetricsService.js documenting a
+// WorkerRegistry/DomainLockManager it accepts by injection — and nothing
+// constructs those, so the injection points are unfed. These are built but
+// unwired features. That does not change whether they should live in the engine
+// package; it is a separate question, recorded rather than acted on.
+const CEILING = 226;
 
 function main() {
   const argv = process.argv.slice(2);

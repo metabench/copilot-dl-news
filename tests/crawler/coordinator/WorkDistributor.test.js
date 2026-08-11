@@ -1,7 +1,7 @@
 'use strict';
 
-const { WorkDistributor } = require('../../../src/core/crawler/coordinator/WorkDistributor');
-const { DomainLockManager } = require('../../../src/core/crawler/coordinator/DomainLockManager');
+const { WorkDistributor } = require('news-crawler-itself/crawl-coordinator');
+const { DomainLockManager } = require('news-crawler-itself/crawl-coordinator');
 
 // Mock queue implementation
 class MockQueue {

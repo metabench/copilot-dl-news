@@ -15,7 +15,7 @@ const {
   ReviewStatus,
   DEFAULT_AUTO_APPROVE_THRESHOLD,
   MIN_SAMPLES
-} = require('../../../src/core/crawler/learning');
+} = require('news-crawler-itself/domain-learning');
 
 // Create sample HTML pages for testing
 const createSampleHtml = (opts = {}) => {

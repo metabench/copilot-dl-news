@@ -142,7 +142,7 @@
       "args": [
         "tools/dev/checks/engine-debt.check.js",
         "--ceiling",
-        244
+        226
       ],
       "needsServer": false,
       "timeoutMs": 20000

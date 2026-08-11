@@ -1,6 +1,6 @@
 'use strict';
 
-const { CrawlProfiler, BottleneckDetector, ProfileReporter, VALID_PHASES } = require('../../../src/core/crawler/profiler');
+const { CrawlProfiler, BottleneckDetector, ProfileReporter, VALID_PHASES } = require('news-crawler-itself/crawl-profiler');
 
 describe('CrawlProfiler', () => {
   let profiler;

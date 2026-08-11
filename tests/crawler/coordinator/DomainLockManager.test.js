@@ -1,6 +1,6 @@
 'use strict';
 
-const { DomainLockManager } = require('../../../src/core/crawler/coordinator/DomainLockManager');
+const { DomainLockManager } = require('news-crawler-itself/crawl-coordinator');
 
 describe('DomainLockManager', () => {
   let lockManager;
