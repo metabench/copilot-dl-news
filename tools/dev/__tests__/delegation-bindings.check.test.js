@@ -1,6 +1,34 @@
 'use strict';
 
-const { unwrappedBindings, isMisbound, stripNonCode } = require('../checks/delegation-bindings.check');
+const { unwrappedBindings, isMisbound, stripNonCode, IS_TEST } = require('../checks/delegation-bindings.check');
+
+describe('IS_TEST — test files are excluded, deliberately', () => {
+  // The check catches what the SUITE cannot see. A misbinding in a test file is
+  // exercised by that test and turns it red at once (51 scheduler tests did),
+  // so scanning tests adds no coverage — only false positives from fixtures
+  // that spell the wrong form out on purpose.
+  test.each([
+    'tools/dev/__tests__/x.check.test.js',
+    'tests/crawler/y.test.js',
+    'src/core/crawler/__tests__/z.js'
+  ])('excluded: %s', (p) => {
+    expect(IS_TEST.test(p) || p.endsWith('.test.js')).toBe(true);
+  });
+
+  test.each([
+    'src/core/crawler/services/groups/ProcessingServices.js',
+    'src/core/crawler/CrawlerServiceWiring.js',
+    'tools/dev/checks/delegation-bindings.check.js'
+  ])('still scanned: %s', (p) => {
+    expect(IS_TEST.test(p) || p.endsWith('.test.js')).toBe(false);
+  });
+
+  test('a directory merely CONTAINING "test" is not excluded', () => {
+    // `contest/`, `latest/` etc. must not fall out of coverage on a substring.
+    expect(IS_TEST.test('src/contest/thing.js')).toBe(false);
+    expect(IS_TEST.test('src/latest/thing.js')).toBe(false);
+  });
+});
 
 describe('stripNonCode — a check must not report its own fixtures', () => {
   // This check flagged ITSELF on its first tracked run: the wrong form appears

@@ -49,6 +49,24 @@ const Module = require('module');
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const SIBLING = /^(news-crawler-db|news-crawler-itself)(\/|$)/;
 
+/**
+ * Test files are NOT scanned, and the reason is the whole point of this check.
+ *
+ * It exists to catch what the suite CANNOT see: a binding that resolves fine and
+ * only fails at first use, behind a catch that warns. A misbinding inside a test
+ * file is, by construction, exercised by that test — it turns the suite red
+ * immediately, as 51 scheduler tests did on 2026-08-11. So scanning tests adds no
+ * unique coverage.
+ *
+ * It does add false positives, which is how this rule was arrived at rather than
+ * assumed: fixtures spell the wrong form out deliberately, and they live in
+ * ordinary quoted strings as often as in template literals. Strings cannot be
+ * stripped — the require specifier lives in one — so a check that scans tests
+ * either reports its own fixtures or needs a real parser. Neither is worth it for
+ * coverage the suite already provides.
+ */
+const IS_TEST = /(^|\/)(__tests__|tests)\//;
+
 // --- pure core ---------------------------------------------------------------
 
 /**
@@ -106,7 +124,9 @@ function main() {
 
   const findings = [];
   let scanned = 0;
+  let skippedTests = 0;
   for (const f of files) {
+    if (IS_TEST.test(f) || f.endsWith('.test.js')) { skippedTests++; continue; }
     let body;
     try { body = fs.readFileSync(path.join(ROOT, f), 'utf8'); } catch (_) {
       // Reviewed swallow: a tracked path we cannot read contributes no bindings.
@@ -127,7 +147,7 @@ function main() {
     }
   }
 
-  console.log(`delegation-bindings: ${scanned} unwrapped sibling-package binding(s) checked`);
+  console.log(`delegation-bindings: ${scanned} unwrapped sibling-package binding(s) checked in non-test files (${skippedTests} test files skipped by design)`);
   if (!findings.length) {
     console.log('             none binds a named bag as if it were the export itself');
     return;
@@ -144,4 +164,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { unwrappedBindings, isMisbound, stripNonCode };
+module.exports = { unwrappedBindings, isMisbound, stripNonCode, IS_TEST };
