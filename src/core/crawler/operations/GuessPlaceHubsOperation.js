@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('path');
-const { CrawlOperation, cloneOptions } = require('./CrawlOperation');
+const { CrawlOperation, cloneOptions } = require('news-crawler-itself/crawl-operations');
 const { guessPlaceHubsForDomain } = require('../../../core/orchestration/placeHubGuessing');
 const { createPlaceHubDependencies } = require('../../../core/orchestration/dependencies');
 

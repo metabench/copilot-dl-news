@@ -2,7 +2,7 @@
 
 const {
   requiresOf, classifyRequire, outboundTargets, hasDynamicRequire, classifyFile, clusterOf,
-  resolveInternal, movableSet
+  resolveInternal, movableSet, needsRepoint
 } = require('../extraction-endpoint');
 
 const F = 'src/core/crawler/gazetteer/Ingestor.js';
@@ -172,6 +172,42 @@ describe('movableSet — the transitive picture', () => {
   test('a soft file is movable — soft is not an anchor', () => {
     const graph = g({ 's.js': { deps: [], kind: 'soft' } });
     expect(movableSet(graph).movable.map((m) => m.file)).toEqual(['s.js']);
+  });
+
+  test('but movable is NOT work-free — soft members are named', () => {
+    // The 2026-08-11 lesson: sequenceContext.js was movable by this measure and
+    // still had to come back out of the slice, because its src/db require wants
+    // getDb from the monorepo's own db layer. "A previous extraction survived
+    // src/db" is evidence about the dependency CLASS, not about this require.
+    const graph = g({
+      'a.js': { deps: ['s.js'], kind: 'portable' },
+      's.js': { deps: [], kind: 'soft', outs: ['src/db'] }
+    });
+    const { movable } = movableSet(graph);
+    expect(movable.map((m) => m.file).sort()).toEqual(['a.js', 's.js']);
+    expect(movable.find((m) => m.file === 'a.js').soft).toEqual(['s.js']);
+  });
+});
+
+describe('needsRepoint — what a moving set must resolve before it moves', () => {
+  const graph = new Map(Object.entries({
+    'clean.js': { deps: [], kind: 'portable', outs: [] },
+    'ctx.js': { deps: [], kind: 'soft', outs: ['src/db', 'src/db/openNewsCrawlerDb'] }
+  }));
+
+  test('names the soft members and the targets they still reach', () => {
+    expect(needsRepoint(['clean.js', 'ctx.js'], graph))
+      .toEqual([{ file: 'ctx.js', targets: ['src/db', 'src/db/openNewsCrawlerDb'] }]);
+  });
+
+  test('an all-portable set needs nothing — silence means silence', () => {
+    expect(needsRepoint(['clean.js'], graph)).toEqual([]);
+  });
+
+  test('a file absent from the graph is not silently treated as clean', () => {
+    // It has no `kind`, so it cannot be `soft`; the caller gets nothing back for
+    // it. Pinned so a future refactor does not turn "unknown" into "fine".
+    expect(needsRepoint(['ghost.js'], graph)).toEqual([]);
   });
 });
 

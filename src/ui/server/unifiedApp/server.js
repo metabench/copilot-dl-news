@@ -408,7 +408,7 @@ function mountDashboardModules(unifiedApp, options = {}) {
     }
     const n = Math.max(1, Math.min(500, Number(req.query.pages) || 5));
     try {
-      const { createTelemetryEvent } = require('../../../core/crawler/telemetry/CrawlTelemetrySchema');
+      const { createTelemetryEvent } = require('news-crawler-itself/telemetry-schema');
       crawlTelemetry.bridge.emitEvent(createTelemetryEvent(
         'crawl:download',
         { pages: n, docs: Math.round(n * 0.45), bytes: n * 90000, stored: n * 15000 },

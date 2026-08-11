@@ -113,7 +113,7 @@ function wireServices(config, options = {}) {
 
   // Sequence runner
   container.register('sequenceRunner', (c) => {
-    const { createSequenceRunner } = require('../sequence/SequenceRunner');
+    const { createSequenceRunner } = require('news-crawler-itself/crawl-sequence');
     const telemetry = c.get('telemetry');
 
     return createSequenceRunner({

@@ -36,7 +36,7 @@ const {
   createUrlVisitedEvent,
   createUrlErrorEvent,
   isValidTelemetryEvent
-} = require('./CrawlTelemetrySchema');
+} = require('news-crawler-itself/telemetry-schema');
 
 const { observable } = require('fnl');
 

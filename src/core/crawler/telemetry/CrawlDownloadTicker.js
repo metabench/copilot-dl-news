@@ -1,6 +1,6 @@
 'use strict';
 
-const { createTelemetryEvent } = require('./CrawlTelemetrySchema');
+const { createTelemetryEvent } = require('news-crawler-itself/telemetry-schema');
 
 /**
  * CrawlDownloadTicker — the lean "something just downloaded" broadcaster.

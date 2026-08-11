@@ -185,7 +185,26 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // And the scheduler submodules export their class DIRECTLY while the entry
 // exports a named bag; re-pointing without destructuring turned 51 tests red.
 // The shapes differ per module — check the SUBMODULE, not just the index.
-const CEILING = 213;
+// 213 → 194 (2026-08-11, fourth slice — the first PARTIAL directory): 16 of
+// operations, plus sequence (2) and telemetry/CrawlTelemetrySchema.js dragged
+// along because the operations needed them. Layout preserved on the far side
+// (src/operations, src/sequence, src/telemetry) so the moved files' own
+// `../sequence/…` and `../telemetry/…` requires keep resolving untouched.
+//
+// operations/index.js STAYS and became a call-through: GuessPlaceHubsOperation
+// reaches adapters/remoteFetch → fleet-host-resolver and cannot leave, and
+// createDefaultOperations() composes it. The parts move; the composition stays
+// with the application that composes them — which is DEC-ENGINE-BOUNDARY's
+// recommendation applied in miniature. The facade's exported shape is
+// byte-for-byte what it was, so no consumer of it changed at all.
+//
+// EXCLUDED LATE: sequenceContext.js. `movableSet` called it movable because it
+// is classed `soft` — its out-of-scope require is on src/db, a target an
+// earlier extraction survived. But `soft` only means the dependency CLASS was
+// resolvable, never that the require works unchanged after a move, and this one
+// wants getDb/openNewsCrawlerDb from the monorepo's own db layer. Pulled back
+// rather than forced. A moving set must be checked for `soft` members.
+const CEILING = 194;
 
 function main() {
   const argv = process.argv.slice(2);

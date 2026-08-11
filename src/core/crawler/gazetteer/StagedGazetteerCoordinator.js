@@ -2,7 +2,7 @@
 
 const { is_array } = require('lang-tools');
 const { GazetteerPriorityScheduler, DEFAULT_STAGE_DEFS } = require('./GazetteerPriorityScheduler');
-const { createProgressTreeEvent } = require('../telemetry/CrawlTelemetrySchema');
+const { createProgressTreeEvent } = require('news-crawler-itself/telemetry-schema');
 
 function normalizeStageConfig(stage, index = 0) {
   if (!stage || !stage.name) {

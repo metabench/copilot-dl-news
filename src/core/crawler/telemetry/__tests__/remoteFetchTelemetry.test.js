@@ -7,7 +7,7 @@
  * These tests pin the two normalization/schema hops.
  */
 
-const { createProgressEvent, CRAWL_EVENT_TYPES } = require('../CrawlTelemetrySchema');
+const { createProgressEvent, CRAWL_EVENT_TYPES } = require('news-crawler-itself/telemetry-schema');
 const { CrawlTelemetryBridge } = require('../CrawlTelemetryBridge');
 
 const SAMPLE_REMOTE_FETCH = {

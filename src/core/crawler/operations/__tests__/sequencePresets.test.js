@@ -4,7 +4,7 @@ const {
   listSequencePresets,
   getSequencePreset,
   resolveSequencePreset
-} = require('../sequencePresets');
+} = require('news-crawler-itself/crawl-operations');
 
 describe('sequencePresets', () => {
   it('lists available presets with metadata', () => {

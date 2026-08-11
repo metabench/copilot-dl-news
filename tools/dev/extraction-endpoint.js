@@ -137,10 +137,35 @@ function movableSet(graph) {
   const movable = [];
   const blocked = [];
   for (const f of graph.keys()) {
-    const reached = [...closure(f)].filter((x) => graph.get(x)?.kind === 'HARD');
-    (reached.length ? blocked : movable).push({ file: f, blockedBy: reached });
+    const reach = [...closure(f)];
+    const reached = reach.filter((x) => graph.get(x)?.kind === 'HARD');
+    // `soft` members need WORK during a move, so name them. Movable and
+    // work-free are not the same thing — see needsRepoint below.
+    const soft = reach.filter((x) => graph.get(x)?.kind === 'soft');
+    (reached.length ? blocked : movable).push({ file: f, blockedBy: reached, soft });
   }
   return { movable, blocked };
+}
+
+/**
+ * Of a proposed moving set, which members carry an out-of-scope require that
+ * must be RESOLVED as part of the move?
+ *
+ * Learned the hard way on 2026-08-11. `soft` means "its out-of-scope target is
+ * one an already-extracted file survived" — evidence the dependency CLASS is
+ * resolvable, never that the require keeps working unchanged once the file is in
+ * another repo. movableSet counts soft as movable, which is right for planning
+ * and wrong for execution: operations/sequenceContext.js came back out of that
+ * slice because its `src/db` require wants getDb/openNewsCrawlerDb from the
+ * monorepo's own db layer, and no amount of "a previous extraction survived
+ * src/db" makes that resolve from news-crawler-itself.
+ *
+ * Call this on the set you are about to move, and deal with what it names.
+ */
+function needsRepoint(files, graph) {
+  return files
+    .filter((f) => graph.get(f)?.kind === 'soft')
+    .map((f) => ({ file: f, targets: graph.get(f).outs || [] }));
 }
 
 /**
@@ -228,7 +253,7 @@ function main() {
       const hit = resolveInternal(r.file, t, trackedSet);
       if (hit) deps.push(hit);
     }
-    graph.set(r.file, { deps, kind: r.kind });
+    graph.set(r.file, { deps, kind: r.kind, outs: r.outs });
   }
   const { movable, blocked } = movableSet(graph);
 
@@ -294,5 +319,5 @@ if (require.main === module) main();
 
 module.exports = {
   requiresOf, classifyRequire, outboundTargets, hasDynamicRequire,
-  classifyFile, clusterOf, resolveInternal, movableSet
+  classifyFile, clusterOf, resolveInternal, movableSet, needsRepoint
 };

@@ -1,6 +1,6 @@
 'use strict';
 
-const { CrawlOperation } = require('../CrawlOperation');
+const { CrawlOperation } = require('news-crawler-itself/crawl-operations');
 
 // P4: CrawlOperation.run() gained a hook that calls the already-tested
 // NewsCrawler.prototype.seedUrls() when options.seedUrls is present, right

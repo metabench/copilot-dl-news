@@ -104,7 +104,7 @@ const {
   createUrlErrorEvent,
   formatPhaseName,
   isValidTelemetryEvent
-} = require('./CrawlTelemetrySchema');
+} = require('news-crawler-itself/telemetry-schema');
 
 const { CrawlTelemetryBridge } = require('./CrawlTelemetryBridge');
 const { TelemetryIntegration } = require('./TelemetryIntegration');

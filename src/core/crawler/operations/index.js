@@ -1,24 +1,46 @@
 'use strict';
 
-const { CrawlOperation, cloneOptions } = require('./CrawlOperation');
-const { EnsureCountryHubsOperation } = require('./EnsureCountryHubsOperation');
-const { ExploreCountryHubsOperation } = require('./ExploreCountryHubsOperation');
-const { CrawlCountryHubHistoryOperation } = require('./CrawlCountryHubHistoryOperation');
-const { CrawlCountryHubsHistoryOperation } = require('./CrawlCountryHubsHistoryOperation');
-const { FindTopicHubsOperation } = require('./FindTopicHubsOperation');
-const { FindPlaceAndTopicHubsOperation } = require('./FindPlaceAndTopicHubsOperation');
-const { GuessPlaceHubsOperation } = require('./GuessPlaceHubsOperation');
-const { SiteExplorerOperation } = require('./SiteExplorerOperation');
-const { BasicArticleCrawlOperation } = require('./BasicArticleCrawlOperation');
-const { SitemapDiscoveryOperation, SitemapOnlyOperation } = require('./SitemapDiscoveryOperation');
-const { CustomCrawlOperation } = require('./CustomCrawlOperation');
-const { HubArchiveCrawlOperation, HubDepthProbeOperation } = require('./HubArchiveCrawlOperation');
-const { CrawlSequenceRunner } = require('./SequenceRunner');
+/**
+ * The crawl-operations facade.
+ *
+ * The operation CLASSES live in news-crawler-itself/crawl-operations as of
+ * 2026-08-11. This file stays because the two things it still does belong to the
+ * application rather than to the engine library:
+ *
+ *   - GuessPlaceHubsOperation reaches adapters/remoteFetch ->
+ *     tools/crawl/lib/fleet-host-resolver, a monorepo surface no extraction has
+ *     resolved, so it cannot leave (see DEC-ENGINE-BOUNDARY).
+ *   - createDefaultOperations() composes the default list, and that list
+ *     includes the local operation above. Composition stays with the thing that
+ *     composes.
+ *
+ * Its exported shape is deliberately unchanged from before the extraction —
+ * every consumer of `require('.../operations')` sees exactly what it saw.
+ */
+
 const {
+  CrawlOperation,
+  cloneOptions,
+  EnsureCountryHubsOperation,
+  ExploreCountryHubsOperation,
+  CrawlCountryHubHistoryOperation,
+  CrawlCountryHubsHistoryOperation,
+  FindTopicHubsOperation,
+  FindPlaceAndTopicHubsOperation,
+  SiteExplorerOperation,
+  BasicArticleCrawlOperation,
+  SitemapDiscoveryOperation,
+  SitemapOnlyOperation,
+  CustomCrawlOperation,
+  HubArchiveCrawlOperation,
+  HubDepthProbeOperation,
+  CrawlSequenceRunner,
   listSequencePresets,
   getSequencePreset,
   resolveSequencePreset
-} = require('./sequencePresets');
+} = require('news-crawler-itself/crawl-operations');
+
+const { GuessPlaceHubsOperation } = require('./GuessPlaceHubsOperation');
 
 const createDefaultOperations = () => (
   [
