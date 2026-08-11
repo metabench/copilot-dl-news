@@ -29,10 +29,13 @@
  *             ALREADY successfully left also depended on
  *   HARD      reaches a surface no completed extraction has yet resolved
  *
- * The `soft` set is derived from evidence rather than judgement: the 2026-08-04
- * extraction moved 108 files, and whatever they required was resolved somehow —
- * the target moved too, the require was re-pointed at news-crawler-itself, or
- * the dependency was inverted and injected (the c180 QueueManager pattern).
+ * The `soft` set is derived from evidence rather than judgement: every file that
+ * has left since BEFORE_EXTRACTION required something, and whatever that was got
+ * resolved somehow — the target moved too, the require was re-pointed at
+ * news-crawler-itself, or the dependency was inverted and injected (the c180
+ * QueueManager pattern). The tool PRINTS how many files that evidence rests on
+ * rather than hardcoding it here, because the set grows with each extraction:
+ * 108 on 2026-08-04, 122 after the operation-schemas slice on 2026-08-11.
  *
  * The honest caveat, because it changes what the number means: this proves the
  * DEPENDENCY CLASS was resolvable, not that any particular target relocated. It
@@ -96,6 +99,48 @@ function classifyFile(outs, proven) {
   if (!outs.length) return { kind: 'portable', hard: [] };
   const hard = outs.filter((o) => !proven.has(o));
   return { kind: hard.length ? 'HARD' : 'soft', hard };
+}
+
+/**
+ * Resolve one INTERNAL require to a tracked file, trying the three forms Node
+ * does. Returns null when nothing matches, rather than inventing a path.
+ */
+function resolveInternal(from, spec, tracked) {
+  const abs = path.posix.normalize(path.posix.join(path.posix.dirname(from), spec));
+  return [abs, abs + '.js', abs + '/index.js'].find((c) => tracked.has(c)) || null;
+}
+
+/**
+ * Which files can ACTUALLY move, following internal edges transitively?
+ *
+ * `portable` above means no DIRECT out-of-scope require, which is an UPPER
+ * BOUND rather than the movable set: a portable file that requires an internal
+ * file which is itself HARD-anchored cannot leave on its own. The unit of
+ * extraction is a closure, not a file — the ledger's own moves describe whole
+ * "pure/db-module closures".
+ *
+ * Measured on the tree of 2026-08-11 BEFORE that day's extraction: 198 movable
+ * / 59 blocked, against a naive 200/57. Close in total, different in membership
+ * — and membership is what decides what can move. Those two figures are a
+ * historical comparison, deliberately not restated as live numbers; run the tool
+ * for today's.
+ *
+ * `graph` is Map<file, { deps: string[], kind }>.
+ */
+function movableSet(graph) {
+  const closure = (f, seen = new Set()) => {
+    if (seen.has(f)) return seen;
+    seen.add(f);
+    for (const d of graph.get(f)?.deps || []) closure(d, seen);
+    return seen;
+  };
+  const movable = [];
+  const blocked = [];
+  for (const f of graph.keys()) {
+    const reached = [...closure(f)].filter((x) => graph.get(x)?.kind === 'HARD');
+    (reached.length ? blocked : movable).push({ file: f, blockedBy: reached });
+  }
+  return { movable, blocked };
 }
 
 /**
@@ -171,6 +216,22 @@ function main() {
   const rows = analyseAt('HEAD', files).map((r) => ({ ...r, ...classifyFile(r.outs, proven) }));
   const of = (k) => rows.filter((r) => r.kind === k);
 
+  // The transitive picture. Built from the same bodies, so one more pass over
+  // git rather than a second scan.
+  const trackedSet = new Set(files);
+  const graph = new Map();
+  for (const r of rows) {
+    const body = git(['show', `HEAD:${r.file}`]);
+    const deps = [];
+    for (const t of requiresOf(body)) {
+      if (classifyRequire(t, r.file) !== 'internal') continue;
+      const hit = resolveInternal(r.file, t, trackedSet);
+      if (hit) deps.push(hit);
+    }
+    graph.set(r.file, { deps, kind: r.kind });
+  }
+  const { movable, blocked } = movableSet(graph);
+
   const byCluster = {};
   for (const r of of('HARD')) {
     for (const t of r.hard) {
@@ -188,6 +249,8 @@ function main() {
       portable: of('portable').length,
       soft: of('soft').length,
       hard: of('HARD').length,
+      movable: movable.length,
+      blocked: blocked.length,
       provenTargets: proven.size,
       clusters: Object.fromEntries(Object.entries(byCluster).map(
         ([k, v]) => [k, { files: v.files.size, targets: [...v.targets].sort() }])),
@@ -198,9 +261,13 @@ function main() {
 
   console.log('\n== crawler-engine extraction endpoint, measured ==');
   console.log(`${files.length} tracked .js files under ${SCOPE}\n`);
-  console.log(`  ${String(of('portable').length).padStart(3)} portable   no out-of-scope requires — these can follow their module today`);
+  console.log('by their OWN imports:');
+  console.log(`  ${String(of('portable').length).padStart(3)} portable   no out-of-scope requires`);
   console.log(`  ${String(of('soft').length).padStart(3)} soft       only on targets an already-extracted file survived`);
   console.log(`  ${String(of('HARD').length).padStart(3)} HARD       reach a surface no completed extraction has resolved`);
+  console.log('\nfollowing internal requires TRANSITIVELY — what can actually move:');
+  console.log(`  ${String(movable.length).padStart(3)} MOVABLE    whole internal closure is anchor-free`);
+  console.log(`  ${String(blocked.length).padStart(3)} blocked    closure reaches a HARD-anchored file`);
   console.log(`\n  (${proven.size} distinct targets proven resolvable by the ${goneCount}-file 2026-08-04 run)`);
 
   console.log('\nHARD anchors, grouped as the decisions they actually represent:');
@@ -225,4 +292,7 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { requiresOf, classifyRequire, outboundTargets, hasDynamicRequire, classifyFile, clusterOf };
+module.exports = {
+  requiresOf, classifyRequire, outboundTargets, hasDynamicRequire,
+  classifyFile, clusterOf, resolveInternal, movableSet
+};

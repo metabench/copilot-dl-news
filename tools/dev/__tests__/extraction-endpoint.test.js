@@ -1,7 +1,8 @@
 'use strict';
 
 const {
-  requiresOf, classifyRequire, outboundTargets, hasDynamicRequire, classifyFile, clusterOf
+  requiresOf, classifyRequire, outboundTargets, hasDynamicRequire, classifyFile, clusterOf,
+  resolveInternal, movableSet
 } = require('../extraction-endpoint');
 
 const F = 'src/core/crawler/gazetteer/Ingestor.js';
@@ -98,6 +99,79 @@ describe('classifyFile', () => {
     // and it must NOT read zero: a 0% false rate would mean the proven set had
     // been fitted to its own test.
     expect(classifyFile(['anything'], new Set()).kind).toBe('HARD');
+  });
+});
+
+describe('resolveInternal', () => {
+  const tracked = new Set([
+    'src/core/crawler/a/Direct.js',
+    'src/core/crawler/a/pkg/index.js'
+  ]);
+
+  test('resolves the three forms Node does', () => {
+    const from = 'src/core/crawler/a/caller.js';
+    expect(resolveInternal(from, './Direct', tracked)).toBe('src/core/crawler/a/Direct.js');
+    expect(resolveInternal(from, './Direct.js', tracked)).toBe('src/core/crawler/a/Direct.js');
+    expect(resolveInternal(from, './pkg', tracked)).toBe('src/core/crawler/a/pkg/index.js');
+  });
+
+  test('returns null rather than inventing a path', () => {
+    // A guessed edge would silently join two closures that are not connected,
+    // which would understate what can move.
+    expect(resolveInternal('src/core/crawler/a/caller.js', './Nope', tracked)).toBeNull();
+  });
+});
+
+describe('movableSet — the transitive picture', () => {
+  // `portable` is an upper bound: it only looks at a file's OWN requires.
+  const g = (o) => new Map(Object.entries(o));
+
+  test('a portable file requiring a HARD file cannot move', () => {
+    const graph = g({
+      'clean.js': { deps: ['anchored.js'], kind: 'portable' },
+      'anchored.js': { deps: [], kind: 'HARD' }
+    });
+    const { movable, blocked } = movableSet(graph);
+    // Neither moves: the HARD file blocks itself, and `clean.js` reaches it.
+    expect(movable).toEqual([]);
+    expect(blocked.map((b) => b.file)).toContain('clean.js');
+    expect(blocked.find((b) => b.file === 'clean.js').blockedBy).toEqual(['anchored.js']);
+  });
+
+  test('the block propagates through a CHAIN, not just direct edges', () => {
+    // a -> b -> c(HARD). `a` looks perfectly clean one edge out.
+    const graph = g({
+      'a.js': { deps: ['b.js'], kind: 'portable' },
+      'b.js': { deps: ['c.js'], kind: 'portable' },
+      'c.js': { deps: [], kind: 'HARD' }
+    });
+    const { movable, blocked } = movableSet(graph);
+    expect(movable).toEqual([]);
+    expect(blocked.map((b) => b.file).sort()).toEqual(['a.js', 'b.js', 'c.js']);
+  });
+
+  test('an anchor-free closure is movable however deep', () => {
+    const graph = g({
+      'a.js': { deps: ['b.js'], kind: 'portable' },
+      'b.js': { deps: ['c.js'], kind: 'soft' },
+      'c.js': { deps: [], kind: 'portable' }
+    });
+    expect(movableSet(graph).movable.map((m) => m.file).sort()).toEqual(['a.js', 'b.js', 'c.js']);
+    expect(movableSet(graph).blocked).toEqual([]);
+  });
+
+  test('a dependency CYCLE terminates instead of overflowing the stack', () => {
+    const graph = g({
+      'a.js': { deps: ['b.js'], kind: 'portable' },
+      'b.js': { deps: ['a.js'], kind: 'portable' }
+    });
+    expect(() => movableSet(graph)).not.toThrow();
+    expect(movableSet(graph).movable.length).toBe(2);
+  });
+
+  test('a soft file is movable — soft is not an anchor', () => {
+    const graph = g({ 's.js': { deps: [], kind: 'soft' } });
+    expect(movableSet(graph).movable.map((m) => m.file)).toEqual(['s.js']);
   });
 });
 
