@@ -56,6 +56,52 @@ rather than "how do we free the blobs?".
    *this* information rather than the earlier framing.
 **Measured on:** live `data/news.db`, read-only
 
+## 2026-08-11: checked the backups — and the premise is wrong a SECOND time
+
+**Owner asked: are the missing rows in any backup?** No — and the reason matters
+more than the answer.
+
+| snapshot | content_storage | NULL-linked | of live's 15,061, recoverable |
+|---|---|---|---|
+| live | 205,942 | 15,061 | — |
+| `news.db.pre-placenames-bak` (2026-07-23) | 190,606 | 15,061 | **0** |
+| `news.db.pre-debt-fixes-20260805.bak` (2026-08-05) | 205,942 | 15,061 | **0** |
+
+All 15,061 are present in BOTH backups and NULL-linked in both. The set is
+identical across all three snapshots while the table itself grew by 15,336 rows.
+Read-only throughout; both gated backups untouched.
+
+**The link is NULL, not a dangling FK.** There is no id to look up, so `re-link`
+was never a restore operation. Nor is it reconstructable another way:
+`http_responses` carries no content hash to match `content_sha256` against, and
+`content_analysis` is the only other table referencing `content_storage` — it
+points back, with no url or response of its own.
+
+**These rows never had a parent.** Cycle 224 corrected the framing to "the HTTP
+response record was deleted while the analysis survived" and asked why it was
+deleted. Nothing was deleted:
+
+- **15,051 of the 15,061 were created on a single day, 2026-02-27**, in a
+  contiguous id range 145926..160976.
+- All 15,051 carry `storage_type = 'inline'`, and **no linked row anywhere uses
+  that value** — linked rows are `db_compressed` (167,719), `gzip` (23,056),
+  `db_inline` (106).
+
+One bulk insert through a code path that never wrote a response record. That also
+explains why cycle 221's producer hunt came back empty: it was hunting a deleter
+that does not exist.
+
+**Effect on the options.** `re-link` is not repairing an inconsistency; it is
+inventing a parent that never existed. **Struck.** The real choice is `leave`
+(costs disk, backs 16.8% of `content_analysis`) versus
+`delete-content-and-analysis` (frees the most, destroys that analysis).
+
+Twice now this row-set has been characterised wrongly and twice the correction
+came from measuring rather than reasoning. Anyone answering this should measure
+the third framing too.
+
+**Measured on:** live `data/news.db` and both backups, read-only, 2026-08-11.
+
 ## Cycle 221: the producer hunt, and why it came back empty
 
 c220 recommended finding the producer before reclaiming. That was done, and
