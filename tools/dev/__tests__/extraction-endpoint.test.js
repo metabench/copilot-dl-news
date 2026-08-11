@@ -1,3 +1,7 @@
+// phantom-sweep: runtime-fixtures — this suite's require() strings are DATA. It
+// tests a tool that CLASSIFIES require statements, so its fixtures name paths
+// ('./x', '../../../shared/utils/pipelines') chosen to exercise the resolver,
+// not to resolve. They are not edges.
 'use strict';
 
 const {

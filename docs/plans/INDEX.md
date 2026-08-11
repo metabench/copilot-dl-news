@@ -1,6 +1,6 @@
 # Project Plans Index
 
-_Last Updated: 2026-08-07_
+_Last Updated: 2026-08-11_
 
 > **Purpose**: AI-generated long-term project plans for human review and commentary.
 > All plans link to `docs/sessions/` for execution tracking.
@@ -22,7 +22,7 @@ _Last Updated: 2026-08-07_
 
 | Plan | Status | Progress | Next Session | Priority |
 |------|--------|----------|--------------|----------|
-| [2026-07-22-module-ecosystem](./2026-07-22-module-ecosystem.md) | **ACTIVE OWNER DIRECTIVE** | working model defined; news-crawler-itself bootstrapped (README+AGENTS); first extraction (remote crawler engine + parallel compression) next | crawler engine → news-crawler-itself | **critical** |
+| [2026-07-22-module-ecosystem](./2026-07-22-module-ecosystem.md) | **ACTIVE OWNER DIRECTIVE** | working model defined; news-crawler-itself bootstrapped (README+AGENTS); **engine extraction underway and instrumented** — engine-debt 365 → 164 (2026-08-04 … 2026-08-11, banked every slice), 191 delegating requires across 50 subpaths. Endpoint measured 2026-08-11: 105 movable, 59 blocked. Authority: `tools/dev/checks/engine-debt.check.js` ceiling + `tools/dev/extraction-endpoint.js` | resume slices; the 59 blocked need `DEC-ENGINE-BOUNDARY` answered | **critical** |
 | [2026-07-distributed-crawl-unification](./2026-07-distributed-crawl-unification.md) | active | D1–D3 + D2a deployed/verified; D4 slices 1+2a shipped; implementation home moving to news-crawler-itself | D4 slice 2b after extraction | high |
 | [2026-03-v5-remote-crawler-application](./2026-03-v5-remote-crawler-application/PLAN.md) | superseded in substance by the Gen2 unification + module-ecosystem plans | planning complete, implementation not started | — | low |
 

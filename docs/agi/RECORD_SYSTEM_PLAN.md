@@ -55,10 +55,7 @@ crawler UI) had shipped on 2026-08-03.** The predicate contradicted the typed
 state, the file was read to confirm, and the node was promoted. Frontier went
 6 grown/18 available → 7/17.
 
-**Still unverified (7):** TECH-WORKORDERS, TECH-PRODUCTS, TECH-L3PROOF,
-TECH-P5AUTO, TECH-HEADLINE2, TECH-PAGESLIVE, TECH-OWNERGUIDE.
-
-Two are known-hard; record the reason rather than forcing a predicate:
+**Still unverified (2):** `TECH-P5AUTO`, `TECH-HEADLINE2` — and both deliberately:
 
 - **TECH-HEADLINE2** — completed as a measured crawl outcome. No file proves it.
   Leave it.
@@ -66,9 +63,14 @@ Two are known-hard; record the reason rather than forcing a predicate:
   FALSE contradiction, worse than none. Needs ledger archaeology to find what it
   actually shipped.
 
-The other five (WORKORDERS, PRODUCTS, L3PROOF, PAGESLIVE, OWNERGUIDE) each
-describe a concrete artifact and should be checkable — read the node's
-`research` text, find or name the artifact, add a `doneWhen`.
+> **This block said "Still unverified (7)" until 2026-08-11**, listing
+> WORKORDERS, PRODUCTS, L3PROOF, PAGESLIVE and OWNERGUIDE alongside them. All
+> five had been given predicates and read `verified-pending`; the count four
+> lines above already said 2. Two records, one fact, opposite answers —
+> *inside the document whose whole subject is that failure mode*, and it
+> survived here for four days because prose is not derived. Corrected by running
+> `node tools/agi/tech-state.js` rather than by re-reading the prose, which is
+> the only method that would ever have caught it.
 
 ### The recurring-review question — ✅ decided 2026-08-07
 

@@ -127,7 +127,27 @@ function resolves(spec, fromDir) {
 // where zero ran; runLegacyCommand runs-and-fails honestly (drift class).
 // StructureMiner.test + art-playground e2e ×2 deleted (subjects retired).
 // js-scan/operations/relationships pragma'd (42/42 fixture class).
-const CEILING = 29;
+// 29 → 7 (2026-08-11). Cause named, because most of this drop is bookkeeping
+// rather than repair:
+//   - The engine extraction re-pointed many test requires at
+//     news-crawler-itself/* package specifiers, which resolve, retiring the
+//     relative edges that did not.
+//   - TEN were my own false positives. tools/dev/__tests__/{extraction-endpoint,
+//     delegation-bindings.check}.test.js test tools that READ require statements,
+//     so their fixtures spell out specifiers chosen NOT to resolve. Both now
+//     carry the `phantom-sweep: runtime-fixtures` opt-out this check already
+//     provides for exactly that. Without it the count read 17 — a guard being
+//     driven UP by tests written for a guard.
+//
+// The surviving 7, listed so the next run does not re-derive them:
+//   3× bare `better-sqlite3` (multiModalCrawlQueries, ncdb-debt-scan,
+//     RemoteCrawlerAdapter) — genuinely unresolvable under raw Node, since it
+//     lives in news-crawler-db/node_modules; jest's resolver finds it and the
+//     suites pass, so these are resolver-dependent rather than broken.
+//   1× fake-indexeddb/auto (OfflineManager) · 1× ./lib/sync-ledger
+//     (cloud-crawl-e2e-validation) · 2× artPlayground/isomorphic/controls
+//     (two puppeteer e2e suites).
+const CEILING = 7;
 
 function main() {
   const phantoms = [];

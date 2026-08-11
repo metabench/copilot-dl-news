@@ -1,3 +1,7 @@
+// phantom-sweep: runtime-fixtures — this suite's require() strings are DATA. It
+// tests a checker that READS require statements, so its fixtures spell out
+// specifiers ('news-crawler-itself/thing', './thing') that intentionally resolve
+// to nothing. They are not edges.
 'use strict';
 
 const { unwrappedBindings, isMisbound, stripNonCode, IS_TEST } = require('../checks/delegation-bindings.check');
