@@ -384,7 +384,7 @@ function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } 
   // Wire new abstractions adapter in shadow mode for validation
   // This tracks state in parallel with existing code to validate consistency
   try {
-    const NewAbstractionsAdapter = require('./integration/NewAbstractionsAdapter');
+    const { NewAbstractionsAdapter } = require('news-crawler-itself/crawl-control');
     const adapter = NewAbstractionsAdapter.create(crawler, {
       mode: 'shadow',
       logInconsistencies: opts.outputVerbosity >= 2

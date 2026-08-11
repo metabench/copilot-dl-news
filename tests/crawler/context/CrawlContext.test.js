@@ -1,6 +1,6 @@
 'use strict';
 
-const { CrawlContext } = require('../../../src/core/crawler/context');
+const { CrawlContext } = require('news-crawler-itself/crawl-control');
 
 describe('CrawlContext', () => {
   let context;

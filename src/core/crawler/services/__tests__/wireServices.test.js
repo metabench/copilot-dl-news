@@ -71,7 +71,7 @@ describe('wireServices', () => {
     });
 
     it('should use existing context if provided', () => {
-      const CrawlContext = require('../../context/CrawlContext');
+      const { CrawlContext } = require('news-crawler-itself/crawl-control');
       const existingContext = CrawlContext.create({ jobId: 'existing' });
 
       const container = wireServices(

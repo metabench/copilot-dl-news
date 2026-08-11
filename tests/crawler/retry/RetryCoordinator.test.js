@@ -1,7 +1,7 @@
 'use strict';
 
-const { RetryCoordinator } = require('../../../src/core/crawler/retry');
-const { CrawlContext } = require('../../../src/core/crawler/context');
+const { RetryCoordinator } = require('news-crawler-itself/crawl-control');
+const { CrawlContext } = require('news-crawler-itself/crawl-control');
 
 describe('RetryCoordinator', () => {
   let coordinator;

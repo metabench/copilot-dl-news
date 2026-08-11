@@ -1,6 +1,6 @@
 'use strict';
 
-const UrlDecisionOrchestrator = require('../../decisions/UrlDecisionOrchestrator');
+const { UrlDecisionOrchestrator } = require('news-crawler-itself/crawl-control');
 
 /**
  * PolicyServices - URL policy and decision services.

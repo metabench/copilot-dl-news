@@ -1,10 +1,10 @@
 'use strict';
 
-const CrawlOrchestrator = require('../../../src/core/crawler/orchestration/CrawlOrchestrator');
-const { CrawlContext } = require('../../../src/core/crawler/context');
-const { CrawlPlan, GOALS } = require('../../../src/core/crawler/plan');
-const { ResourceBudget } = require('../../../src/core/crawler/budget');
-const { PHASES } = require('../../../src/core/crawler/progress');
+const { CrawlOrchestrator } = require('news-crawler-itself/crawl-control');
+const { CrawlContext } = require('news-crawler-itself/crawl-control');
+const { CrawlPlan, GOALS } = require('news-crawler-itself/crawl-control');
+const { ResourceBudget } = require('news-crawler-itself/crawl-control');
+const { PHASES } = require('news-crawler-itself/crawl-control');
 
 describe('CrawlOrchestrator', () => {
   let mockCrawler;

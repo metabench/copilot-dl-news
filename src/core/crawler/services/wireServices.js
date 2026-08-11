@@ -57,7 +57,7 @@ function wireServices(config, options = {}) {
       return options.existingContext;
     }
 
-    const CrawlContext = require('../context/CrawlContext');
+    const { CrawlContext } = require('news-crawler-itself/crawl-control');
     return CrawlContext.create({
       jobId: config.jobId || `job-${Date.now()}`,
       startUrl: config.startUrl,
@@ -89,7 +89,7 @@ function wireServices(config, options = {}) {
 
   // Retry coordinator
   container.register('retryCoordinator', (c) => {
-    const RetryCoordinator = require('../retry/RetryCoordinator');
+    const { RetryCoordinator } = require('news-crawler-itself/crawl-control');
     return new RetryCoordinator({
       context: c.get('context'),
       maxRetries: config.maxRetries ?? 3,
@@ -161,7 +161,7 @@ function createTestContainer(overrides = {}) {
   container.register('context', () => {
     if (overrides.context) return overrides.context;
 
-    const CrawlContext = require('../context/CrawlContext');
+    const { CrawlContext } = require('news-crawler-itself/crawl-control');
     return CrawlContext.create({
       jobId: 'test-job',
       startUrl: 'http://test.example.com'

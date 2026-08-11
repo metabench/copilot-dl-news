@@ -82,7 +82,13 @@ function registerProcessingServices(container, config) {
   // Fetch pipeline
   container.register('fetchPipeline', (c) => {
     try {
-      const FetchPipeline = require('news-crawler-itself/fetch-pipeline');
+      // Destructured: the package entry exports a bag of ~18 names, not the
+      // class. Bound unwrapped since cycle 178 (2026-08-04), which made
+      // `new FetchPipeline(...)` below throw "not a constructor" and the catch
+      // re-raise it as "FetchPipeline not available" — so resolving this
+      // service failed outright. Unnoticed for seven days because no test
+      // covers it and the crawler has not run since 2026-07-18.
+      const { FetchPipeline } = require('news-crawler-itself/fetch-pipeline');
       // Optional remote fetch: local coordination, remote page downloads.
       // See src/core/crawler/adapters/remoteFetch.js.
       let remoteFetchFn = null;

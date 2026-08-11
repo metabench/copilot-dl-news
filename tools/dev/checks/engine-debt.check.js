@@ -204,7 +204,23 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // resolvable, never that the require works unchanged after a move, and this one
 // wants getDb/openNewsCrawlerDb from the monorepo's own db layer. Pulled back
 // rather than forced. A moving set must be checked for `soft` members.
-const CEILING = 194;
+// 194 → 164 (2026-08-11, fifth slice): thirteen small control-primitive
+// directories — budget, checkpoint, concurrency, context, retry, progress,
+// decisions, plan, strategies, metrics, orchestration, integration, utils — as
+// ONE entry, news-crawler-itself/crawl-control, plus puppeteer-detection.
+// Twelve of them export 23 names with ZERO collisions (measured before
+// merging), so one shim beat thirteen root files; same shape as crawl-infra.js.
+// Nothing dragged, nothing soft, nothing HARD in the set.
+//
+// The slice's real lesson is in tools/dev/checks/delegation-bindings.check.js.
+// Re-pointing carried nine UNWRAPPED bindings across — `const X = require(pkg)`
+// where pkg exports `{ X, ... }` — and three were production files. That shape
+// does not throw at require time, only at first USE, and one of the three sat a
+// line above a catch that only warns. Proven the suite cannot see it: the
+// binding was re-broken deliberately and both the wiring test and entry-loads
+// still passed. The new check found a REAL pre-existing instance from cycle
+// 178's own fetch-cluster slice, seven days cold.
+const CEILING = 164;
 
 function main() {
   const argv = process.argv.slice(2);

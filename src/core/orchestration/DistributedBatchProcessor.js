@@ -9,7 +9,7 @@
 
 const { CRAWL_EVENT_TYPES, SEVERITY_LEVELS } = require('../../core/crawler/telemetry');
 const { createFetchRow, extractTitle } = require('./utils/httpUtils');
-const { shouldUsePuppeteer, detectPuppeteerNeeded, recordPuppeteerNeeded, recordHttpSuccess, recordPuppeteerSuccess } = require('../../core/crawler/utils/puppeteerDetection');
+const { shouldUsePuppeteer, detectPuppeteerNeeded, recordPuppeteerNeeded, recordHttpSuccess, recordPuppeteerSuccess } = require('news-crawler-itself/puppeteer-detection');
 
 class DistributedBatchProcessor {
   /**

@@ -1,6 +1,6 @@
 'use strict';
 
-const ConcurrencyController = require('../../../src/core/crawler/concurrency/ConcurrencyController');
+const { ConcurrencyController } = require('news-crawler-itself/crawl-control');
 
 describe('ConcurrencyController', () => {
   let controller;

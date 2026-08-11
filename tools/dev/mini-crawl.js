@@ -289,7 +289,7 @@ For long-running crawls, use the daemon approach:
   // Lazy require heavy modules
   const { createCrawlService } = require('../../src/server/crawl-api');
   const { TelemetryIntegration } = require('../../src/core/crawler/telemetry/TelemetryIntegration');
-  const { AdaptiveDiscoveryService, STRATEGIES } = require('../../src/core/crawler/strategies');
+  const { AdaptiveDiscoveryService, STRATEGIES } = require('news-crawler-itself/crawl-control');
 
   // Open database
   const db = openNewsCrawlerDb(flags.db);

@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const CheckpointManager = require('../../../src/core/crawler/checkpoint/CheckpointManager');
+const { CheckpointManager } = require('news-crawler-itself/crawl-control');
 
 describe('CheckpointManager', () => {
   let tempDir;

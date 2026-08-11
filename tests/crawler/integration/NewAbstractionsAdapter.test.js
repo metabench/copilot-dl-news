@@ -1,6 +1,6 @@
 'use strict';
 
-const NewAbstractionsAdapter = require('../../../src/core/crawler/integration/NewAbstractionsAdapter');
+const { NewAbstractionsAdapter } = require('news-crawler-itself/crawl-control');
 const { CrawlerState } = require('news-crawler-itself/crawler-state');
 
 /**
