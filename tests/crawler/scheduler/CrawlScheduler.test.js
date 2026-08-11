@@ -13,9 +13,11 @@ const { openNewsCrawlerDb } = require('../../../src/db/openNewsCrawlerDb');
 const path = require('path');
 const fs = require('fs');
 
-const CrawlScheduler = require('../../../src/core/crawler/scheduler/CrawlScheduler');
-const UpdatePatternAnalyzer = require('../../../src/core/crawler/scheduler/UpdatePatternAnalyzer');
-const ScheduleStore = require('../../../src/core/crawler/scheduler/ScheduleStore');
+// Destructured, because these three submodules export their class DIRECTLY
+// (module.exports = CrawlScheduler) while the package entry exports them as a
+// named bag. Pointing each binding at the entry without destructuring hands it
+// the whole object — "CrawlScheduler is not a constructor", 51 tests red.
+const { CrawlScheduler, UpdatePatternAnalyzer, ScheduleStore } = require('news-crawler-itself/crawl-scheduler');
 const scheduleAdapter = require('news-crawler-db');
 const { TaskEventWriter } = require('../../../src/db/TaskEventWriter');
 

@@ -171,7 +171,21 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 // constructs those, so the injection points are unfed. These are built but
 // unwired features. That does not change whether they should live in the engine
 // package; it is a separate question, recorded rather than acted on.
-const CEILING = 226;
+// 226 → 213 (2026-08-11, third slice): pipeline (4), remote (5, incl. its
+// AGENT.md), scheduler (4) — to news-crawler-itself as crawl-pipeline,
+// peer-crawl and crawl-scheduler. Unlike the earlier slices these had PRODUCTION
+// consumers, re-pointed here: domainProcessingPipeline, IntelligentCrawlServer
+// and tools/crawl/peer-server.
+//
+// Two hazards worth recording. IntelligentCrawlServer's scheduler require sits
+// inside a try/catch that only WARNS, so a broken re-point would have left the
+// scheduler silently uninitialised — the c188 quiet-fallback class, which a
+// green suite cannot see. Proven separately by resolving the specifier from that
+// exact file and constructing CrawlScheduler against a real sqlite handle.
+// And the scheduler submodules export their class DIRECTLY while the entry
+// exports a named bag; re-pointing without destructuring turned 51 tests red.
+// The shapes differ per module — check the SUBMODULE, not just the index.
+const CEILING = 213;
 
 function main() {
   const argv = process.argv.slice(2);

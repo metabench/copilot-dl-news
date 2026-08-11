@@ -6,8 +6,8 @@
 const assert = require('node:assert/strict');
 const EventEmitter = require('events');
 
-const { createPeerServer, createPeerApp } = require('../../../../src/core/crawler/remote/PeerCrawlServer');
-const { MessageTypes, createAnnouncement } = require('../../../../src/core/crawler/remote/PeerProtocol');
+const { createPeerServer, createPeerApp } = require('news-crawler-itself/peer-crawl');
+const { MessageTypes, createAnnouncement } = require('news-crawler-itself/peer-crawl');
 
 // ── Test helpers ────────────────────────────────────────────
 

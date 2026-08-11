@@ -1,7 +1,7 @@
 /**
  * Tests for the pipeline module - runPipeline, createStep, composePipelines
  */
-const { runPipeline, createStep, composePipelines } = require('../../../src/core/crawler/pipeline/runPipeline');
+const { runPipeline, createStep, composePipelines } = require('news-crawler-itself/crawl-pipeline');
 
 describe('runPipeline', () => {
   describe('basic execution', () => {

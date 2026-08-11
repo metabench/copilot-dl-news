@@ -156,7 +156,7 @@ async function main(argv = process.argv.slice(2)) {
   const dataDir = args['data-dir'] || path.join(process.cwd(), 'data');
 
   // Lazy-load heavy modules only when actually running
-  const { createPeerServer } = require('../../src/core/crawler/remote/PeerCrawlServer');
+  const { createPeerServer } = require('news-crawler-itself/peer-crawl');
   const NewsCrawler = require('../../src/core/crawler/NewsCrawler');
 
   // Use shared news.db by default (matches repo production persistence convention).
@@ -237,7 +237,7 @@ async function main(argv = process.argv.slice(2)) {
 
   // Register with hub if specified
   if (args.hub) {
-    const { createAnnouncement } = require('../../src/core/crawler/remote/PeerProtocol');
+    const { createAnnouncement } = require('news-crawler-itself/peer-crawl');
     const announcement = createAnnouncement({
       nodeId: address.nodeId,
       baseUrl: `http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${address.port}`,

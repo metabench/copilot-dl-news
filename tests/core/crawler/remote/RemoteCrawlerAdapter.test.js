@@ -7,7 +7,7 @@ const { openNewsCrawlerDb } = require('../../../../src/db/openNewsCrawlerDb');
 const assert = require('node:assert/strict');
 const EventEmitter = require('events');
 
-const { RemoteCrawlerAdapter } = require('../../../../src/core/crawler/remote/RemoteCrawlerAdapter');
+const { RemoteCrawlerAdapter } = require('news-crawler-itself/peer-crawl');
 const {
   generateNodeId,
   PROTOCOL_VERSION,
@@ -18,7 +18,7 @@ const {
   createIntelligenceShare,
   createHeartbeat,
   validateMessage,
-} = require('../../../../src/core/crawler/remote/PeerProtocol');
+} = require('news-crawler-itself/peer-crawl');
 
 // ── Test helpers ────────────────────────────────────────────
 

@@ -13,7 +13,7 @@ const {
   createProcessArticleStep,
   createUpdateStateStep,
   createRecordMetricsStep
-} = require('../../../src/core/crawler/pipeline/pageProcessingPipeline');
+} = require('news-crawler-itself/crawl-pipeline');
 
 // Mock dependencies factory
 function createMockDeps(overrides = {}) {

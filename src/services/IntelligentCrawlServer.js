@@ -834,7 +834,7 @@ class IntelligentCrawlServer extends EventEmitter {
     // Initialize scheduler if not provided
     if (!this.scheduler) {
       try {
-        const { CrawlScheduler } = require('../core/crawler/scheduler');
+        const { CrawlScheduler } = require('news-crawler-itself/crawl-scheduler');
         this.scheduler = new CrawlScheduler({ db: this.db });
       } catch (err) {
         this.logger.warn(`[IntelligentCrawlServer] CrawlScheduler not available: ${err.message}`);

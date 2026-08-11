@@ -1,8 +1,8 @@
 /**
  * Tests for buildSteps - step builder factory
  */
-const { buildSteps, getAvailableSteps, registerStepBuilder, STEP_BUILDERS } = require('../../../src/core/crawler/pipeline/buildSteps');
-const { runPipeline } = require('../../../src/core/crawler/pipeline/runPipeline');
+const { buildSteps, getAvailableSteps, registerStepBuilder, STEP_BUILDERS } = require('news-crawler-itself/crawl-pipeline');
+const { runPipeline } = require('news-crawler-itself/crawl-pipeline');
 
 describe('buildSteps', () => {
   describe('step generation', () => {

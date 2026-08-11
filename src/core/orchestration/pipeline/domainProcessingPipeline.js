@@ -7,7 +7,7 @@
  * @module src/orchestration/pipeline/domainProcessingPipeline
  */
 
-const { createStep, runPipeline } = require('../../../core/crawler/pipeline');
+const { createStep, runPipeline } = require('news-crawler-itself/crawl-pipeline');
 
 /**
  * @typedef {Object} DomainProcessingDeps
